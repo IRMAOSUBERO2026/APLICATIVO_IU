@@ -5,7 +5,6 @@ import {
   TrendingUp,
   HardHat,
   Users,
-  Package,
   AlertTriangle,
 } from "lucide-react";
 import {
@@ -38,9 +37,9 @@ const margemData = [
 ];
 
 const COLORS = [
-  "hsl(220, 60%, 20%)",
-  "hsl(30, 95%, 50%)",
-  "hsl(152, 60%, 40%)",
+  "hsl(100, 35%, 28%)",
+  "hsl(100, 45%, 40%)",
+  "hsl(0, 0%, 20%)",
   "hsl(38, 92%, 50%)",
 ];
 
@@ -55,88 +54,39 @@ export default function Dashboard() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        {/* Header */}
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Dashboard Executivo</h1>
           <p className="text-sm text-muted-foreground">Visão geral da operação — Março 2026</p>
         </div>
 
-        {/* KPIs */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          <KPICard
-            title="Faturamento"
-            value="R$ 2.36M"
-            change="+12% vs mês anterior"
-            changeType="positive"
-            icon={<DollarSign className="h-5 w-5" />}
-          />
-          <KPICard
-            title="Custos Totais"
-            value="R$ 1.78M"
-            change="+8% vs mês anterior"
-            changeType="negative"
-            icon={<TrendingUp className="h-5 w-5" />}
-          />
-          <KPICard
-            title="Margem Média"
-            value="24.6%"
-            change="+2.1pp"
-            changeType="positive"
-            icon={<TrendingUp className="h-5 w-5" />}
-          />
-          <KPICard
-            title="Obras Ativas"
-            value="4"
-            change="1 nova este mês"
-            changeType="neutral"
-            icon={<HardHat className="h-5 w-5" />}
-          />
-          <KPICard
-            title="Folha Total"
-            value="R$ 485K"
-            change="142 funcionários"
-            changeType="neutral"
-            icon={<Users className="h-5 w-5" />}
-          />
-          <KPICard
-            title="Estoque Crítico"
-            value="7 itens"
-            change="Ação necessária"
-            changeType="negative"
-            icon={<AlertTriangle className="h-5 w-5" />}
-          />
+          <KPICard title="Faturamento" value="R$ 2.36M" change="+12% vs mês anterior" changeType="positive" icon={<DollarSign className="h-5 w-5" />} />
+          <KPICard title="Custos Totais" value="R$ 1.78M" change="+8% vs mês anterior" changeType="negative" icon={<TrendingUp className="h-5 w-5" />} />
+          <KPICard title="Margem Média" value="24.6%" change="+2.1pp" changeType="positive" icon={<TrendingUp className="h-5 w-5" />} />
+          <KPICard title="Obras Ativas" value="4" change="1 nova este mês" changeType="neutral" icon={<HardHat className="h-5 w-5" />} />
+          <KPICard title="Folha Total" value="R$ 485K" change="142 funcionários" changeType="neutral" icon={<Users className="h-5 w-5" />} />
+          <KPICard title="Estoque Crítico" value="7 itens" change="Ação necessária" changeType="negative" icon={<AlertTriangle className="h-5 w-5" />} />
         </div>
 
-        {/* Charts */}
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* Faturamento Chart */}
           <div className="lg:col-span-2 rounded-xl border bg-card p-5 shadow-sm">
             <h3 className="mb-4 text-sm font-semibold">Faturamento Mensal</h3>
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={faturamentoData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 15%, 88%)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(0, 0%, 85%)" />
                 <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${v / 1000}K`} />
                 <Tooltip formatter={(v: number) => [`R$ ${(v / 1000).toFixed(0)}K`, "Valor"]} />
-                <Bar dataKey="valor" fill="hsl(220, 60%, 20%)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="valor" fill="hsl(100, 35%, 28%)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
-          {/* Margem por Obra */}
           <div className="rounded-xl border bg-card p-5 shadow-sm">
             <h3 className="mb-4 text-sm font-semibold">Margem por Obra (%)</h3>
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
-                <Pie
-                  data={margemData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={50}
-                  outerRadius={80}
-                  dataKey="value"
-                  label={({ name, value }) => `${value}%`}
-                >
+                <Pie data={margemData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" label={({ value }) => `${value}%`}>
                   {margemData.map((_, index) => (
                     <Cell key={index} fill={COLORS[index % COLORS.length]} />
                   ))}
@@ -156,7 +106,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Obras Table */}
         <div className="rounded-xl border bg-card shadow-sm">
           <div className="border-b px-5 py-4">
             <h3 className="text-sm font-semibold">Obras em Andamento</h3>
@@ -177,22 +126,15 @@ export default function Dashboard() {
                     <td className="px-5 py-3.5 font-medium">{obra.nome}</td>
                     <td className="px-5 py-3.5">
                       <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                        obra.status === "Em andamento"
-                          ? "bg-success/10 text-success"
-                          : obra.status === "Medição pendente"
-                          ? "bg-warning/10 text-warning"
-                          : "bg-accent/10 text-accent"
-                      }`}>
-                        {obra.status}
-                      </span>
+                        obra.status === "Em andamento" ? "bg-success/10 text-success"
+                        : obra.status === "Medição pendente" ? "bg-warning/10 text-warning"
+                        : "bg-accent/10 text-accent"
+                      }`}>{obra.status}</span>
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
                         <div className="h-2 w-24 rounded-full bg-muted">
-                          <div
-                            className="h-2 rounded-full bg-primary transition-all"
-                            style={{ width: `${obra.progresso}%` }}
-                          />
+                          <div className="h-2 rounded-full bg-primary transition-all" style={{ width: `${obra.progresso}%` }} />
                         </div>
                         <span className="text-xs text-muted-foreground">{obra.progresso}%</span>
                       </div>

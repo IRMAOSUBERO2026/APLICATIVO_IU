@@ -10,8 +10,10 @@ import {
   Shield,
   Wrench,
   X,
-  Building2,
+  ClipboardList,
+  HardDrive,
 } from "lucide-react";
+import logoPreto from "@/assets/logo-preto.png";
 
 const menuSections = [
   {
@@ -24,6 +26,7 @@ const menuSections = [
     label: "Operacional",
     items: [
       { icon: HardHat, label: "Obras", path: "/obras" },
+      { icon: ClipboardList, label: "Diário de Obra", path: "/diario-obra" },
       { icon: Users, label: "RH / DP", path: "/rh" },
       { icon: CreditCard, label: "Folha Salarial", path: "/folha" },
     ],
@@ -32,6 +35,7 @@ const menuSections = [
     label: "Logística",
     items: [
       { icon: Package, label: "Estoque", path: "/estoque" },
+      { icon: HardDrive, label: "Entrega de EPI", path: "/entrega-epi" },
       { icon: Wrench, label: "Equip. Próprios", path: "/equipamentos-proprios" },
       { icon: Truck, label: "Equip. Locados", path: "/equipamentos-locados" },
     ],
@@ -55,14 +59,12 @@ export function AppSidebar({ onClose }: AppSidebarProps) {
   return (
     <div className="flex h-full flex-col overflow-y-auto scrollbar-thin">
       {/* Logo */}
-      <div className="flex h-14 items-center justify-between px-4 border-b border-sidebar-border">
+      <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sidebar-primary">
-            <Building2 className="h-4 w-4 text-sidebar-primary-foreground" />
-          </div>
+          <img src={logoPreto} alt="Irmãos Ubero" className="h-10 w-auto" />
           <div>
-            <h1 className="text-sm font-bold text-sidebar-accent-foreground tracking-tight">ConcrERP</h1>
-            <p className="text-[10px] text-sidebar-muted leading-none">Estruturas de Concreto</p>
+            <h1 className="text-xs font-bold text-sidebar-accent-foreground tracking-tight leading-tight">IRMÃOS UBERO</h1>
+            <p className="text-[9px] text-sidebar-muted leading-none">Engenharia</p>
           </div>
         </div>
         <button
@@ -113,7 +115,7 @@ export function AppSidebar({ onClose }: AppSidebarProps) {
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-sidebar-accent-foreground">Administrador</p>
-            <p className="truncate text-xs text-sidebar-muted">admin@empresa.com</p>
+            <p className="truncate text-xs text-sidebar-muted">admin@irmaos ubero.com</p>
           </div>
         </div>
       </div>
