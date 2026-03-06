@@ -12,6 +12,8 @@ import {
   X,
   ClipboardList,
   HardDrive,
+  Palmtree,
+  Calculator,
 } from "lucide-react";
 import logoPreto from "@/assets/logo-preto.png";
 
@@ -29,6 +31,7 @@ const menuSections = [
       { icon: ClipboardList, label: "Diário de Obra", path: "/diario-obra" },
       { icon: Users, label: "RH / DP", path: "/rh" },
       { icon: CreditCard, label: "Folha Salarial", path: "/folha" },
+      { icon: Palmtree, label: "Férias", path: "/ferias" },
     ],
   },
   {
@@ -44,6 +47,7 @@ const menuSections = [
     label: "Administrativo",
     items: [
       { icon: Warehouse, label: "Financeiro", path: "/financeiro" },
+      { icon: Calculator, label: "Orçamentos", path: "/orcamento" },
       { icon: Shield, label: "Controle de Acesso", path: "/acesso" },
     ],
   },
