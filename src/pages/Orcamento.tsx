@@ -7,7 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Trash2, Download, FileText, Save, Eye } from "lucide-react";
+import { Plus, Trash2, Download, FileText, Save, Eye, ChevronDown } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -58,10 +60,53 @@ const diferenciais = [
 ];
 
 const servicosAdmin = [
-  { profissional: "Profissionais (Carpinteiro/Armador)", valor: 420 },
+  { profissional: "Carpinteiro", valor: 420 },
+  { profissional: "Armador", valor: 420 },
+  { profissional: "Pedreiro", valor: 420 },
   { profissional: "Meio Oficial", valor: 355 },
-  { profissional: "Serventes", valor: 295 },
-  { profissional: "Encarregados", valor: 500 },
+  { profissional: "Servente", valor: 295 },
+  { profissional: "Encarregado", valor: 500 },
+  { profissional: "Mestre de Obras", valor: 600 },
+  { profissional: "Técnico de Segurança", valor: 480 },
+  { profissional: "Apontador", valor: 380 },
+  { profissional: "Guincheiro", valor: 400 },
+];
+
+const etapasPreDefinidas = [
+  { grupo: "Estrutura", itens: [
+    { etapa: "Fundação (Sapata/Bloco)", valorM2: 250, taxa: 2 },
+    { etapa: "Fundação (Estaca/Tubulão)", valorM2: 280, taxa: 2 },
+    { etapa: "Pilares Subsolo", valorM2: 250, taxa: 1.5 },
+    { etapa: "Pilares Tipo", valorM2: 250, taxa: 1 },
+    { etapa: "Vigas Baldrame", valorM2: 250, taxa: 1.5 },
+    { etapa: "Vigas Tipo", valorM2: 250, taxa: 1 },
+    { etapa: "Laje Subsolo", valorM2: 250, taxa: 1.5 },
+    { etapa: "Laje Tipo", valorM2: 250, taxa: 1 },
+    { etapa: "Laje Cobertura", valorM2: 250, taxa: 1.2 },
+    { etapa: "Laje Ático", valorM2: 250, taxa: 1.3 },
+    { etapa: "Laje Pé Direito Duplo", valorM2: 250, taxa: 1.5 },
+    { etapa: "Escadas", valorM2: 280, taxa: 1.5 },
+    { etapa: "Reservatório Superior", valorM2: 300, taxa: 1.8 },
+    { etapa: "Reservatório Inferior", valorM2: 280, taxa: 1.5 },
+    { etapa: "Casa de Máquinas", valorM2: 280, taxa: 1.3 },
+    { etapa: "Muros de Arrimo", valorM2: 250, taxa: 1.5 },
+  ]},
+  { grupo: "Alvenaria / Cinza", itens: [
+    { etapa: "Levantamento de Paredes (Tijolos)", valorM2: 85, taxa: 1 },
+    { etapa: "Chapisco", valorM2: 18, taxa: 1 },
+    { etapa: "Reboco Interno", valorM2: 45, taxa: 1 },
+    { etapa: "Reboco Externo", valorM2: 55, taxa: 1.2 },
+    { etapa: "Contrapiso", valorM2: 40, taxa: 1 },
+    { etapa: "Regularização de Piso", valorM2: 35, taxa: 1 },
+  ]},
+  { grupo: "Infraestrutura", itens: [
+    { etapa: "Calçada Perimetral", valorM2: 120, taxa: 1 },
+    { etapa: "Tapume", valorM2: 95, taxa: 1 },
+    { etapa: "Bandeja de Proteção", valorM2: 150, taxa: 1.3 },
+    { etapa: "Área de Vivência", valorM2: 180, taxa: 1 },
+    { etapa: "Plataforma de Proteção (Tela)", valorM2: 80, taxa: 1 },
+    { etapa: "Rampas de Acesso", valorM2: 130, taxa: 1.2 },
+  ]},
 ];
 
 const itensNaoInclusos = [
@@ -88,11 +133,15 @@ export default function Orcamento() {
   const [cliente, setCliente] = useState<DadosCliente>({ construtora: "", empreendimento: "", cidade: "", contato: "", telefone: "", email: "" });
   const [proposta, setProposta] = useState<DadosProposta>({ data: format(new Date(), "yyyy-MM-dd"), responsavel: "", observacoes: "" });
   const [etapas, setEtapas] = useState<EtapaOrcamento[]>([
-    { id: "1", etapa: "Fundação", area: 0, valorM2: 250, taxa: 1, observacao: "" },
+    { id: "1", etapa: "Fundação (Sapata/Bloco)", area: 0, valorM2: 250, taxa: 2, observacao: "" },
   ]);
 
   const addEtapa = () => {
     setEtapas(prev => [...prev, { id: `${Date.now()}`, etapa: "", area: 0, valorM2: 250, taxa: 1, observacao: "" }]);
+  };
+
+  const addEtapaPreDefinida = (item: { etapa: string; valorM2: number; taxa: number }) => {
+    setEtapas(prev => [...prev, { id: `${Date.now()}-${Math.random()}`, etapa: item.etapa, area: 0, valorM2: item.valorM2, taxa: item.taxa, observacao: "" }]);
   };
 
   const removeEtapa = (id: string) => setEtapas(prev => prev.filter(e => e.id !== id));
@@ -378,8 +427,32 @@ export default function Orcamento() {
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">Tabela de Orçamento</CardTitle>
-                  <Button size="sm" variant="outline" onClick={addEtapa}><Plus className="mr-1 h-4 w-4" />Adicionar Etapa</Button>
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-base">Tabela de Orçamento</CardTitle>
+                  </div>
+                  <div className="flex gap-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" variant="outline"><Plus className="mr-1 h-4 w-4" />Adicionar Atividade <ChevronDown className="ml-1 h-3 w-3" /></Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="max-h-[400px] overflow-y-auto w-[280px]">
+                        {etapasPreDefinidas.map(grupo => (
+                          <div key={grupo.grupo}>
+                            <DropdownMenuLabel className="text-xs text-muted-foreground">{grupo.grupo}</DropdownMenuLabel>
+                            {grupo.itens.map(item => (
+                              <DropdownMenuItem key={item.etapa} onClick={() => addEtapaPreDefinida(item)}>
+                                <span className="text-sm">{item.etapa}</span>
+                              </DropdownMenuItem>
+                            ))}
+                            <DropdownMenuSeparator />
+                          </div>
+                        ))}
+                        <DropdownMenuItem onClick={addEtapa} className="font-medium text-primary">
+                          <Plus className="mr-1 h-3.5 w-3.5" />Linha em branco
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
