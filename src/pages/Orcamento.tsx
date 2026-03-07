@@ -133,11 +133,15 @@ export default function Orcamento() {
   const [cliente, setCliente] = useState<DadosCliente>({ construtora: "", empreendimento: "", cidade: "", contato: "", telefone: "", email: "" });
   const [proposta, setProposta] = useState<DadosProposta>({ data: format(new Date(), "yyyy-MM-dd"), responsavel: "", observacoes: "" });
   const [etapas, setEtapas] = useState<EtapaOrcamento[]>([
-    { id: "1", etapa: "Fundação", area: 0, valorM2: 250, taxa: 1, observacao: "" },
+    { id: "1", etapa: "Fundação (Sapata/Bloco)", area: 0, valorM2: 250, taxa: 2, observacao: "" },
   ]);
 
   const addEtapa = () => {
     setEtapas(prev => [...prev, { id: `${Date.now()}`, etapa: "", area: 0, valorM2: 250, taxa: 1, observacao: "" }]);
+  };
+
+  const addEtapaPreDefinida = (item: { etapa: string; valorM2: number; taxa: number }) => {
+    setEtapas(prev => [...prev, { id: `${Date.now()}-${Math.random()}`, etapa: item.etapa, area: 0, valorM2: item.valorM2, taxa: item.taxa, observacao: "" }]);
   };
 
   const removeEtapa = (id: string) => setEtapas(prev => prev.filter(e => e.id !== id));
@@ -423,8 +427,32 @@ export default function Orcamento() {
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">Tabela de Orçamento</CardTitle>
-                  <Button size="sm" variant="outline" onClick={addEtapa}><Plus className="mr-1 h-4 w-4" />Adicionar Etapa</Button>
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-base">Tabela de Orçamento</CardTitle>
+                  </div>
+                  <div className="flex gap-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" variant="outline"><Plus className="mr-1 h-4 w-4" />Adicionar Atividade <ChevronDown className="ml-1 h-3 w-3" /></Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="max-h-[400px] overflow-y-auto w-[280px]">
+                        {etapasPreDefinidas.map(grupo => (
+                          <div key={grupo.grupo}>
+                            <DropdownMenuLabel className="text-xs text-muted-foreground">{grupo.grupo}</DropdownMenuLabel>
+                            {grupo.itens.map(item => (
+                              <DropdownMenuItem key={item.etapa} onClick={() => addEtapaPreDefinida(item)}>
+                                <span className="text-sm">{item.etapa}</span>
+                              </DropdownMenuItem>
+                            ))}
+                            <DropdownMenuSeparator />
+                          </div>
+                        ))}
+                        <DropdownMenuItem onClick={addEtapa} className="font-medium text-primary">
+                          <Plus className="mr-1 h-3.5 w-3.5" />Linha em branco
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
