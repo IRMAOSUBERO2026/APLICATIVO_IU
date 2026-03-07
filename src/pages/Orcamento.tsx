@@ -7,7 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Trash2, Download, FileText, Save, Eye } from "lucide-react";
+import { Plus, Trash2, Download, FileText, Save, Eye, ChevronDown } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -58,10 +60,53 @@ const diferenciais = [
 ];
 
 const servicosAdmin = [
-  { profissional: "Profissionais (Carpinteiro/Armador)", valor: 420 },
+  { profissional: "Carpinteiro", valor: 420 },
+  { profissional: "Armador", valor: 420 },
+  { profissional: "Pedreiro", valor: 420 },
   { profissional: "Meio Oficial", valor: 355 },
-  { profissional: "Serventes", valor: 295 },
-  { profissional: "Encarregados", valor: 500 },
+  { profissional: "Servente", valor: 295 },
+  { profissional: "Encarregado", valor: 500 },
+  { profissional: "Mestre de Obras", valor: 600 },
+  { profissional: "Técnico de Segurança", valor: 480 },
+  { profissional: "Apontador", valor: 380 },
+  { profissional: "Guincheiro", valor: 400 },
+];
+
+const etapasPreDefinidas = [
+  { grupo: "Estrutura", itens: [
+    { etapa: "Fundação (Sapata/Bloco)", valorM2: 250, taxa: 2 },
+    { etapa: "Fundação (Estaca/Tubulão)", valorM2: 280, taxa: 2 },
+    { etapa: "Pilares Subsolo", valorM2: 250, taxa: 1.5 },
+    { etapa: "Pilares Tipo", valorM2: 250, taxa: 1 },
+    { etapa: "Vigas Baldrame", valorM2: 250, taxa: 1.5 },
+    { etapa: "Vigas Tipo", valorM2: 250, taxa: 1 },
+    { etapa: "Laje Subsolo", valorM2: 250, taxa: 1.5 },
+    { etapa: "Laje Tipo", valorM2: 250, taxa: 1 },
+    { etapa: "Laje Cobertura", valorM2: 250, taxa: 1.2 },
+    { etapa: "Laje Ático", valorM2: 250, taxa: 1.3 },
+    { etapa: "Laje Pé Direito Duplo", valorM2: 250, taxa: 1.5 },
+    { etapa: "Escadas", valorM2: 280, taxa: 1.5 },
+    { etapa: "Reservatório Superior", valorM2: 300, taxa: 1.8 },
+    { etapa: "Reservatório Inferior", valorM2: 280, taxa: 1.5 },
+    { etapa: "Casa de Máquinas", valorM2: 280, taxa: 1.3 },
+    { etapa: "Muros de Arrimo", valorM2: 250, taxa: 1.5 },
+  ]},
+  { grupo: "Alvenaria / Cinza", itens: [
+    { etapa: "Levantamento de Paredes (Tijolos)", valorM2: 85, taxa: 1 },
+    { etapa: "Chapisco", valorM2: 18, taxa: 1 },
+    { etapa: "Reboco Interno", valorM2: 45, taxa: 1 },
+    { etapa: "Reboco Externo", valorM2: 55, taxa: 1.2 },
+    { etapa: "Contrapiso", valorM2: 40, taxa: 1 },
+    { etapa: "Regularização de Piso", valorM2: 35, taxa: 1 },
+  ]},
+  { grupo: "Infraestrutura", itens: [
+    { etapa: "Calçada Perimetral", valorM2: 120, taxa: 1 },
+    { etapa: "Tapume", valorM2: 95, taxa: 1 },
+    { etapa: "Bandeja de Proteção", valorM2: 150, taxa: 1.3 },
+    { etapa: "Área de Vivência", valorM2: 180, taxa: 1 },
+    { etapa: "Plataforma de Proteção (Tela)", valorM2: 80, taxa: 1 },
+    { etapa: "Rampas de Acesso", valorM2: 130, taxa: 1.2 },
+  ]},
 ];
 
 const itensNaoInclusos = [
