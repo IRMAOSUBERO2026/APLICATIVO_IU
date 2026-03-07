@@ -16,6 +16,7 @@ import DiarioObra from "./pages/DiarioObra";
 import EntregaEPI from "./pages/EntregaEPI";
 import Ferias from "./pages/Ferias";
 import Orcamento from "./pages/Orcamento";
+import Compras from "./pages/Compras";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,6 +41,7 @@ const App = () => (
           <Route path="/entrega-epi" element={<EntregaEPI />} />
           <Route path="/ferias" element={<Ferias />} />
           <Route path="/orcamento" element={<Orcamento />} />
+          <Route path="/compras" element={<Compras />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

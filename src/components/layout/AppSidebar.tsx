@@ -9,6 +9,7 @@ import {
   CreditCard,
   Shield,
   Wrench,
+  ShoppingCart,
   X,
   ClipboardList,
   HardDrive,
@@ -37,6 +38,7 @@ const menuSections = [
   {
     label: "Logística",
     items: [
+      { icon: ShoppingCart, label: "Compras", path: "/compras" },
       { icon: Package, label: "Estoque", path: "/estoque" },
       { icon: HardDrive, label: "Entrega de EPI", path: "/entrega-epi" },
       { icon: Wrench, label: "Equip. Próprios", path: "/equipamentos-proprios" },
