@@ -10,8 +10,8 @@ interface Props {
   onChange: (data: FolhaInput) => void;
 }
 
-function NumField({ label, value, onChange, min = 0, step = "1" }: {
-  label: string; value: number; onChange: (v: number) => void; min?: number; step?: string;
+function NumField({ label, value, onChange, min = 0, step = "1", disabled = false }: {
+  label: string; value: number; onChange: (v: number) => void; min?: number; step?: string; disabled?: boolean;
 }) {
   return (
     <div className="space-y-1">
@@ -23,6 +23,7 @@ function NumField({ label, value, onChange, min = 0, step = "1" }: {
         value={value}
         onChange={(e) => onChange(Number(e.target.value) || 0)}
         className="h-9"
+        disabled={disabled}
       />
     </div>
   );
@@ -34,7 +35,7 @@ export function FolhaInputForm({ data, onChange }: Props) {
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      {/* Salários e Mês */}
+      {/* Salários (auto-preenchidos, mas editáveis) */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
@@ -44,7 +45,7 @@ export function FolhaInputForm({ data, onChange }: Props) {
         <CardContent className="grid grid-cols-2 gap-3">
           <NumField label="Salário Registro" value={data.salario_registro} onChange={(v) => set("salario_registro", v)} step="0.01" />
           <NumField label="Salário Combinado" value={data.salario_combinado} onChange={(v) => set("salario_combinado", v)} step="0.01" />
-          <NumField label="Dias do Mês" value={data.dias_do_mes} onChange={(v) => set("dias_do_mes", v)} />
+          <NumField label="Dias do Mês" value={data.dias_do_mes} onChange={(v) => set("dias_do_mes", v)} disabled />
           <NumField label="Domingos/Feriados" value={data.domingos_feriados_no_mes} onChange={(v) => set("domingos_feriados_no_mes", v)} />
           <div className="col-span-2 flex items-center justify-between rounded-md border border-border p-3">
             <Label className="text-xs">Usar salário sindicato p/ HE</Label>

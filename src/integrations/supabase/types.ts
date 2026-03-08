@@ -423,6 +423,157 @@ export type Database = {
         }
         Relationships: []
       }
+      folhas_pagamento: {
+        Row: {
+          ano: number
+          atestados: number
+          base_dia: number
+          base_hora: number
+          bonificacao_assiduidade: number
+          bonificacao_meta: number
+          created_at: string
+          desconto_emprestimo: number
+          desconto_faltas: number
+          desconto_horas_negativas: number
+          desconto_marmita: number
+          desconto_vale: number
+          dias_do_mes: number
+          domingos_feriados_no_mes: number
+          dsr_he: number
+          dsr_perdido: number
+          empresa_id: string
+          faltas: number
+          funcionario_id: string
+          he_100: number
+          he_sabado: number
+          he_semanal: number
+          horas_extras_100: number
+          horas_extras_sabado: number
+          horas_extras_semanais: number
+          horas_negativas: number
+          id: string
+          mes: number
+          obra_id: string
+          outros_descontos: number
+          salario_combinado: number
+          salario_final: number
+          salario_registro: number
+          semanas_com_falta: number
+          total_bonificacoes: number
+          total_descontos: number
+          total_he: number
+          updated_at: string
+          usar_salario_sindicato_para_he: boolean
+          valor_atestados: number
+        }
+        Insert: {
+          ano: number
+          atestados?: number
+          base_dia?: number
+          base_hora?: number
+          bonificacao_assiduidade?: number
+          bonificacao_meta?: number
+          created_at?: string
+          desconto_emprestimo?: number
+          desconto_faltas?: number
+          desconto_horas_negativas?: number
+          desconto_marmita?: number
+          desconto_vale?: number
+          dias_do_mes?: number
+          domingos_feriados_no_mes?: number
+          dsr_he?: number
+          dsr_perdido?: number
+          empresa_id: string
+          faltas?: number
+          funcionario_id: string
+          he_100?: number
+          he_sabado?: number
+          he_semanal?: number
+          horas_extras_100?: number
+          horas_extras_sabado?: number
+          horas_extras_semanais?: number
+          horas_negativas?: number
+          id?: string
+          mes: number
+          obra_id: string
+          outros_descontos?: number
+          salario_combinado?: number
+          salario_final?: number
+          salario_registro?: number
+          semanas_com_falta?: number
+          total_bonificacoes?: number
+          total_descontos?: number
+          total_he?: number
+          updated_at?: string
+          usar_salario_sindicato_para_he?: boolean
+          valor_atestados?: number
+        }
+        Update: {
+          ano?: number
+          atestados?: number
+          base_dia?: number
+          base_hora?: number
+          bonificacao_assiduidade?: number
+          bonificacao_meta?: number
+          created_at?: string
+          desconto_emprestimo?: number
+          desconto_faltas?: number
+          desconto_horas_negativas?: number
+          desconto_marmita?: number
+          desconto_vale?: number
+          dias_do_mes?: number
+          domingos_feriados_no_mes?: number
+          dsr_he?: number
+          dsr_perdido?: number
+          empresa_id?: string
+          faltas?: number
+          funcionario_id?: string
+          he_100?: number
+          he_sabado?: number
+          he_semanal?: number
+          horas_extras_100?: number
+          horas_extras_sabado?: number
+          horas_extras_semanais?: number
+          horas_negativas?: number
+          id?: string
+          mes?: number
+          obra_id?: string
+          outros_descontos?: number
+          salario_combinado?: number
+          salario_final?: number
+          salario_registro?: number
+          semanas_com_falta?: number
+          total_bonificacoes?: number
+          total_descontos?: number
+          total_he?: number
+          updated_at?: string
+          usar_salario_sindicato_para_he?: boolean
+          valor_atestados?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folhas_pagamento_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "folhas_pagamento_funcionario_id_fkey"
+            columns: ["funcionario_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "folhas_pagamento_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fornecedores: {
         Row: {
           ativo: boolean
