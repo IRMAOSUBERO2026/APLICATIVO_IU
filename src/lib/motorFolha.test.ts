@@ -58,7 +58,7 @@ describe("motorFolha", () => {
     expect(r.base_dia).toBe(106.67);
     expect(r.desconto_faltas).toBe(213.34); // 106.67 * 2
     expect(r.dsr_perdido).toBe(213.34); // 106.67 * 2
-    expect(r.salario_final).toBe(3200 - 213.34 - 213.34);
+    expect(r.salario_final).toBe(2773.32);
   });
 
   it("calcula atestados pelo salário de registro", () => {
