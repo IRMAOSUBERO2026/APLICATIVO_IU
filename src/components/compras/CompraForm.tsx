@@ -7,25 +7,52 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, Save } from "lucide-react";
-import { Compra, ItemCompra, CATEGORIAS_MATERIAL, UNIDADES, FormaPagamento } from "./types";
+import { CATEGORIAS_MATERIAL, UNIDADES } from "./types";
+import { ObraOption, EmpresaOption } from "@/hooks/useCompras";
 
-interface CompraFormProps {
-  onSave: (compra: Compra) => void;
-  onCancel: () => void;
-  obras: string[];
+interface ItemForm {
+  id: string;
+  descricao: string;
+  unidade: string;
+  quantidade: number;
+  valorUnitario: number;
+  subtotal: number;
+  categoria: string;
 }
 
-export function CompraForm({ onSave, onCancel, obras }: CompraFormProps) {
+interface CompraFormProps {
+  onSave: (data: {
+    empresa_id: string;
+    obra_id?: string;
+    fornecedor_nome: string;
+    fornecedor_cnpj?: string;
+    nfe_numero?: string;
+    data_emissao: string;
+    data_entrega?: string;
+    origem: string;
+    forma_pagamento?: string;
+    parcelas?: number;
+    observacoes?: string;
+    itens: { descricao: string; categoria?: string; unidade: string; quantidade: number; valor_unitario: number; subtotal: number }[];
+  }) => void;
+  onCancel: () => void;
+  obras: ObraOption[];
+  empresas: EmpresaOption[];
+  isSaving?: boolean;
+}
+
+export function CompraForm({ onSave, onCancel, obras, empresas, isSaving }: CompraFormProps) {
+  const [empresaId, setEmpresaId] = useState(empresas[0]?.id || "");
   const [fornecedor, setFornecedor] = useState("");
   const [cnpj, setCnpj] = useState("");
   const [dataEmissao, setDataEmissao] = useState(new Date().toISOString().split("T")[0]);
   const [dataEntrega, setDataEntrega] = useState("");
-  const [obra, setObra] = useState("");
-  const [formaPagamento, setFormaPagamento] = useState<FormaPagamento>("boleto");
+  const [obraId, setObraId] = useState("");
+  const [formaPagamento, setFormaPagamento] = useState("boleto");
   const [parcelas, setParcelas] = useState(1);
   const [observacoes, setObservacoes] = useState("");
   const [nfeNumero, setNfeNumero] = useState("");
-  const [itens, setItens] = useState<ItemCompra[]>([
+  const [itens, setItens] = useState<ItemForm[]>([
     { id: crypto.randomUUID(), descricao: "", unidade: "un", quantidade: 1, valorUnitario: 0, subtotal: 0, categoria: "Outros" },
   ]);
 
@@ -37,7 +64,7 @@ export function CompraForm({ onSave, onCancel, obras }: CompraFormProps) {
     if (itens.length > 1) setItens(itens.filter((i) => i.id !== id));
   };
 
-  const updateItem = (id: string, field: keyof ItemCompra, value: string | number) => {
+  const updateItem = (id: string, field: keyof ItemForm, value: string | number) => {
     setItens(itens.map((item) => {
       if (item.id !== id) return item;
       const updated = { ...item, [field]: value };
@@ -49,25 +76,28 @@ export function CompraForm({ onSave, onCancel, obras }: CompraFormProps) {
   const totalCompra = itens.reduce((sum, i) => sum + i.subtotal, 0);
 
   const handleSave = () => {
-    if (!fornecedor || !obra) return;
-    const compra: Compra = {
-      id: crypto.randomUUID(),
-      numero: `CP-${Date.now().toString(36).toUpperCase()}`,
-      fornecedor,
-      cnpjFornecedor: cnpj,
-      dataEmissao,
-      dataEntrega,
-      obra,
-      status: "pendente",
+    if (!fornecedor || !empresaId) return;
+    onSave({
+      empresa_id: empresaId,
+      obra_id: obraId || undefined,
+      fornecedor_nome: fornecedor,
+      fornecedor_cnpj: cnpj || undefined,
+      nfe_numero: nfeNumero || undefined,
+      data_emissao: dataEmissao,
+      data_entrega: dataEntrega || undefined,
       origem: "manual",
-      formaPagamento,
+      forma_pagamento: formaPagamento,
       parcelas,
-      observacoes,
-      itens,
-      totalCompra,
-      nfeNumero,
-    };
-    onSave(compra);
+      observacoes: observacoes || undefined,
+      itens: itens.filter(i => i.descricao).map(i => ({
+        descricao: i.descricao,
+        categoria: i.categoria,
+        unidade: i.unidade,
+        quantidade: i.quantidade,
+        valor_unitario: i.valorUnitario,
+        subtotal: i.subtotal,
+      })),
+    });
   };
 
   return (
@@ -106,17 +136,26 @@ export function CompraForm({ onSave, onCancel, obras }: CompraFormProps) {
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <Label>Obra *</Label>
-            <Select value={obra} onValueChange={setObra}>
+            <Label>Empresa *</Label>
+            <Select value={empresaId} onValueChange={setEmpresaId}>
               <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
               <SelectContent>
-                {obras.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                {empresas.map((e) => <SelectItem key={e.id} value={e.id}>{e.razao_social}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Obra</Label>
+            <Select value={obraId} onValueChange={setObraId}>
+              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectContent>
+                {obras.map((o) => <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <div>
             <Label>Forma de Pagamento</Label>
-            <Select value={formaPagamento} onValueChange={(v) => setFormaPagamento(v as FormaPagamento)}>
+            <Select value={formaPagamento} onValueChange={setFormaPagamento}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="boleto">Boleto</SelectItem>
@@ -131,7 +170,7 @@ export function CompraForm({ onSave, onCancel, obras }: CompraFormProps) {
             <Label>Parcelas</Label>
             <Input type="number" min={1} value={parcelas} onChange={(e) => setParcelas(Number(e.target.value))} />
           </div>
-          <div className="md:col-span-3">
+          <div className="md:col-span-2">
             <Label>Observações</Label>
             <Textarea value={observacoes} onChange={(e) => setObservacoes(e.target.value)} placeholder="Observações da compra..." rows={2} />
           </div>
@@ -200,7 +239,7 @@ export function CompraForm({ onSave, onCancel, obras }: CompraFormProps) {
 
       <div className="flex gap-3 justify-end">
         <Button variant="outline" onClick={onCancel}>Cancelar</Button>
-        <Button onClick={handleSave}><Save className="h-4 w-4 mr-1" />Salvar Compra</Button>
+        <Button onClick={handleSave} disabled={isSaving}><Save className="h-4 w-4 mr-1" />{isSaving ? "Salvando..." : "Salvar Compra"}</Button>
       </div>
     </div>
   );

@@ -6,104 +6,70 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
-  ShoppingCart, Plus, Search, FileDown, Package, CreditCard, TrendingUp, Eye,
+  ShoppingCart, Plus, Search, FileDown, Package, TrendingUp, Eye,
   CheckCircle2, XCircle, FileText, BarChart3,
 } from "lucide-react";
 import { CompraForm } from "@/components/compras/CompraForm";
 import { ImportadorArquivos } from "@/components/compras/ImportadorArquivos";
-import { Compra, CompraStatus, STATUS_LABELS, STATUS_COLORS, ORIGEM_LABELS } from "@/components/compras/types";
+import { CompraStatus, STATUS_LABELS, STATUS_COLORS, ORIGEM_LABELS, OrigemLancamento } from "@/components/compras/types";
+import { useCompras, useEmpresas, useObras, useCreateCompra, useUpdateCompraStatus, CompraDB } from "@/hooks/useCompras";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
-import { toast } from "sonner";
-
-const OBRAS_MOCK = ["Edifício Aurora", "Residencial Monte Verde", "Condomínio Solar", "Galpão Industrial BK"];
-
-const COMPRAS_MOCK: Compra[] = [
-  {
-    id: "1", numero: "CP-001", fornecedor: "Aço Brasil Ltda", cnpjFornecedor: "12.345.678/0001-90",
-    dataEmissao: "2025-06-01", dataEntrega: "2025-06-05", obra: "Edifício Aurora",
-    status: "recebida", origem: "xml", formaPagamento: "boleto", parcelas: 3,
-    observacoes: "", nfeNumero: "12345",
-    itens: [
-      { id: "i1", descricao: "Vergalhão CA-50 10mm", unidade: "kg", quantidade: 5000, valorUnitario: 6.5, subtotal: 32500, categoria: "Aço e Ferragens" },
-      { id: "i2", descricao: "Arame recozido 18", unidade: "kg", quantidade: 200, valorUnitario: 12, subtotal: 2400, categoria: "Aço e Ferragens" },
-    ],
-    totalCompra: 34900,
-  },
-  {
-    id: "2", numero: "CP-002", fornecedor: "Concreteira Max", cnpjFornecedor: "98.765.432/0001-10",
-    dataEmissao: "2025-06-10", dataEntrega: "2025-06-12", obra: "Residencial Monte Verde",
-    status: "aprovada", origem: "manual", formaPagamento: "pix", parcelas: 1,
-    observacoes: "Entrega programada para segunda",
-    itens: [
-      { id: "i3", descricao: "Cimento CP-II 50kg", unidade: "sc", quantidade: 300, valorUnitario: 38, subtotal: 11400, categoria: "Cimento e Argamassa" },
-    ],
-    totalCompra: 11400,
-  },
-  {
-    id: "3", numero: "CP-003", fornecedor: "EPI Segurança Total", cnpjFornecedor: "11.222.333/0001-44",
-    dataEmissao: "2025-06-15", dataEntrega: "", obra: "Edifício Aurora",
-    status: "pendente", origem: "manual", formaPagamento: "boleto", parcelas: 1,
-    observacoes: "",
-    itens: [
-      { id: "i4", descricao: "Capacete classe B", unidade: "un", quantidade: 50, valorUnitario: 45, subtotal: 2250, categoria: "EPI" },
-      { id: "i5", descricao: "Luva de raspa", unidade: "un", quantidade: 100, valorUnitario: 18, subtotal: 1800, categoria: "EPI" },
-      { id: "i6", descricao: "Botina de segurança", unidade: "un", quantidade: 30, valorUnitario: 95, subtotal: 2850, categoria: "EPI" },
-    ],
-    totalCompra: 6900,
-  },
-];
 
 export default function Compras() {
-  const [compras, setCompras] = useState<Compra[]>(COMPRAS_MOCK);
+  const { data: compras = [], isLoading } = useCompras();
+  const { data: empresas = [] } = useEmpresas();
+  const { data: obras = [] } = useObras();
+  const createCompra = useCreateCompra();
+  const updateStatus = useUpdateCompraStatus();
+
   const [showForm, setShowForm] = useState(false);
   const [showImport, setShowImport] = useState(false);
-  const [detalhesCompra, setDetalhesCompra] = useState<Compra | null>(null);
+  const [detalhesCompra, setDetalhesCompra] = useState<CompraDB | null>(null);
   const [filtroObra, setFiltroObra] = useState("todas");
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const [busca, setBusca] = useState("");
 
   const filtered = useMemo(() => {
     return compras.filter((c) => {
-      if (filtroObra !== "todas" && c.obra !== filtroObra) return false;
+      if (filtroObra !== "todas" && c.obra_id !== filtroObra) return false;
       if (filtroStatus !== "todos" && c.status !== filtroStatus) return false;
       if (busca) {
         const q = busca.toLowerCase();
-        return c.fornecedor.toLowerCase().includes(q) || c.numero.toLowerCase().includes(q) || c.itens.some((i) => i.descricao.toLowerCase().includes(q));
+        const fornNome = c.fornecedores?.razao_social?.toLowerCase() || "";
+        const itensMatch = c.itens_compra?.some((i) => i.descricao.toLowerCase().includes(q)) || false;
+        return fornNome.includes(q) || c.numero.toLowerCase().includes(q) || itensMatch;
       }
       return true;
     });
   }, [compras, filtroObra, filtroStatus, busca]);
 
   const kpis = useMemo(() => {
-    const totalMes = compras.reduce((s, c) => s + c.totalCompra, 0);
+    const totalMes = compras.reduce((s, c) => s + (c.total || 0), 0);
     const pendentes = compras.filter((c) => c.status === "pendente").length;
     const recebidas = compras.filter((c) => c.status === "recebida").length;
-    const totalItens = compras.reduce((s, c) => s + c.itens.length, 0);
+    const totalItens = compras.reduce((s, c) => s + (c.itens_compra?.length || 0), 0);
     return { totalMes, pendentes, recebidas, totalItens };
   }, [compras]);
 
-  const handleSave = (compra: Compra) => {
-    setCompras([compra, ...compras]);
-    setShowForm(false);
-    toast.success("Compra registrada com sucesso!");
+  const handleSave = (data: Parameters<typeof createCompra.mutate>[0]) => {
+    createCompra.mutate(data, {
+      onSuccess: () => setShowForm(false),
+    });
   };
 
-  const handleImport = (data: Partial<Compra>) => {
+  const handleImport = () => {
     setShowImport(false);
     setShowForm(true);
-    toast.info("Dados importados. Complete o cadastro da compra.");
   };
 
-  const updateStatus = (id: string, status: CompraStatus) => {
-    setCompras(compras.map((c) => (c.id === id ? { ...c, status } : c)));
-    if (status === "recebida") toast.success("Compra recebida — itens disponíveis no Estoque e lançamento gerado no Financeiro.");
-    if (status === "aprovada") toast.success("Compra aprovada — aguardando recebimento.");
-    if (status === "cancelada") toast.info("Compra cancelada.");
+  const handleUpdateStatus = (id: string, status: CompraStatus) => {
+    updateStatus.mutate({ id, status });
+    setDetalhesCompra(null);
   };
 
   const exportPDF = () => {
@@ -112,29 +78,37 @@ export default function Compras() {
     doc.text("Relatório de Compras", 14, 20);
     doc.setFontSize(9);
     doc.text(`Gerado em ${new Date().toLocaleDateString("pt-BR")}`, 14, 27);
-
     autoTable(doc, {
       startY: 35,
       head: [["Nº", "Fornecedor", "Obra", "Data", "Total", "Status", "Origem"]],
       body: filtered.map((c) => [
-        c.numero, c.fornecedor, c.obra,
-        new Date(c.dataEmissao).toLocaleDateString("pt-BR"),
-        c.totalCompra.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
-        STATUS_LABELS[c.status], ORIGEM_LABELS[c.origem],
+        c.numero,
+        c.fornecedores?.razao_social || "—",
+        c.obras?.nome || "—",
+        new Date(c.data_emissao).toLocaleDateString("pt-BR"),
+        (c.total || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
+        STATUS_LABELS[c.status as CompraStatus] || c.status,
+        ORIGEM_LABELS[c.origem as OrigemLancamento] || c.origem,
       ]),
       styles: { fontSize: 8 },
       headStyles: { fillColor: [45, 80, 36] },
     });
-
     doc.save("relatorio-compras.pdf");
   };
 
   const exportExcel = () => {
     const data = filtered.map((c) => ({
-      Número: c.numero, Fornecedor: c.fornecedor, CNPJ: c.cnpjFornecedor,
-      Obra: c.obra, "Data Emissão": c.dataEmissao, "NF-e": c.nfeNumero || "",
-      Total: c.totalCompra, Status: STATUS_LABELS[c.status], Origem: ORIGEM_LABELS[c.origem],
-      Pagamento: c.formaPagamento, Parcelas: c.parcelas,
+      Número: c.numero,
+      Fornecedor: c.fornecedores?.razao_social || "",
+      CNPJ: c.fornecedores?.cnpj || "",
+      Obra: c.obras?.nome || "",
+      "Data Emissão": c.data_emissao,
+      "NF-e": c.nfe_numero || "",
+      Total: c.total,
+      Status: STATUS_LABELS[c.status as CompraStatus] || c.status,
+      Origem: ORIGEM_LABELS[c.origem as OrigemLancamento] || c.origem,
+      Pagamento: c.forma_pagamento || "",
+      Parcelas: c.parcelas || 1,
     }));
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
@@ -179,7 +153,7 @@ export default function Compras() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-warning/10 p-2.5"><ShoppingCart className="h-5 w-5 text-warning" /></div>
+                <div className="rounded-lg bg-orange-500/10 p-2.5"><ShoppingCart className="h-5 w-5 text-orange-500" /></div>
                 <div>
                   <p className="text-xs text-muted-foreground">Pendentes</p>
                   <p className="text-lg font-bold">{kpis.pendentes}</p>
@@ -190,7 +164,7 @@ export default function Compras() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-success/10 p-2.5"><CheckCircle2 className="h-5 w-5 text-success" /></div>
+                <div className="rounded-lg bg-green-500/10 p-2.5"><CheckCircle2 className="h-5 w-5 text-green-500" /></div>
                 <div>
                   <p className="text-xs text-muted-foreground">Recebidas</p>
                   <p className="text-lg font-bold">{kpis.recebidas}</p>
@@ -201,7 +175,7 @@ export default function Compras() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-accent/10 p-2.5"><Package className="h-5 w-5 text-accent" /></div>
+                <div className="rounded-lg bg-blue-500/10 p-2.5"><Package className="h-5 w-5 text-blue-500" /></div>
                 <div>
                   <p className="text-xs text-muted-foreground">Itens Comprados</p>
                   <p className="text-lg font-bold">{kpis.totalItens}</p>
@@ -215,7 +189,7 @@ export default function Compras() {
         <Dialog open={showImport} onOpenChange={setShowImport}>
           <DialogContent className="max-w-lg">
             <DialogHeader><DialogTitle>Importar Nota Fiscal</DialogTitle></DialogHeader>
-            <ImportadorArquivos onImport={handleImport} obras={OBRAS_MOCK} />
+            <ImportadorArquivos onImport={handleImport} obras={obras.map(o => o.nome)} />
           </DialogContent>
         </Dialog>
 
@@ -223,7 +197,13 @@ export default function Compras() {
         <Dialog open={showForm} onOpenChange={setShowForm}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>Nova Compra — Lançamento Manual</DialogTitle></DialogHeader>
-            <CompraForm onSave={handleSave} onCancel={() => setShowForm(false)} obras={OBRAS_MOCK} />
+            <CompraForm
+              onSave={handleSave}
+              onCancel={() => setShowForm(false)}
+              obras={obras}
+              empresas={empresas}
+              isSaving={createCompra.isPending}
+            />
           </DialogContent>
         </Dialog>
 
@@ -234,18 +214,18 @@ export default function Compras() {
               <>
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
-                    {detalhesCompra.numero} — {detalhesCompra.fornecedor}
-                    <Badge className={STATUS_COLORS[detalhesCompra.status]}>{STATUS_LABELS[detalhesCompra.status]}</Badge>
+                    {detalhesCompra.numero} — {detalhesCompra.fornecedores?.razao_social || "Sem fornecedor"}
+                    <Badge className={STATUS_COLORS[detalhesCompra.status as CompraStatus] || ""}>{STATUS_LABELS[detalhesCompra.status as CompraStatus] || detalhesCompra.status}</Badge>
                   </DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                    <div><span className="text-muted-foreground">CNPJ:</span><br />{detalhesCompra.cnpjFornecedor || "—"}</div>
-                    <div><span className="text-muted-foreground">NF-e:</span><br />{detalhesCompra.nfeNumero || "—"}</div>
-                    <div><span className="text-muted-foreground">Obra:</span><br />{detalhesCompra.obra}</div>
-                    <div><span className="text-muted-foreground">Emissão:</span><br />{new Date(detalhesCompra.dataEmissao).toLocaleDateString("pt-BR")}</div>
-                    <div><span className="text-muted-foreground">Pagamento:</span><br />{detalhesCompra.formaPagamento} ({detalhesCompra.parcelas}x)</div>
-                    <div><span className="text-muted-foreground">Origem:</span><br />{ORIGEM_LABELS[detalhesCompra.origem]}</div>
+                    <div><span className="text-muted-foreground">CNPJ:</span><br />{detalhesCompra.fornecedores?.cnpj || "—"}</div>
+                    <div><span className="text-muted-foreground">NF-e:</span><br />{detalhesCompra.nfe_numero || "—"}</div>
+                    <div><span className="text-muted-foreground">Obra:</span><br />{detalhesCompra.obras?.nome || "—"}</div>
+                    <div><span className="text-muted-foreground">Emissão:</span><br />{new Date(detalhesCompra.data_emissao).toLocaleDateString("pt-BR")}</div>
+                    <div><span className="text-muted-foreground">Pagamento:</span><br />{detalhesCompra.forma_pagamento || "—"} ({detalhesCompra.parcelas || 1}x)</div>
+                    <div><span className="text-muted-foreground">Origem:</span><br />{ORIGEM_LABELS[detalhesCompra.origem as OrigemLancamento] || detalhesCompra.origem}</div>
                   </div>
                   <Table>
                     <TableHeader>
@@ -258,12 +238,12 @@ export default function Compras() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {detalhesCompra.itens.map((item) => (
+                      {(detalhesCompra.itens_compra || []).map((item) => (
                         <TableRow key={item.id}>
                           <TableCell>{item.descricao}</TableCell>
-                          <TableCell><Badge variant="outline" className="text-xs">{item.categoria}</Badge></TableCell>
+                          <TableCell><Badge variant="outline" className="text-xs">{item.categoria || "—"}</Badge></TableCell>
                           <TableCell className="text-right">{item.quantidade} {item.unidade}</TableCell>
-                          <TableCell className="text-right">{item.valorUnitario.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</TableCell>
+                          <TableCell className="text-right">{item.valor_unitario.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</TableCell>
                           <TableCell className="text-right font-medium">{item.subtotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</TableCell>
                         </TableRow>
                       ))}
@@ -273,21 +253,21 @@ export default function Compras() {
                     <div className="flex gap-2">
                       {detalhesCompra.status === "pendente" && (
                         <>
-                          <Button size="sm" onClick={() => { updateStatus(detalhesCompra.id, "aprovada"); setDetalhesCompra(null); }}>
+                          <Button size="sm" onClick={() => handleUpdateStatus(detalhesCompra.id, "aprovada")}>
                             <CheckCircle2 className="h-4 w-4 mr-1" />Aprovar
                           </Button>
-                          <Button size="sm" variant="destructive" onClick={() => { updateStatus(detalhesCompra.id, "cancelada"); setDetalhesCompra(null); }}>
+                          <Button size="sm" variant="destructive" onClick={() => handleUpdateStatus(detalhesCompra.id, "cancelada")}>
                             <XCircle className="h-4 w-4 mr-1" />Cancelar
                           </Button>
                         </>
                       )}
                       {detalhesCompra.status === "aprovada" && (
-                        <Button size="sm" onClick={() => { updateStatus(detalhesCompra.id, "recebida"); setDetalhesCompra(null); }}>
+                        <Button size="sm" onClick={() => handleUpdateStatus(detalhesCompra.id, "recebida")}>
                           <Package className="h-4 w-4 mr-1" />Confirmar Recebimento
                         </Button>
                       )}
                     </div>
-                    <span className="text-xl font-bold">{detalhesCompra.totalCompra.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
+                    <span className="text-xl font-bold">{(detalhesCompra.total || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
                   </div>
                 </div>
               </>
@@ -308,7 +288,7 @@ export default function Compras() {
                   <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todas">Todas as obras</SelectItem>
-                    {OBRAS_MOCK.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                    {obras.map((o) => <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <Select value={filtroStatus} onValueChange={setFiltroStatus}>
@@ -327,72 +307,52 @@ export default function Compras() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nº</TableHead>
-                    <TableHead>Fornecedor</TableHead>
-                    <TableHead>Obra</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Origem</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.length === 0 ? (
-                    <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhuma compra encontrada.</TableCell></TableRow>
-                  ) : (
-                    filtered.map((c) => (
-                      <TableRow key={c.id} className="cursor-pointer" onClick={() => setDetalhesCompra(c)}>
-                        <TableCell className="font-mono text-xs">{c.numero}</TableCell>
-                        <TableCell className="font-medium">{c.fornecedor}</TableCell>
-                        <TableCell className="text-sm">{c.obra}</TableCell>
-                        <TableCell className="text-sm">{new Date(c.dataEmissao).toLocaleDateString("pt-BR")}</TableCell>
-                        <TableCell><Badge variant="outline" className="text-xs">{ORIGEM_LABELS[c.origem]}</Badge></TableCell>
-                        <TableCell className="text-right font-medium">{c.totalCompra.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</TableCell>
-                        <TableCell><Badge className={`text-xs ${STATUS_COLORS[c.status]}`}>{STATUS_LABELS[c.status]}</Badge></TableCell>
-                        <TableCell className="text-right">
-                          <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); setDetalhesCompra(c); }}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+            {isLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nº</TableHead>
+                      <TableHead>Fornecedor</TableHead>
+                      <TableHead>Obra</TableHead>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Origem</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.length === 0 ? (
+                      <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhuma compra encontrada.</TableCell></TableRow>
+                    ) : (
+                      filtered.map((c) => (
+                        <TableRow key={c.id} className="cursor-pointer" onClick={() => setDetalhesCompra(c)}>
+                          <TableCell className="font-mono text-xs">{c.numero}</TableCell>
+                          <TableCell className="font-medium">{c.fornecedores?.razao_social || "—"}</TableCell>
+                          <TableCell className="text-sm">{c.obras?.nome || "—"}</TableCell>
+                          <TableCell className="text-sm">{new Date(c.data_emissao).toLocaleDateString("pt-BR")}</TableCell>
+                          <TableCell><Badge variant="outline" className="text-xs">{ORIGEM_LABELS[c.origem as OrigemLancamento] || c.origem}</Badge></TableCell>
+                          <TableCell className="text-right font-medium">{(c.total || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</TableCell>
+                          <TableCell><Badge className={`text-xs ${STATUS_COLORS[c.status as CompraStatus] || ""}`}>{STATUS_LABELS[c.status as CompraStatus] || c.status}</Badge></TableCell>
+                          <TableCell className="text-right">
+                            <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); setDetalhesCompra(c); }}>
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </CardContent>
         </Card>
-
-        {/* Integration Info */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card className="border-primary/20">
-            <CardContent className="p-4 flex items-start gap-3">
-              <div className="rounded-lg bg-primary/10 p-2"><Package className="h-5 w-5 text-primary" /></div>
-              <div>
-                <h3 className="font-semibold text-sm">Integração com Estoque</h3>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Ao confirmar o recebimento de uma compra, os itens são automaticamente adicionados ao estoque da obra selecionada, atualizando quantidades e valores médios.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border-primary/20">
-            <CardContent className="p-4 flex items-start gap-3">
-              <div className="rounded-lg bg-primary/10 p-2"><CreditCard className="h-5 w-5 text-primary" /></div>
-              <div>
-                <h3 className="font-semibold text-sm">Integração com Financeiro</h3>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Cada compra aprovada gera automaticamente contas a pagar no módulo Financeiro, respeitando a forma de pagamento e o parcelamento definido.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
       </div>
     </AppLayout>
   );
