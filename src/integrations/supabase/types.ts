@@ -14,7 +14,861 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      compras: {
+        Row: {
+          created_at: string
+          data_emissao: string
+          data_entrega: string | null
+          data_recebimento: string | null
+          empresa_id: string
+          forma_pagamento: string | null
+          fornecedor_id: string | null
+          id: string
+          nfe_chave: string | null
+          nfe_numero: string | null
+          numero: string
+          obra_id: string | null
+          observacoes: string | null
+          origem: string
+          parcelas: number | null
+          status: string
+          total: number
+          updated_at: string
+          xml_original: string | null
+        }
+        Insert: {
+          created_at?: string
+          data_emissao: string
+          data_entrega?: string | null
+          data_recebimento?: string | null
+          empresa_id: string
+          forma_pagamento?: string | null
+          fornecedor_id?: string | null
+          id?: string
+          nfe_chave?: string | null
+          nfe_numero?: string | null
+          numero: string
+          obra_id?: string | null
+          observacoes?: string | null
+          origem?: string
+          parcelas?: number | null
+          status?: string
+          total?: number
+          updated_at?: string
+          xml_original?: string | null
+        }
+        Update: {
+          created_at?: string
+          data_emissao?: string
+          data_entrega?: string | null
+          data_recebimento?: string | null
+          empresa_id?: string
+          forma_pagamento?: string | null
+          fornecedor_id?: string | null
+          id?: string
+          nfe_chave?: string | null
+          nfe_numero?: string | null
+          numero?: string
+          obra_id?: string | null
+          observacoes?: string | null
+          origem?: string
+          parcelas?: number | null
+          status?: string
+          total?: number
+          updated_at?: string
+          xml_original?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "compras_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compras_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contas_pagar: {
+        Row: {
+          categoria: string | null
+          compra_id: string | null
+          created_at: string
+          data_pagamento: string | null
+          data_vencimento: string
+          descricao: string
+          documento: string | null
+          empresa_id: string
+          forma_pagamento: string | null
+          fornecedor_id: string | null
+          id: string
+          obra_id: string | null
+          observacoes: string | null
+          parcela: number | null
+          status: string
+          total_parcelas: number | null
+          updated_at: string
+          valor: number
+          valor_pago: number | null
+        }
+        Insert: {
+          categoria?: string | null
+          compra_id?: string | null
+          created_at?: string
+          data_pagamento?: string | null
+          data_vencimento: string
+          descricao: string
+          documento?: string | null
+          empresa_id: string
+          forma_pagamento?: string | null
+          fornecedor_id?: string | null
+          id?: string
+          obra_id?: string | null
+          observacoes?: string | null
+          parcela?: number | null
+          status?: string
+          total_parcelas?: number | null
+          updated_at?: string
+          valor: number
+          valor_pago?: number | null
+        }
+        Update: {
+          categoria?: string | null
+          compra_id?: string | null
+          created_at?: string
+          data_pagamento?: string | null
+          data_vencimento?: string
+          descricao?: string
+          documento?: string | null
+          empresa_id?: string
+          forma_pagamento?: string | null
+          fornecedor_id?: string | null
+          id?: string
+          obra_id?: string | null
+          observacoes?: string | null
+          parcela?: number | null
+          status?: string
+          total_parcelas?: number | null
+          updated_at?: string
+          valor?: number
+          valor_pago?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contas_pagar_compra_id_fkey"
+            columns: ["compra_id"]
+            isOneToOne: false
+            referencedRelation: "compras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contas_pagar_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contas_pagar_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contas_pagar_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contas_receber: {
+        Row: {
+          categoria: string | null
+          cliente: string | null
+          created_at: string
+          data_recebimento: string | null
+          data_vencimento: string
+          descricao: string
+          documento: string | null
+          empresa_id: string
+          forma_recebimento: string | null
+          id: string
+          obra_id: string | null
+          observacoes: string | null
+          parcela: number | null
+          status: string
+          total_parcelas: number | null
+          updated_at: string
+          valor: number
+          valor_recebido: number | null
+        }
+        Insert: {
+          categoria?: string | null
+          cliente?: string | null
+          created_at?: string
+          data_recebimento?: string | null
+          data_vencimento: string
+          descricao: string
+          documento?: string | null
+          empresa_id: string
+          forma_recebimento?: string | null
+          id?: string
+          obra_id?: string | null
+          observacoes?: string | null
+          parcela?: number | null
+          status?: string
+          total_parcelas?: number | null
+          updated_at?: string
+          valor: number
+          valor_recebido?: number | null
+        }
+        Update: {
+          categoria?: string | null
+          cliente?: string | null
+          created_at?: string
+          data_recebimento?: string | null
+          data_vencimento?: string
+          descricao?: string
+          documento?: string | null
+          empresa_id?: string
+          forma_recebimento?: string | null
+          id?: string
+          obra_id?: string | null
+          observacoes?: string | null
+          parcela?: number | null
+          status?: string
+          total_parcelas?: number | null
+          updated_at?: string
+          valor?: number
+          valor_recebido?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contas_receber_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contas_receber_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      diarios_obra: {
+        Row: {
+          atividades_executadas: string | null
+          clima: string | null
+          condicoes_trabalho: string | null
+          created_at: string
+          data: string
+          fotos: string[] | null
+          id: string
+          mao_de_obra_presente: number | null
+          obra_id: string
+          observacoes: string | null
+          ocorrencias: string | null
+          responsavel: string | null
+          temperatura_max: number | null
+          temperatura_min: number | null
+          updated_at: string
+        }
+        Insert: {
+          atividades_executadas?: string | null
+          clima?: string | null
+          condicoes_trabalho?: string | null
+          created_at?: string
+          data: string
+          fotos?: string[] | null
+          id?: string
+          mao_de_obra_presente?: number | null
+          obra_id: string
+          observacoes?: string | null
+          ocorrencias?: string | null
+          responsavel?: string | null
+          temperatura_max?: number | null
+          temperatura_min?: number | null
+          updated_at?: string
+        }
+        Update: {
+          atividades_executadas?: string | null
+          clima?: string | null
+          condicoes_trabalho?: string | null
+          created_at?: string
+          data?: string
+          fotos?: string[] | null
+          id?: string
+          mao_de_obra_presente?: number | null
+          obra_id?: string
+          observacoes?: string | null
+          ocorrencias?: string | null
+          responsavel?: string | null
+          temperatura_max?: number | null
+          temperatura_min?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diarios_obra_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documentos_funcionario: {
+        Row: {
+          data_upload: string
+          funcionario_id: string
+          id: string
+          nome_arquivo: string
+          tipo: string
+          url: string
+        }
+        Insert: {
+          data_upload?: string
+          funcionario_id: string
+          id?: string
+          nome_arquivo: string
+          tipo: string
+          url: string
+        }
+        Update: {
+          data_upload?: string
+          funcionario_id?: string
+          id?: string
+          nome_arquivo?: string
+          tipo?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documentos_funcionario_funcionario_id_fkey"
+            columns: ["funcionario_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      empresas: {
+        Row: {
+          ativo: boolean
+          cep: string | null
+          cidade: string | null
+          cnpj: string
+          created_at: string
+          email: string | null
+          endereco: string | null
+          id: string
+          inscricao_estadual: string | null
+          nome_fantasia: string | null
+          razao_social: string
+          telefone: string | null
+          uf: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          cep?: string | null
+          cidade?: string | null
+          cnpj: string
+          created_at?: string
+          email?: string | null
+          endereco?: string | null
+          id?: string
+          inscricao_estadual?: string | null
+          nome_fantasia?: string | null
+          razao_social: string
+          telefone?: string | null
+          uf?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          cep?: string | null
+          cidade?: string | null
+          cnpj?: string
+          created_at?: string
+          email?: string | null
+          endereco?: string | null
+          id?: string
+          inscricao_estadual?: string | null
+          nome_fantasia?: string | null
+          razao_social?: string
+          telefone?: string | null
+          uf?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      fornecedores: {
+        Row: {
+          ativo: boolean
+          cep: string | null
+          cidade: string | null
+          cnpj: string | null
+          contato: string | null
+          cpf: string | null
+          created_at: string
+          email: string | null
+          endereco: string | null
+          id: string
+          inscricao_estadual: string | null
+          nome_fantasia: string | null
+          observacoes: string | null
+          razao_social: string
+          telefone: string | null
+          uf: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          cep?: string | null
+          cidade?: string | null
+          cnpj?: string | null
+          contato?: string | null
+          cpf?: string | null
+          created_at?: string
+          email?: string | null
+          endereco?: string | null
+          id?: string
+          inscricao_estadual?: string | null
+          nome_fantasia?: string | null
+          observacoes?: string | null
+          razao_social: string
+          telefone?: string | null
+          uf?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          cep?: string | null
+          cidade?: string | null
+          cnpj?: string | null
+          contato?: string | null
+          cpf?: string | null
+          created_at?: string
+          email?: string | null
+          endereco?: string | null
+          id?: string
+          inscricao_estadual?: string | null
+          nome_fantasia?: string | null
+          observacoes?: string | null
+          razao_social?: string
+          telefone?: string | null
+          uf?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      funcionarios: {
+        Row: {
+          agencia: string | null
+          bairro: string | null
+          banco: string | null
+          cargo: string
+          categoria_cnh: string | null
+          cep: string | null
+          cidade: string | null
+          clinica_aso: string | null
+          cnh: string | null
+          codigo_pix: string | null
+          conta: string | null
+          cpf: string
+          created_at: string
+          ctps: string | null
+          data_admissao: string
+          data_aso: string | null
+          data_nascimento: string | null
+          data_nr12: string | null
+          data_nr18: string | null
+          data_nr35: string | null
+          data_nr6: string | null
+          data_rescisao: string | null
+          dependentes: number | null
+          email: string | null
+          empresa_id: string
+          endereco: string | null
+          escolaridade: string | null
+          estado_civil: string | null
+          foto_url: string | null
+          id: string
+          motivo_rescisao: string | null
+          nacionalidade: string | null
+          nome: string
+          nome_mae: string | null
+          nome_pai: string | null
+          obra_id: string | null
+          pis: string | null
+          rg: string | null
+          salario_base: number
+          salario_combinado: number | null
+          secao_eleitoral: string | null
+          serie_ctps: string | null
+          status: string
+          telefone: string | null
+          tipo_conta: string | null
+          titulo_eleitor: string | null
+          uf: string | null
+          updated_at: string
+          validade_cnh: string | null
+          zona_eleitoral: string | null
+        }
+        Insert: {
+          agencia?: string | null
+          bairro?: string | null
+          banco?: string | null
+          cargo: string
+          categoria_cnh?: string | null
+          cep?: string | null
+          cidade?: string | null
+          clinica_aso?: string | null
+          cnh?: string | null
+          codigo_pix?: string | null
+          conta?: string | null
+          cpf: string
+          created_at?: string
+          ctps?: string | null
+          data_admissao: string
+          data_aso?: string | null
+          data_nascimento?: string | null
+          data_nr12?: string | null
+          data_nr18?: string | null
+          data_nr35?: string | null
+          data_nr6?: string | null
+          data_rescisao?: string | null
+          dependentes?: number | null
+          email?: string | null
+          empresa_id: string
+          endereco?: string | null
+          escolaridade?: string | null
+          estado_civil?: string | null
+          foto_url?: string | null
+          id?: string
+          motivo_rescisao?: string | null
+          nacionalidade?: string | null
+          nome: string
+          nome_mae?: string | null
+          nome_pai?: string | null
+          obra_id?: string | null
+          pis?: string | null
+          rg?: string | null
+          salario_base?: number
+          salario_combinado?: number | null
+          secao_eleitoral?: string | null
+          serie_ctps?: string | null
+          status?: string
+          telefone?: string | null
+          tipo_conta?: string | null
+          titulo_eleitor?: string | null
+          uf?: string | null
+          updated_at?: string
+          validade_cnh?: string | null
+          zona_eleitoral?: string | null
+        }
+        Update: {
+          agencia?: string | null
+          bairro?: string | null
+          banco?: string | null
+          cargo?: string
+          categoria_cnh?: string | null
+          cep?: string | null
+          cidade?: string | null
+          clinica_aso?: string | null
+          cnh?: string | null
+          codigo_pix?: string | null
+          conta?: string | null
+          cpf?: string
+          created_at?: string
+          ctps?: string | null
+          data_admissao?: string
+          data_aso?: string | null
+          data_nascimento?: string | null
+          data_nr12?: string | null
+          data_nr18?: string | null
+          data_nr35?: string | null
+          data_nr6?: string | null
+          data_rescisao?: string | null
+          dependentes?: number | null
+          email?: string | null
+          empresa_id?: string
+          endereco?: string | null
+          escolaridade?: string | null
+          estado_civil?: string | null
+          foto_url?: string | null
+          id?: string
+          motivo_rescisao?: string | null
+          nacionalidade?: string | null
+          nome?: string
+          nome_mae?: string | null
+          nome_pai?: string | null
+          obra_id?: string | null
+          pis?: string | null
+          rg?: string | null
+          salario_base?: number
+          salario_combinado?: number | null
+          secao_eleitoral?: string | null
+          serie_ctps?: string | null
+          status?: string
+          telefone?: string | null
+          tipo_conta?: string | null
+          titulo_eleitor?: string | null
+          uf?: string | null
+          updated_at?: string
+          validade_cnh?: string | null
+          zona_eleitoral?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funcionarios_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "funcionarios_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      itens_compra: {
+        Row: {
+          categoria: string | null
+          cfop: string | null
+          compra_id: string
+          descricao: string
+          id: string
+          ncm: string | null
+          quantidade: number
+          subtotal: number
+          unidade: string
+          valor_unitario: number
+        }
+        Insert: {
+          categoria?: string | null
+          cfop?: string | null
+          compra_id: string
+          descricao: string
+          id?: string
+          ncm?: string | null
+          quantidade?: number
+          subtotal?: number
+          unidade?: string
+          valor_unitario?: number
+        }
+        Update: {
+          categoria?: string | null
+          cfop?: string | null
+          compra_id?: string
+          descricao?: string
+          id?: string
+          ncm?: string | null
+          quantidade?: number
+          subtotal?: number
+          unidade?: string
+          valor_unitario?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "itens_compra_compra_id_fkey"
+            columns: ["compra_id"]
+            isOneToOne: false
+            referencedRelation: "compras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      movimentacoes_estoque: {
+        Row: {
+          compra_id: string | null
+          created_at: string
+          data_movimentacao: string
+          documento: string | null
+          id: string
+          obra_id: string | null
+          observacoes: string | null
+          produto_id: string
+          quantidade: number
+          tipo: string
+          valor_unitario: number | null
+        }
+        Insert: {
+          compra_id?: string | null
+          created_at?: string
+          data_movimentacao?: string
+          documento?: string | null
+          id?: string
+          obra_id?: string | null
+          observacoes?: string | null
+          produto_id: string
+          quantidade: number
+          tipo: string
+          valor_unitario?: number | null
+        }
+        Update: {
+          compra_id?: string | null
+          created_at?: string
+          data_movimentacao?: string
+          documento?: string | null
+          id?: string
+          obra_id?: string | null
+          observacoes?: string | null
+          produto_id?: string
+          quantidade?: number
+          tipo?: string
+          valor_unitario?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "movimentacoes_estoque_compra_id_fkey"
+            columns: ["compra_id"]
+            isOneToOne: false
+            referencedRelation: "compras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_estoque_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_estoque_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      obras: {
+        Row: {
+          cidade: string | null
+          codigo: string
+          construtora: string | null
+          created_at: string
+          data_fim: string | null
+          data_inicio: string | null
+          data_previsao_fim: string | null
+          empresa_id: string
+          endereco: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          status: string
+          uf: string | null
+          updated_at: string
+        }
+        Insert: {
+          cidade?: string | null
+          codigo: string
+          construtora?: string | null
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string | null
+          data_previsao_fim?: string | null
+          empresa_id: string
+          endereco?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          status?: string
+          uf?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cidade?: string | null
+          codigo?: string
+          construtora?: string | null
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string | null
+          data_previsao_fim?: string | null
+          empresa_id?: string
+          endereco?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          status?: string
+          uf?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "obras_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      produtos: {
+        Row: {
+          ativo: boolean
+          categoria: string | null
+          codigo: string | null
+          created_at: string
+          descricao: string
+          estoque_minimo: number | null
+          id: string
+          ncm: string | null
+          unidade: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          categoria?: string | null
+          codigo?: string | null
+          created_at?: string
+          descricao: string
+          estoque_minimo?: number | null
+          id?: string
+          ncm?: string | null
+          unidade?: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          categoria?: string | null
+          codigo?: string | null
+          created_at?: string
+          descricao?: string
+          estoque_minimo?: number | null
+          id?: string
+          ncm?: string | null
+          unidade?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
