@@ -332,6 +332,14 @@ export default function Folha() {
           </CardContent>
         </Card>
 
+        {/* Importar Ponto */}
+        {!loading && funcionarios.length > 0 && !showResumo && (
+          <ImportarPontoPDF
+            funcionariosCpfs={funcionarios.map((f, i) => ({ cpf: f.cpf, idx: i }))}
+            onImport={handleImportPonto}
+          />
+        )}
+
         {/* Loading */}
         {loading && <p className="text-sm text-muted-foreground text-center py-8">Carregando funcionários...</p>}
 
