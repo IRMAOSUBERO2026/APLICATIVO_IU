@@ -3,6 +3,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { FolhaInputForm } from "@/components/folha/FolhaInputForm";
 import { FolhaResultado } from "@/components/folha/FolhaResultado";
 import { FolhaResumoObra } from "@/components/folha/FolhaResumoObra";
+import { ImportarPontoPDF } from "@/components/folha/ImportarPontoPDF";
 import { calcularFolha, type FolhaInput, type FolhaOutput } from "@/lib/motorFolha";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 interface FuncionarioFolha {
   id: string;
   nome: string;
+  cpf: string;
   cargo: string;
   salario_base: number;
   salario_combinado: number | null;
@@ -105,7 +107,7 @@ export default function Folha() {
     Promise.all([
       supabase
         .from("funcionarios")
-        .select("id, nome, cargo, salario_base, salario_combinado")
+        .select("id, nome, cpf, cargo, salario_base, salario_combinado")
         .eq("obra_id", selectedObraId)
         .eq("status", "ativo")
         .order("nome"),
@@ -146,6 +148,7 @@ export default function Folha() {
           return {
             id: f.id,
             nome: f.nome,
+            cpf: f.cpf,
             cargo: f.cargo,
             salario_base: f.salario_base,
             salario_combinado: f.salario_combinado,
@@ -158,6 +161,7 @@ export default function Folha() {
         return {
           id: f.id,
           nome: f.nome,
+          cpf: f.cpf,
           cargo: f.cargo,
           salario_base: f.salario_base,
           salario_combinado: f.salario_combinado,
@@ -197,6 +201,26 @@ export default function Folha() {
       setTimeout(() => setCurrentIdx((i) => i + 1), 200);
     }
   };
+
+  const handleImportPonto = useCallback((data: Map<string, { faltas: number; heSemanais: number }>) => {
+    const normalizeCpf = (cpf: string) => cpf.replace(/\D/g, "");
+    setFuncionarios((prev) =>
+      prev.map((f) => {
+        const ponto = data.get(normalizeCpf(f.cpf));
+        if (!ponto) return f;
+        return {
+          ...f,
+          input: {
+            ...f.input,
+            faltas: ponto.faltas,
+            horas_extras_semanais: Math.round(ponto.heSemanais * 10) / 10,
+          },
+          result: null,
+          saved: false,
+        };
+      })
+    );
+  }, []);
 
   const handleSaveAll = async () => {
     // Calculate any uncalculated
@@ -327,6 +351,14 @@ export default function Folha() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Importar Ponto */}
+        {!loading && funcionarios.length > 0 && !showResumo && (
+          <ImportarPontoPDF
+            funcionariosCpfs={funcionarios.map((f, i) => ({ cpf: f.cpf, idx: i }))}
+            onImport={handleImportPonto}
+          />
+        )}
 
         {/* Loading */}
         {loading && <p className="text-sm text-muted-foreground text-center py-8">Carregando funcionários...</p>}
