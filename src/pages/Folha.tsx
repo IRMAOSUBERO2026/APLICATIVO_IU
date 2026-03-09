@@ -4,16 +4,16 @@ import { FolhaInputForm } from "@/components/folha/FolhaInputForm";
 import { FolhaResultado } from "@/components/folha/FolhaResultado";
 import { FolhaResumoObra } from "@/components/folha/FolhaResumoObra";
 import { ImportarPontoPDF } from "@/components/folha/ImportarPontoPDF";
+import { FuncionariosList } from "@/components/folha/FuncionariosList";
 import { calcularFolha, type FolhaInput, type FolhaOutput } from "@/lib/motorFolha";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Calculator, ChevronLeft, ChevronRight, Save, HardHat, FileText } from "lucide-react";
+import { Calculator, Save, HardHat, FileText, ArrowLeft } from "lucide-react";
 import { getDaysInMonth } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { Badge } from "@/components/ui/badge";
 
 interface FuncionarioFolha {
   id: string;
@@ -79,7 +79,7 @@ export default function Folha() {
   const [ano, setAno] = useState(now.getFullYear());
 
   const [funcionarios, setFuncionarios] = useState<FuncionarioFolha[]>([]);
-  const [currentIdx, setCurrentIdx] = useState(0);
+  const [selectedFuncId, setSelectedFuncId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showResumo, setShowResumo] = useState(false);
@@ -99,7 +99,7 @@ export default function Folha() {
     if (!selectedObraId) { setFuncionarios([]); return; }
     setLoading(true);
     setShowResumo(false);
-    setCurrentIdx(0);
+    setSelectedFuncId(null);
 
     const diasMes = getDaysInMonth(new Date(ano, mes));
     const domingos = countSundaysAndHolidays(ano, mes);
@@ -175,31 +175,99 @@ export default function Folha() {
     });
   }, [selectedObraId, mes, ano]);
 
-  const current = funcionarios[currentIdx] ?? null;
+  const currentIdx = useMemo(
+    () => funcionarios.findIndex((f) => f.id === selectedFuncId),
+    [funcionarios, selectedFuncId]
+  );
+  const current = currentIdx >= 0 ? funcionarios[currentIdx] : null;
 
   const handleInputChange = useCallback((data: FolhaInput) => {
-    setFuncionarios((prev) => {
-      const copy = [...prev];
-      copy[currentIdx] = { ...copy[currentIdx], input: data, result: null, saved: false };
-      return copy;
-    });
-  }, [currentIdx]);
+    setFuncionarios((prev) =>
+      prev.map((f) =>
+        f.id === selectedFuncId ? { ...f, input: data, result: null, saved: false } : f
+      )
+    );
+  }, [selectedFuncId]);
 
   const handleCalc = () => {
     if (!current) return;
     const result = calcularFolha(current.input);
-    setFuncionarios((prev) => {
-      const copy = [...prev];
-      copy[currentIdx] = { ...copy[currentIdx], result, saved: false };
-      return copy;
-    });
+    setFuncionarios((prev) =>
+      prev.map((f) =>
+        f.id === selectedFuncId ? { ...f, result, saved: false } : f
+      )
+    );
   };
 
-  const handleCalcAndNext = () => {
-    handleCalc();
-    if (currentIdx < funcionarios.length - 1) {
-      setTimeout(() => setCurrentIdx((i) => i + 1), 200);
+  const handleSaveIndividual = async () => {
+    if (!current) return;
+    const result = current.result ?? calcularFolha(current.input);
+    setSaving(true);
+
+    const empresaRes = await supabase.from("obras").select("empresa_id").eq("id", selectedObraId).single();
+    const empresaId = empresaRes.data?.empresa_id;
+
+    if (!empresaId) {
+      toast({ title: "Erro ao buscar empresa da obra", variant: "destructive" });
+      setSaving(false);
+      return;
     }
+
+    const row = {
+      funcionario_id: current.id,
+      obra_id: selectedObraId,
+      empresa_id: empresaId,
+      mes: mes + 1,
+      ano,
+      salario_registro: current.input.salario_registro,
+      salario_combinado: current.input.salario_combinado,
+      dias_do_mes: current.input.dias_do_mes,
+      domingos_feriados_no_mes: current.input.domingos_feriados_no_mes,
+      usar_salario_sindicato_para_he: current.input.usar_salario_sindicato_para_HE,
+      horas_extras_semanais: current.input.horas_extras_semanais,
+      horas_extras_sabado: current.input.horas_extras_sabado,
+      horas_extras_100: current.input.horas_extras_100,
+      horas_negativas: current.input.horas_negativas,
+      faltas: current.input.faltas,
+      atestados: current.input.atestados,
+      semanas_com_falta: current.input.semanas_com_falta,
+      bonificacao_meta: current.input.bonificacao_meta,
+      bonificacao_assiduidade: current.input.bonificacao_assiduidade,
+      desconto_marmita: current.input.desconto_marmita,
+      desconto_vale: current.input.desconto_vale,
+      desconto_emprestimo: current.input.desconto_emprestimo,
+      outros_descontos: current.input.outros_descontos,
+      base_dia: result.base_dia,
+      base_hora: result.base_hora,
+      he_semanal: result.HE_semanal,
+      he_sabado: result.HE_sabado,
+      he_100: result.HE_100,
+      total_he: result.total_HE,
+      dsr_he: result.DSR_HE,
+      valor_atestados: result.valor_atestados,
+      desconto_faltas: result.desconto_faltas,
+      desconto_horas_negativas: result.desconto_horas_negativas,
+      dsr_perdido: result.dsr_perdido,
+      total_bonificacoes: result.total_bonificacoes,
+      total_descontos: result.total_descontos,
+      salario_final: result.salario_final,
+    };
+
+    const { error } = await supabase.from("folhas_pagamento").upsert([row], {
+      onConflict: "funcionario_id,mes,ano",
+    });
+
+    if (error) {
+      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: `Folha de ${current.nome} salva com sucesso` });
+      setFuncionarios((prev) =>
+        prev.map((f) =>
+          f.id === selectedFuncId ? { ...f, result, saved: true } : f
+        )
+      );
+    }
+    setSaving(false);
   };
 
   const handleImportPonto = useCallback((data: Map<string, { faltas: number; heSemanais: number }>) => {
@@ -222,88 +290,15 @@ export default function Folha() {
     );
   }, []);
 
-  const handleSaveAll = async () => {
-    // Calculate any uncalculated
-    const withResults = funcionarios.map((f) => ({
-      ...f,
-      result: f.result ?? calcularFolha(f.input),
-    }));
-    setFuncionarios(withResults);
-    setSaving(true);
-
-    const obra = obras.find((o) => o.id === selectedObraId);
-    const empresaRes = await supabase.from("obras").select("empresa_id").eq("id", selectedObraId).single();
-    const empresaId = empresaRes.data?.empresa_id;
-
-    if (!empresaId) {
-      toast({ title: "Erro ao buscar empresa da obra", variant: "destructive" });
-      setSaving(false);
-      return;
-    }
-
-    const rows = withResults.map((f) => ({
-      funcionario_id: f.id,
-      obra_id: selectedObraId,
-      empresa_id: empresaId,
-      mes: mes + 1,
-      ano,
-      salario_registro: f.input.salario_registro,
-      salario_combinado: f.input.salario_combinado,
-      dias_do_mes: f.input.dias_do_mes,
-      domingos_feriados_no_mes: f.input.domingos_feriados_no_mes,
-      usar_salario_sindicato_para_he: f.input.usar_salario_sindicato_para_HE,
-      horas_extras_semanais: f.input.horas_extras_semanais,
-      horas_extras_sabado: f.input.horas_extras_sabado,
-      horas_extras_100: f.input.horas_extras_100,
-      horas_negativas: f.input.horas_negativas,
-      faltas: f.input.faltas,
-      atestados: f.input.atestados,
-      semanas_com_falta: f.input.semanas_com_falta,
-      bonificacao_meta: f.input.bonificacao_meta,
-      bonificacao_assiduidade: f.input.bonificacao_assiduidade,
-      desconto_marmita: f.input.desconto_marmita,
-      desconto_vale: f.input.desconto_vale,
-      desconto_emprestimo: f.input.desconto_emprestimo,
-      outros_descontos: f.input.outros_descontos,
-      base_dia: f.result!.base_dia,
-      base_hora: f.result!.base_hora,
-      he_semanal: f.result!.HE_semanal,
-      he_sabado: f.result!.HE_sabado,
-      he_100: f.result!.HE_100,
-      total_he: f.result!.total_HE,
-      dsr_he: f.result!.DSR_HE,
-      valor_atestados: f.result!.valor_atestados,
-      desconto_faltas: f.result!.desconto_faltas,
-      desconto_horas_negativas: f.result!.desconto_horas_negativas,
-      dsr_perdido: f.result!.dsr_perdido,
-      total_bonificacoes: f.result!.total_bonificacoes,
-      total_descontos: f.result!.total_descontos,
-      salario_final: f.result!.salario_final,
-    }));
-
-    const { error } = await supabase.from("folhas_pagamento").upsert(rows, {
-      onConflict: "funcionario_id,mes,ano",
-    });
-
-    if (error) {
-      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: `Folha salva para ${withResults.length} funcionários` });
-      setFuncionarios((prev) => prev.map((f) => ({ ...f, saved: true })));
-      setShowResumo(true);
-    }
-    setSaving(false);
-  };
-
   const anos = [ano - 1, ano, ano + 1];
   const calculatedCount = funcionarios.filter((f) => f.result !== null).length;
 
   return (
     <AppLayout>
-      <div className="space-y-6 max-w-5xl mx-auto">
+      <div className="space-y-6 max-w-6xl mx-auto">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Folha Salarial</h1>
-          <p className="text-sm text-muted-foreground">Fechamento mensal por obra</p>
+          <p className="text-sm text-muted-foreground">Cálculo individual por funcionário</p>
         </div>
 
         {/* Seleção Obra / Mês */}
@@ -353,7 +348,7 @@ export default function Folha() {
         </Card>
 
         {/* Importar Ponto */}
-        {!loading && funcionarios.length > 0 && !showResumo && (
+        {!loading && funcionarios.length > 0 && !showResumo && !selectedFuncId && (
           <ImportarPontoPDF
             funcionariosCpfs={funcionarios.map((f, i) => ({ cpf: f.cpf, idx: i }))}
             onImport={handleImportPonto}
@@ -368,52 +363,72 @@ export default function Folha() {
           <Card><CardContent className="py-8 text-center text-muted-foreground text-sm">Nenhum funcionário ativo nesta obra.</CardContent></Card>
         )}
 
-        {/* Navegação entre funcionários */}
+        {/* Lista de funcionários OU formulário individual */}
         {!loading && funcionarios.length > 0 && !showResumo && (
           <>
-            <Card>
-              <CardContent className="flex items-center justify-between py-3 px-4">
-                <Button variant="outline" size="sm" disabled={currentIdx === 0} onClick={() => setCurrentIdx((i) => i - 1)}>
-                  <ChevronLeft className="h-4 w-4 mr-1" /> Anterior
-                </Button>
-                <div className="text-center">
-                  <p className="font-semibold text-sm">{current?.nome}</p>
-                  <p className="text-xs text-muted-foreground">{current?.cargo}</p>
-                  <div className="flex items-center gap-2 justify-center mt-1">
-                    <Badge variant="outline" className="text-xs">{currentIdx + 1} / {funcionarios.length}</Badge>
-                    {current?.result && <Badge variant={current.saved ? "default" : "secondary"} className="text-xs">{current.saved ? "Salvo" : "Calculado"}</Badge>}
+            {!selectedFuncId ? (
+              <>
+                <FuncionariosList
+                  funcionarios={funcionarios.map((f) => ({
+                    id: f.id,
+                    nome: f.nome,
+                    cpf: f.cpf,
+                    cargo: f.cargo,
+                    salario_base: f.salario_base,
+                    hasSaved: f.saved,
+                    hasCalculated: f.result !== null,
+                  }))}
+                  onSelect={setSelectedFuncId}
+                  selectedId={selectedFuncId}
+                />
+                {calculatedCount === funcionarios.length && calculatedCount > 0 && (
+                  <div className="flex justify-end">
+                    <Button onClick={() => setShowResumo(true)} variant="secondary" className="gap-2">
+                      <FileText className="h-4 w-4" /> Ver Resumo da Obra
+                    </Button>
                   </div>
+                )}
+              </>
+            ) : current && (
+              <div className="space-y-4">
+                {/* Header do funcionário selecionado */}
+                <Card>
+                  <CardContent className="flex items-center justify-between py-3 px-4">
+                    <Button variant="ghost" size="sm" onClick={() => setSelectedFuncId(null)}>
+                      <ArrowLeft className="h-4 w-4 mr-1" /> Voltar à Lista
+                    </Button>
+                    <div className="text-center">
+                      <p className="font-semibold text-sm">{current.nome}</p>
+                      <p className="text-xs text-muted-foreground">{current.cargo}</p>
+                    </div>
+                    <div className="w-[120px] text-right">
+                      {current.saved && (
+                        <span className="text-xs text-muted-foreground bg-primary/10 text-primary px-2 py-1 rounded">Salvo ✓</span>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Formulário */}
+                <FolhaInputForm data={current.input} onChange={handleInputChange} />
+
+                {/* Ações */}
+                <div className="flex flex-wrap gap-3 justify-between">
+                  <Button variant="outline" onClick={handleCalc} className="gap-2">
+                    <Calculator className="h-4 w-4" /> Calcular
+                  </Button>
+                  {current.result && (
+                    <Button onClick={handleSaveIndividual} disabled={saving} className="gap-2">
+                      <Save className="h-4 w-4" />
+                      {saving ? "Salvando..." : "Salvar Folha"}
+                    </Button>
+                  )}
                 </div>
-                <Button variant="outline" size="sm" disabled={currentIdx === funcionarios.length - 1} onClick={() => setCurrentIdx((i) => i + 1)}>
-                  Próximo <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
-              </CardContent>
-            </Card>
 
-            {/* Formulário */}
-            {current && (
-              <FolhaInputForm data={current.input} onChange={handleInputChange} />
+                {/* Resultado individual */}
+                {current.result && <FolhaResultado result={current.result} />}
+              </div>
             )}
-
-            {/* Ações */}
-            <div className="flex flex-wrap gap-3 justify-between">
-              <Button variant="outline" onClick={handleCalc} className="gap-2">
-                <Calculator className="h-4 w-4" /> Calcular
-              </Button>
-              {currentIdx < funcionarios.length - 1 && (
-                <Button onClick={handleCalcAndNext} className="gap-2">
-                  <Calculator className="h-4 w-4" /> Calcular & Próximo
-                </Button>
-              )}
-              {calculatedCount === funcionarios.length && (
-                <Button onClick={() => setShowResumo(true)} variant="secondary" className="gap-2">
-                  <FileText className="h-4 w-4" /> Ver Resumo da Obra
-                </Button>
-              )}
-            </div>
-
-            {/* Resultado individual */}
-            {current?.result && <FolhaResultado result={current.result} />}
           </>
         )}
 
@@ -432,11 +447,7 @@ export default function Folha() {
             />
             <div className="flex gap-3 justify-end">
               <Button variant="outline" onClick={() => setShowResumo(false)}>
-                <ChevronLeft className="h-4 w-4 mr-1" /> Voltar p/ Edição
-              </Button>
-              <Button onClick={handleSaveAll} disabled={saving} className="gap-2">
-                <Save className="h-4 w-4" />
-                {saving ? "Salvando..." : "Salvar Fechamento Completo"}
+                <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
               </Button>
             </div>
           </>
