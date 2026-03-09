@@ -3,6 +3,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { FolhaInputForm } from "@/components/folha/FolhaInputForm";
 import { FolhaResultado } from "@/components/folha/FolhaResultado";
 import { FolhaResumoObra } from "@/components/folha/FolhaResumoObra";
+import { ImportarPontoPDF } from "@/components/folha/ImportarPontoPDF";
 import { calcularFolha, type FolhaInput, type FolhaOutput } from "@/lib/motorFolha";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
