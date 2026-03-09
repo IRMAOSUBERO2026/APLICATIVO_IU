@@ -202,6 +202,26 @@ export default function Folha() {
     }
   };
 
+  const handleImportPonto = useCallback((data: Map<string, { faltas: number; heSemanais: number }>) => {
+    const normalizeCpf = (cpf: string) => cpf.replace(/\D/g, "");
+    setFuncionarios((prev) =>
+      prev.map((f) => {
+        const ponto = data.get(normalizeCpf(f.cpf));
+        if (!ponto) return f;
+        return {
+          ...f,
+          input: {
+            ...f.input,
+            faltas: ponto.faltas,
+            horas_extras_semanais: Math.round(ponto.heSemanais * 10) / 10,
+          },
+          result: null,
+          saved: false,
+        };
+      })
+    );
+  }, []);
+
   const handleSaveAll = async () => {
     // Calculate any uncalculated
     const withResults = funcionarios.map((f) => ({
