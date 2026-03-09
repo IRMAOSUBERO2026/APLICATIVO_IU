@@ -107,7 +107,7 @@ export default function Folha() {
     Promise.all([
       supabase
         .from("funcionarios")
-        .select("id, nome, cargo, salario_base, salario_combinado")
+        .select("id, nome, cpf, cargo, salario_base, salario_combinado")
         .eq("obra_id", selectedObraId)
         .eq("status", "ativo")
         .order("nome"),
