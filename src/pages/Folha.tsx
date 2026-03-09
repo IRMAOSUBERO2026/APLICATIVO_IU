@@ -161,6 +161,7 @@ export default function Folha() {
         return {
           id: f.id,
           nome: f.nome,
+          cpf: f.cpf,
           cargo: f.cargo,
           salario_base: f.salario_base,
           salario_combinado: f.salario_combinado,
