@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 interface FuncionarioFolha {
   id: string;
   nome: string;
+  cpf: string;
   cargo: string;
   salario_base: number;
   salario_combinado: number | null;
