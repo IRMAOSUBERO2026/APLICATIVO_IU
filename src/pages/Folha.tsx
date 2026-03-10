@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Calculator, Save, HardHat, FileText, ArrowLeft } from "lucide-react";
+import { Calculator, Save, HardHat, FileText, ArrowLeft, CheckCircle } from "lucide-react";
 import { getDaysInMonth } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
@@ -197,6 +197,78 @@ export default function Folha() {
         f.id === selectedFuncId ? { ...f, result, saved: false } : f
       )
     );
+  };
+
+  const handleFechamentoMensal = async () => {
+    if (!current) return;
+    const result = calcularFolha(current.input);
+    setFuncionarios((prev) =>
+      prev.map((f) =>
+        f.id === selectedFuncId ? { ...f, result, saved: false } : f
+      )
+    );
+    // Auto-save after calculating
+    setSaving(true);
+    const empresaRes = await supabase.from("obras").select("empresa_id").eq("id", selectedObraId).single();
+    const empresaId = empresaRes.data?.empresa_id;
+    if (!empresaId) {
+      toast({ title: "Erro ao buscar empresa da obra", variant: "destructive" });
+      setSaving(false);
+      return;
+    }
+    const row = {
+      funcionario_id: current.id,
+      obra_id: selectedObraId,
+      empresa_id: empresaId,
+      mes: mes + 1,
+      ano,
+      salario_registro: current.input.salario_registro,
+      salario_combinado: current.input.salario_combinado,
+      dias_do_mes: current.input.dias_do_mes,
+      domingos_feriados_no_mes: current.input.domingos_feriados_no_mes,
+      usar_salario_sindicato_para_he: current.input.usar_salario_sindicato_para_HE,
+      horas_extras_semanais: current.input.horas_extras_semanais,
+      horas_extras_sabado: current.input.horas_extras_sabado,
+      horas_extras_100: current.input.horas_extras_100,
+      horas_negativas: current.input.horas_negativas,
+      faltas: current.input.faltas,
+      atestados: current.input.atestados,
+      semanas_com_falta: current.input.semanas_com_falta,
+      bonificacao_meta: current.input.bonificacao_meta,
+      bonificacao_assiduidade: current.input.bonificacao_assiduidade,
+      desconto_marmita: current.input.desconto_marmita,
+      desconto_vale: current.input.desconto_vale,
+      desconto_emprestimo: current.input.desconto_emprestimo,
+      outros_descontos: current.input.outros_descontos,
+      base_dia: result.base_dia,
+      base_hora: result.base_hora,
+      he_semanal: result.HE_semanal,
+      he_sabado: result.HE_sabado,
+      he_100: result.HE_100,
+      total_he: result.total_HE,
+      dsr_he: result.DSR_HE,
+      valor_atestados: result.valor_atestados,
+      desconto_faltas: result.desconto_faltas,
+      desconto_horas_negativas: result.desconto_horas_negativas,
+      dsr_perdido: result.dsr_perdido,
+      total_bonificacoes: result.total_bonificacoes,
+      total_descontos: result.total_descontos,
+      salario_final: result.salario_final,
+    };
+    const { error } = await supabase.from("folhas_pagamento").upsert([row], {
+      onConflict: "funcionario_id,mes,ano",
+    });
+    if (error) {
+      toast({ title: "Erro ao fechar mês", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: `Mês fechado para ${current.nome} com sucesso!` });
+      setFuncionarios((prev) =>
+        prev.map((f) =>
+          f.id === selectedFuncId ? { ...f, result, saved: true } : f
+        )
+      );
+    }
+    setSaving(false);
   };
 
   const handleSaveIndividual = async () => {
@@ -414,15 +486,21 @@ export default function Folha() {
 
                 {/* Ações */}
                 <div className="flex flex-wrap gap-3 justify-between">
-                  <Button variant="outline" onClick={handleCalc} className="gap-2">
-                    <Calculator className="h-4 w-4" /> Calcular
-                  </Button>
-                  {current.result && (
-                    <Button onClick={handleSaveIndividual} disabled={saving} className="gap-2">
-                      <Save className="h-4 w-4" />
-                      {saving ? "Salvando..." : "Salvar Folha"}
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={handleCalc} className="gap-2">
+                      <Calculator className="h-4 w-4" /> Calcular
                     </Button>
-                  )}
+                    {current.result && (
+                      <Button variant="secondary" onClick={handleSaveIndividual} disabled={saving} className="gap-2">
+                        <Save className="h-4 w-4" />
+                        {saving ? "Salvando..." : "Salvar Rascunho"}
+                      </Button>
+                    )}
+                  </div>
+                  <Button onClick={handleFechamentoMensal} disabled={saving} className="gap-2" variant="default">
+                    <CheckCircle className="h-4 w-4" />
+                    {saving ? "Fechando..." : "Fechamento Mensal"}
+                  </Button>
                 </div>
 
                 {/* Resultado individual */}
