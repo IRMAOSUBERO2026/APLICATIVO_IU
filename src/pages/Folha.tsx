@@ -486,15 +486,21 @@ export default function Folha() {
 
                 {/* Ações */}
                 <div className="flex flex-wrap gap-3 justify-between">
-                  <Button variant="outline" onClick={handleCalc} className="gap-2">
-                    <Calculator className="h-4 w-4" /> Calcular
-                  </Button>
-                  {current.result && (
-                    <Button onClick={handleSaveIndividual} disabled={saving} className="gap-2">
-                      <Save className="h-4 w-4" />
-                      {saving ? "Salvando..." : "Salvar Folha"}
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={handleCalc} className="gap-2">
+                      <Calculator className="h-4 w-4" /> Calcular
                     </Button>
-                  )}
+                    {current.result && (
+                      <Button variant="secondary" onClick={handleSaveIndividual} disabled={saving} className="gap-2">
+                        <Save className="h-4 w-4" />
+                        {saving ? "Salvando..." : "Salvar Rascunho"}
+                      </Button>
+                    )}
+                  </div>
+                  <Button onClick={handleFechamentoMensal} disabled={saving} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
+                    <CheckCircle className="h-4 w-4" />
+                    {saving ? "Fechando..." : "Fechamento Mensal"}
+                  </Button>
                 </div>
 
                 {/* Resultado individual */}
