@@ -497,7 +497,7 @@ export default function Folha() {
                       </Button>
                     )}
                   </div>
-                  <Button onClick={handleFechamentoMensal} disabled={saving} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white">
+                  <Button onClick={handleFechamentoMensal} disabled={saving} className="gap-2" variant="default">
                     <CheckCircle className="h-4 w-4" />
                     {saving ? "Fechando..." : "Fechamento Mensal"}
                   </Button>
