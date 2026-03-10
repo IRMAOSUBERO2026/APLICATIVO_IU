@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Calculator, Save, HardHat, FileText, ArrowLeft } from "lucide-react";
+import { Calculator, Save, HardHat, FileText, ArrowLeft, CheckCircle } from "lucide-react";
 import { getDaysInMonth } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
