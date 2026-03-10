@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, User } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Search, User, ClipboardCheck, Pencil } from "lucide-react";
 
 interface FuncionarioItem {
   id: string;
@@ -35,6 +36,10 @@ export function FuncionariosList({ funcionarios, onSelect, selectedId }: Props) 
     );
   });
 
+  const savedCount = funcionarios.filter((f) => f.hasSaved).length;
+  const calculatedCount = funcionarios.filter((f) => f.hasCalculated && !f.hasSaved).length;
+  const pendingCount = funcionarios.length - savedCount - calculatedCount;
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -43,12 +48,9 @@ export function FuncionariosList({ funcionarios, onSelect, selectedId }: Props) 
             <User className="h-4 w-4" /> Funcionários ({funcionarios.length})
           </span>
           <div className="flex gap-2 text-xs font-normal">
-            <Badge variant="outline" className="text-xs">
-              {funcionarios.filter((f) => f.hasSaved).length} salvos
-            </Badge>
-            <Badge variant="secondary" className="text-xs">
-              {funcionarios.filter((f) => f.hasCalculated && !f.hasSaved).length} calculados
-            </Badge>
+            <Badge variant="default" className="text-xs">{savedCount} fechados</Badge>
+            <Badge variant="secondary" className="text-xs">{calculatedCount} calculados</Badge>
+            <Badge variant="outline" className="text-xs">{pendingCount} pendentes</Badge>
           </div>
         </CardTitle>
       </CardHeader>
@@ -62,32 +64,36 @@ export function FuncionariosList({ funcionarios, onSelect, selectedId }: Props) 
             className="pl-9 h-9"
           />
         </div>
-        <div className="max-h-[400px] overflow-y-auto space-y-1">
+        <div className="max-h-[450px] overflow-y-auto space-y-1.5">
           {filtered.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-4">Nenhum funcionário encontrado.</p>
           )}
           {filtered.map((f) => (
-            <button
+            <div
               key={f.id}
-              onClick={() => onSelect(f.id)}
-              className={`w-full text-left px-3 py-2.5 rounded-md flex items-center justify-between transition-colors hover:bg-accent/50 ${
-                selectedId === f.id ? "bg-accent border border-accent-foreground/20" : ""
+              className={`w-full px-3 py-2.5 rounded-md flex items-center justify-between transition-colors hover:bg-accent/50 border ${
+                selectedId === f.id ? "bg-accent border-accent-foreground/20" : "border-transparent"
               }`}
             >
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium truncate">{f.nome}</p>
                 <p className="text-xs text-muted-foreground">{f.cargo} • {fmt(f.salario_base)}</p>
               </div>
-              <div className="flex-shrink-0 ml-2">
+              <div className="flex-shrink-0 ml-2 flex items-center gap-2">
                 {f.hasSaved ? (
-                  <Badge variant="default" className="text-xs">Salvo</Badge>
-                ) : f.hasCalculated ? (
-                  <Badge variant="secondary" className="text-xs">Calculado</Badge>
+                  <>
+                    <Badge variant="default" className="text-xs">Fechado ✓</Badge>
+                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => onSelect(f.id)}>
+                      <Pencil className="h-3 w-3" /> Corrigir
+                    </Button>
+                  </>
                 ) : (
-                  <Badge variant="outline" className="text-xs">Pendente</Badge>
+                  <Button size="sm" variant="default" className="h-7 text-xs gap-1" onClick={() => onSelect(f.id)}>
+                    <ClipboardCheck className="h-3 w-3" /> Fechar Mês
+                  </Button>
                 )}
               </div>
-            </button>
+            </div>
           ))}
         </div>
       </CardContent>
