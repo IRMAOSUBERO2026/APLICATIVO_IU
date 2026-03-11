@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { FolhaDashboard } from "@/components/folha/FolhaDashboard";
 import { FolhaInputForm } from "@/components/folha/FolhaInputForm";
 import { FolhaResultado } from "@/components/folha/FolhaResultado";
 import { FolhaResumoObra } from "@/components/folha/FolhaResumoObra";
@@ -11,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Calculator, Save, HardHat, FileText, ArrowLeft, CheckCircle } from "lucide-react";
+import { Calculator, Save, FileText, ArrowLeft, CheckCircle } from "lucide-react";
 import { getDaysInMonth } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
@@ -70,8 +71,11 @@ function makeDefaultInput(salarioBase: number, salarioCombinado: number, diasMes
   };
 }
 
+type ViewMode = "dashboard" | "obra" | "funcionario";
+
 export default function Folha() {
   const { toast } = useToast();
+  const [view, setView] = useState<ViewMode>("dashboard");
   const [obras, setObras] = useState<ObraOption[]>([]);
   const [selectedObraId, setSelectedObraId] = useState("");
   const now = new Date();
@@ -82,7 +86,16 @@ export default function Folha() {
   const [selectedFuncId, setSelectedFuncId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [showResumo, setShowResumo] = useState(false);
+
+  // Dashboard data
+  const [dashboardData, setDashboardData] = useState<{
+    obrasResumo: Array<{
+      id: string; nome: string; codigo: string;
+      totalFuncionarios: number; fechados: number; pendentes: number;
+      folhaEstimada: number;
+    }>;
+    loading: boolean;
+  }>({ obrasResumo: [], loading: true });
 
   // Load obras
   useEffect(() => {
@@ -94,11 +107,65 @@ export default function Folha() {
       .then(({ data }) => { if (data) setObras(data); });
   }, []);
 
-  // Load funcionários when obra/mes/ano changes
+  // Load dashboard data
   useEffect(() => {
-    if (!selectedObraId) { setFuncionarios([]); return; }
+    if (view !== "dashboard" || obras.length === 0) return;
+    setDashboardData(prev => ({ ...prev, loading: true }));
+
+    const loadDashboard = async () => {
+      const obraIds = obras.map(o => o.id);
+
+      const [funcRes, folhaRes] = await Promise.all([
+        supabase
+          .from("funcionarios")
+          .select("id, obra_id, salario_base, salario_combinado")
+          .eq("status", "ativo")
+          .in("obra_id", obraIds),
+        supabase
+          .from("folhas_pagamento")
+          .select("funcionario_id, obra_id, salario_final")
+          .eq("mes", mes + 1)
+          .eq("ano", ano)
+          .in("obra_id", obraIds),
+      ]);
+
+      const funcs = funcRes.data ?? [];
+      const folhas = folhaRes.data ?? [];
+      const folhaSet = new Set(folhas.map((f: any) => f.funcionario_id));
+
+      const obrasResumo = obras.map(obra => {
+        const obraFuncs = funcs.filter((f: any) => f.obra_id === obra.id);
+        const obraFolhas = folhas.filter((f: any) => f.obra_id === obra.id);
+        const fechados = obraFuncs.filter((f: any) => folhaSet.has(f.id)).length;
+        const pendentes = obraFuncs.length - fechados;
+
+        // Estimated payroll: for closed use actual, for pending use salario_combinado or salario_base
+        const folhaFechadaTotal = obraFolhas.reduce((s: number, f: any) => s + Number(f.salario_final), 0);
+        const folhaPendenteEstimada = obraFuncs
+          .filter((f: any) => !folhaSet.has(f.id))
+          .reduce((s: number, f: any) => s + Number(f.salario_combinado ?? f.salario_base), 0);
+
+        return {
+          id: obra.id,
+          nome: obra.nome,
+          codigo: obra.codigo,
+          totalFuncionarios: obraFuncs.length,
+          fechados,
+          pendentes,
+          folhaEstimada: folhaFechadaTotal + folhaPendenteEstimada,
+        };
+      }).filter(o => o.totalFuncionarios > 0);
+
+      setDashboardData({ obrasResumo, loading: false });
+    };
+
+    loadDashboard();
+  }, [view, obras, mes, ano]);
+
+  // Load funcionários when entering obra view
+  useEffect(() => {
+    if (view !== "obra" || !selectedObraId) { setFuncionarios([]); return; }
     setLoading(true);
-    setShowResumo(false);
     setSelectedFuncId(null);
 
     const diasMes = getDaysInMonth(new Date(ano, mes));
@@ -146,34 +213,23 @@ export default function Folha() {
             usar_salario_sindicato_para_HE: existing.usar_salario_sindicato_para_he,
           };
           return {
-            id: f.id,
-            nome: f.nome,
-            cpf: f.cpf,
-            cargo: f.cargo,
-            salario_base: f.salario_base,
-            salario_combinado: f.salario_combinado,
-            input,
-            result: calcularFolha(input),
-            saved: true,
+            id: f.id, nome: f.nome, cpf: f.cpf, cargo: f.cargo,
+            salario_base: f.salario_base, salario_combinado: f.salario_combinado,
+            input, result: calcularFolha(input), saved: true,
           };
         }
         const sc = f.salario_combinado ?? f.salario_base;
         return {
-          id: f.id,
-          nome: f.nome,
-          cpf: f.cpf,
-          cargo: f.cargo,
-          salario_base: f.salario_base,
-          salario_combinado: f.salario_combinado,
+          id: f.id, nome: f.nome, cpf: f.cpf, cargo: f.cargo,
+          salario_base: f.salario_base, salario_combinado: f.salario_combinado,
           input: makeDefaultInput(f.salario_base, sc, diasMes, domingos),
-          result: null,
-          saved: false,
+          result: null, saved: false,
         };
       });
       setFuncionarios(list);
       setLoading(false);
     });
-  }, [selectedObraId, mes, ano]);
+  }, [view, selectedObraId, mes, ano]);
 
   const currentIdx = useMemo(
     () => funcionarios.findIndex((f) => f.id === selectedFuncId),
@@ -193,79 +249,75 @@ export default function Folha() {
     if (!current) return;
     const result = calcularFolha(current.input);
     setFuncionarios((prev) =>
-      prev.map((f) =>
-        f.id === selectedFuncId ? { ...f, result, saved: false } : f
-      )
+      prev.map((f) => f.id === selectedFuncId ? { ...f, result, saved: false } : f)
     );
+  };
+
+  const buildRow = (func: FuncionarioFolha, result: FolhaOutput, empresaId: string) => ({
+    funcionario_id: func.id,
+    obra_id: selectedObraId,
+    empresa_id: empresaId,
+    mes: mes + 1,
+    ano,
+    salario_registro: func.input.salario_registro,
+    salario_combinado: func.input.salario_combinado,
+    dias_do_mes: func.input.dias_do_mes,
+    domingos_feriados_no_mes: func.input.domingos_feriados_no_mes,
+    usar_salario_sindicato_para_he: func.input.usar_salario_sindicato_para_HE,
+    horas_extras_semanais: func.input.horas_extras_semanais,
+    horas_extras_sabado: func.input.horas_extras_sabado,
+    horas_extras_100: func.input.horas_extras_100,
+    horas_negativas: func.input.horas_negativas,
+    faltas: func.input.faltas,
+    atestados: func.input.atestados,
+    semanas_com_falta: func.input.semanas_com_falta,
+    bonificacao_meta: func.input.bonificacao_meta,
+    bonificacao_assiduidade: func.input.bonificacao_assiduidade,
+    desconto_marmita: func.input.desconto_marmita,
+    desconto_vale: func.input.desconto_vale,
+    desconto_emprestimo: func.input.desconto_emprestimo,
+    outros_descontos: func.input.outros_descontos,
+    base_dia: result.base_dia,
+    base_hora: result.base_hora,
+    he_semanal: result.HE_semanal,
+    he_sabado: result.HE_sabado,
+    he_100: result.HE_100,
+    total_he: result.total_HE,
+    dsr_he: result.DSR_HE,
+    valor_atestados: result.valor_atestados,
+    desconto_faltas: result.desconto_faltas,
+    desconto_horas_negativas: result.desconto_horas_negativas,
+    dsr_perdido: result.dsr_perdido,
+    total_bonificacoes: result.total_bonificacoes,
+    total_descontos: result.total_descontos,
+    salario_final: result.salario_final,
+  });
+
+  const getEmpresaId = async () => {
+    const res = await supabase.from("obras").select("empresa_id").eq("id", selectedObraId).single();
+    return res.data?.empresa_id;
   };
 
   const handleFechamentoMensal = async () => {
     if (!current) return;
     const result = calcularFolha(current.input);
-    setFuncionarios((prev) =>
-      prev.map((f) =>
-        f.id === selectedFuncId ? { ...f, result, saved: false } : f
-      )
-    );
-    // Auto-save after calculating
     setSaving(true);
-    const empresaRes = await supabase.from("obras").select("empresa_id").eq("id", selectedObraId).single();
-    const empresaId = empresaRes.data?.empresa_id;
+    const empresaId = await getEmpresaId();
     if (!empresaId) {
       toast({ title: "Erro ao buscar empresa da obra", variant: "destructive" });
       setSaving(false);
       return;
     }
-    const row = {
-      funcionario_id: current.id,
-      obra_id: selectedObraId,
-      empresa_id: empresaId,
-      mes: mes + 1,
-      ano,
-      salario_registro: current.input.salario_registro,
-      salario_combinado: current.input.salario_combinado,
-      dias_do_mes: current.input.dias_do_mes,
-      domingos_feriados_no_mes: current.input.domingos_feriados_no_mes,
-      usar_salario_sindicato_para_he: current.input.usar_salario_sindicato_para_HE,
-      horas_extras_semanais: current.input.horas_extras_semanais,
-      horas_extras_sabado: current.input.horas_extras_sabado,
-      horas_extras_100: current.input.horas_extras_100,
-      horas_negativas: current.input.horas_negativas,
-      faltas: current.input.faltas,
-      atestados: current.input.atestados,
-      semanas_com_falta: current.input.semanas_com_falta,
-      bonificacao_meta: current.input.bonificacao_meta,
-      bonificacao_assiduidade: current.input.bonificacao_assiduidade,
-      desconto_marmita: current.input.desconto_marmita,
-      desconto_vale: current.input.desconto_vale,
-      desconto_emprestimo: current.input.desconto_emprestimo,
-      outros_descontos: current.input.outros_descontos,
-      base_dia: result.base_dia,
-      base_hora: result.base_hora,
-      he_semanal: result.HE_semanal,
-      he_sabado: result.HE_sabado,
-      he_100: result.HE_100,
-      total_he: result.total_HE,
-      dsr_he: result.DSR_HE,
-      valor_atestados: result.valor_atestados,
-      desconto_faltas: result.desconto_faltas,
-      desconto_horas_negativas: result.desconto_horas_negativas,
-      dsr_perdido: result.dsr_perdido,
-      total_bonificacoes: result.total_bonificacoes,
-      total_descontos: result.total_descontos,
-      salario_final: result.salario_final,
-    };
-    const { error } = await supabase.from("folhas_pagamento").upsert([row], {
-      onConflict: "funcionario_id,mes,ano",
-    });
+    const { error } = await supabase.from("folhas_pagamento").upsert(
+      [buildRow(current, result, empresaId)],
+      { onConflict: "funcionario_id,mes,ano" }
+    );
     if (error) {
       toast({ title: "Erro ao fechar mês", description: error.message, variant: "destructive" });
     } else {
       toast({ title: `Mês fechado para ${current.nome} com sucesso!` });
       setFuncionarios((prev) =>
-        prev.map((f) =>
-          f.id === selectedFuncId ? { ...f, result, saved: true } : f
-        )
+        prev.map((f) => f.id === selectedFuncId ? { ...f, result, saved: true } : f)
       );
     }
     setSaving(false);
@@ -275,68 +327,22 @@ export default function Folha() {
     if (!current) return;
     const result = current.result ?? calcularFolha(current.input);
     setSaving(true);
-
-    const empresaRes = await supabase.from("obras").select("empresa_id").eq("id", selectedObraId).single();
-    const empresaId = empresaRes.data?.empresa_id;
-
+    const empresaId = await getEmpresaId();
     if (!empresaId) {
       toast({ title: "Erro ao buscar empresa da obra", variant: "destructive" });
       setSaving(false);
       return;
     }
-
-    const row = {
-      funcionario_id: current.id,
-      obra_id: selectedObraId,
-      empresa_id: empresaId,
-      mes: mes + 1,
-      ano,
-      salario_registro: current.input.salario_registro,
-      salario_combinado: current.input.salario_combinado,
-      dias_do_mes: current.input.dias_do_mes,
-      domingos_feriados_no_mes: current.input.domingos_feriados_no_mes,
-      usar_salario_sindicato_para_he: current.input.usar_salario_sindicato_para_HE,
-      horas_extras_semanais: current.input.horas_extras_semanais,
-      horas_extras_sabado: current.input.horas_extras_sabado,
-      horas_extras_100: current.input.horas_extras_100,
-      horas_negativas: current.input.horas_negativas,
-      faltas: current.input.faltas,
-      atestados: current.input.atestados,
-      semanas_com_falta: current.input.semanas_com_falta,
-      bonificacao_meta: current.input.bonificacao_meta,
-      bonificacao_assiduidade: current.input.bonificacao_assiduidade,
-      desconto_marmita: current.input.desconto_marmita,
-      desconto_vale: current.input.desconto_vale,
-      desconto_emprestimo: current.input.desconto_emprestimo,
-      outros_descontos: current.input.outros_descontos,
-      base_dia: result.base_dia,
-      base_hora: result.base_hora,
-      he_semanal: result.HE_semanal,
-      he_sabado: result.HE_sabado,
-      he_100: result.HE_100,
-      total_he: result.total_HE,
-      dsr_he: result.DSR_HE,
-      valor_atestados: result.valor_atestados,
-      desconto_faltas: result.desconto_faltas,
-      desconto_horas_negativas: result.desconto_horas_negativas,
-      dsr_perdido: result.dsr_perdido,
-      total_bonificacoes: result.total_bonificacoes,
-      total_descontos: result.total_descontos,
-      salario_final: result.salario_final,
-    };
-
-    const { error } = await supabase.from("folhas_pagamento").upsert([row], {
-      onConflict: "funcionario_id,mes,ano",
-    });
-
+    const { error } = await supabase.from("folhas_pagamento").upsert(
+      [buildRow(current, result, empresaId)],
+      { onConflict: "funcionario_id,mes,ano" }
+    );
     if (error) {
       toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
     } else {
       toast({ title: `Folha de ${current.nome} salva com sucesso` });
       setFuncionarios((prev) =>
-        prev.map((f) =>
-          f.id === selectedFuncId ? { ...f, result, saved: true } : f
-        )
+        prev.map((f) => f.id === selectedFuncId ? { ...f, result, saved: true } : f)
       );
     }
     setSaving(false);
@@ -362,84 +368,124 @@ export default function Folha() {
     );
   }, []);
 
+  const handleSelectObra = (obraId: string) => {
+    setSelectedObraId(obraId);
+    setSelectedFuncId(null);
+    setView("obra");
+  };
+
+  const handleSelectFunc = (funcId: string) => {
+    setSelectedFuncId(funcId);
+    setView("funcionario");
+  };
+
+  const handleBackToObra = () => {
+    setSelectedFuncId(null);
+    setView("obra");
+  };
+
+  const handleBackToDashboard = () => {
+    setSelectedObraId("");
+    setSelectedFuncId(null);
+    setView("dashboard");
+  };
+
   const anos = [ano - 1, ano, ano + 1];
   const calculatedCount = funcionarios.filter((f) => f.result !== null).length;
+  const obraNome = obras.find((o) => o.id === selectedObraId);
+  const showResumo = calculatedCount === funcionarios.length && calculatedCount > 0;
+
+  // Dashboard totals
+  const totalFuncionarios = dashboardData.obrasResumo.reduce((s, o) => s + o.totalFuncionarios, 0);
+  const totalFechados = dashboardData.obrasResumo.reduce((s, o) => s + o.fechados, 0);
+  const totalPendentes = dashboardData.obrasResumo.reduce((s, o) => s + o.pendentes, 0);
+  const totalFolhaEstimada = dashboardData.obrasResumo.reduce((s, o) => s + o.folhaEstimada, 0);
 
   return (
     <AppLayout>
       <div className="space-y-6 max-w-6xl mx-auto">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Folha Salarial</h1>
-          <p className="text-sm text-muted-foreground">Cálculo individual por funcionário</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">Folha Salarial</h1>
+            <p className="text-sm text-muted-foreground">
+              {view === "dashboard" && "Visão geral de todas as obras"}
+              {view === "obra" && `${obraNome?.codigo} — ${obraNome?.nome}`}
+              {view === "funcionario" && current && `${current.nome} • ${current.cargo}`}
+            </p>
+          </div>
+          {view !== "dashboard" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={view === "funcionario" ? handleBackToObra : handleBackToDashboard}
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              {view === "funcionario" ? "Voltar à Obra" : "Voltar ao Painel"}
+            </Button>
+          )}
         </div>
 
-        {/* Seleção Obra / Mês */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <HardHat className="h-4 w-4" /> Selecionar Obra & Período
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Obra</Label>
-              <Select value={selectedObraId} onValueChange={(v) => { setSelectedObraId(v); setShowResumo(false); }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a obra..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {obras.map((o) => (
-                    <SelectItem key={o.id} value={o.id}>{o.codigo} — {o.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Mês</Label>
-              <Select value={String(mes)} onValueChange={(v) => setMes(Number(v))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {MESES.map((m, i) => (
-                    <SelectItem key={i} value={String(i)}>{m}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Ano</Label>
-              <Select value={String(ano)} onValueChange={(v) => setAno(Number(v))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {anos.map((a) => (
-                    <SelectItem key={a} value={String(a)}>{a}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Seleção de Período (sempre visível) */}
+        <div className="flex gap-3 items-end">
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Mês</Label>
+            <Select value={String(mes)} onValueChange={(v) => setMes(Number(v))}>
+              <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {MESES.map((m, i) => (
+                  <SelectItem key={i} value={String(i)}>{m}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">Ano</Label>
+            <Select value={String(ano)} onValueChange={(v) => setAno(Number(v))}>
+              <SelectTrigger className="w-[100px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {anos.map((a) => (
+                  <SelectItem key={a} value={String(a)}>{a}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
 
-        {/* Importar Ponto */}
-        {!loading && funcionarios.length > 0 && !showResumo && !selectedFuncId && (
-          <ImportarPontoPDF
-            funcionariosCpfs={funcionarios.map((f, i) => ({ cpf: f.cpf, idx: i }))}
-            onImport={handleImportPonto}
-          />
+        {/* === DASHBOARD === */}
+        {view === "dashboard" && (
+          dashboardData.loading ? (
+            <p className="text-sm text-muted-foreground text-center py-8">Carregando dados...</p>
+          ) : (
+            <FolhaDashboard
+              obras={dashboardData.obrasResumo}
+              mes={MESES[mes]}
+              ano={ano}
+              totalObras={dashboardData.obrasResumo.length}
+              totalFuncionarios={totalFuncionarios}
+              totalFechados={totalFechados}
+              totalPendentes={totalPendentes}
+              totalFolhaEstimada={totalFolhaEstimada}
+              onSelectObra={handleSelectObra}
+            />
+          )
         )}
 
-        {/* Loading */}
-        {loading && <p className="text-sm text-muted-foreground text-center py-8">Carregando funcionários...</p>}
-
-        {/* Sem funcionários */}
-        {!loading && selectedObraId && funcionarios.length === 0 && (
-          <Card><CardContent className="py-8 text-center text-muted-foreground text-sm">Nenhum funcionário ativo nesta obra.</CardContent></Card>
-        )}
-
-        {/* Lista de funcionários OU formulário individual */}
-        {!loading && funcionarios.length > 0 && !showResumo && (
+        {/* === OBRA VIEW === */}
+        {view === "obra" && (
           <>
-            {!selectedFuncId ? (
+            {loading && <p className="text-sm text-muted-foreground text-center py-8">Carregando funcionários...</p>}
+
+            {!loading && funcionarios.length === 0 && (
+              <Card><CardContent className="py-8 text-center text-muted-foreground text-sm">Nenhum funcionário ativo nesta obra.</CardContent></Card>
+            )}
+
+            {!loading && funcionarios.length > 0 && (
               <>
+                <ImportarPontoPDF
+                  funcionariosCpfs={funcionarios.map((f, i) => ({ cpf: f.cpf, idx: i }))}
+                  onImport={handleImportPonto}
+                />
+
                 <FuncionariosList
                   funcionarios={funcionarios.map((f) => ({
                     id: f.id,
@@ -450,85 +496,66 @@ export default function Folha() {
                     hasSaved: f.saved,
                     hasCalculated: f.result !== null,
                   }))}
-                  onSelect={setSelectedFuncId}
+                  onSelect={handleSelectFunc}
                   selectedId={selectedFuncId}
                 />
-                {calculatedCount === funcionarios.length && calculatedCount > 0 && (
-                  <div className="flex justify-end">
-                    <Button onClick={() => setShowResumo(true)} variant="secondary" className="gap-2">
-                      <FileText className="h-4 w-4" /> Ver Resumo da Obra
-                    </Button>
-                  </div>
+
+                {showResumo && (
+                  <FolhaResumoObra
+                    funcionarios={funcionarios.map((f) => ({
+                      nome: f.nome,
+                      cargo: f.cargo,
+                      result: f.result ?? calcularFolha(f.input),
+                    }))}
+                    obra={obraNome?.nome ?? ""}
+                    mes={MESES[mes]}
+                    ano={ano}
+                  />
                 )}
               </>
-            ) : current && (
-              <div className="space-y-4">
-                {/* Header do funcionário selecionado */}
-                <Card>
-                  <CardContent className="flex items-center justify-between py-3 px-4">
-                    <Button variant="ghost" size="sm" onClick={() => setSelectedFuncId(null)}>
-                      <ArrowLeft className="h-4 w-4 mr-1" /> Voltar à Lista
-                    </Button>
-                    <div className="text-center">
-                      <p className="font-semibold text-sm">{current.nome}</p>
-                      <p className="text-xs text-muted-foreground">{current.cargo}</p>
-                    </div>
-                    <div className="w-[120px] text-right">
-                      {current.saved && (
-                        <span className="text-xs text-muted-foreground bg-primary/10 text-primary px-2 py-1 rounded">Salvo ✓</span>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Formulário */}
-                <FolhaInputForm data={current.input} onChange={handleInputChange} />
-
-                {/* Ações */}
-                <div className="flex flex-wrap gap-3 justify-between">
-                  <div className="flex gap-2">
-                    <Button variant="outline" onClick={handleCalc} className="gap-2">
-                      <Calculator className="h-4 w-4" /> Calcular
-                    </Button>
-                    {current.result && (
-                      <Button variant="secondary" onClick={handleSaveIndividual} disabled={saving} className="gap-2">
-                        <Save className="h-4 w-4" />
-                        {saving ? "Salvando..." : "Salvar Rascunho"}
-                      </Button>
-                    )}
-                  </div>
-                  <Button onClick={handleFechamentoMensal} disabled={saving} className="gap-2" variant="default">
-                    <CheckCircle className="h-4 w-4" />
-                    {saving ? "Fechando..." : "Fechamento Mensal"}
-                  </Button>
-                </div>
-
-                {/* Resultado individual */}
-                {current.result && <FolhaResultado result={current.result} />}
-              </div>
             )}
           </>
         )}
 
-        {/* Resumo da obra */}
-        {showResumo && (
-          <>
-            <FolhaResumoObra
-              funcionarios={funcionarios.map((f) => ({
-                nome: f.nome,
-                cargo: f.cargo,
-                result: f.result ?? calcularFolha(f.input),
-              }))}
-              obra={obras.find((o) => o.id === selectedObraId)?.nome ?? ""}
-              mes={MESES[mes]}
-              ano={ano}
-            />
-            <div className="flex gap-3 justify-end">
-              <Button variant="outline" onClick={() => setShowResumo(false)}>
-                <ArrowLeft className="h-4 w-4 mr-1" /> Voltar
+        {/* === FUNCIONÁRIO VIEW === */}
+        {view === "funcionario" && current && (
+          <div className="space-y-4">
+            <Card>
+              <CardContent className="flex items-center justify-between py-3 px-4">
+                <div className="text-center flex-1">
+                  <p className="font-semibold text-sm">{current.nome}</p>
+                  <p className="text-xs text-muted-foreground">{current.cargo} • Sal. Base: {current.salario_base.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p>
+                </div>
+                <div className="w-[120px] text-right">
+                  {current.saved && (
+                    <span className="text-xs text-muted-foreground bg-primary/10 text-primary px-2 py-1 rounded">Salvo ✓</span>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <FolhaInputForm data={current.input} onChange={handleInputChange} />
+
+            <div className="flex flex-wrap gap-3 justify-between">
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={handleCalc} className="gap-2">
+                  <Calculator className="h-4 w-4" /> Calcular
+                </Button>
+                {current.result && (
+                  <Button variant="secondary" onClick={handleSaveIndividual} disabled={saving} className="gap-2">
+                    <Save className="h-4 w-4" />
+                    {saving ? "Salvando..." : "Salvar Rascunho"}
+                  </Button>
+                )}
+              </div>
+              <Button onClick={handleFechamentoMensal} disabled={saving} className="gap-2" variant="default">
+                <CheckCircle className="h-4 w-4" />
+                {saving ? "Fechando..." : "Fechamento Mensal"}
               </Button>
             </div>
-          </>
+
+            {current.result && <FolhaResultado result={current.result} />}
+          </div>
         )}
       </div>
     </AppLayout>
