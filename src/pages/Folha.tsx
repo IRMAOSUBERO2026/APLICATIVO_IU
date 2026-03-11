@@ -4,6 +4,7 @@ import { FolhaDashboard } from "@/components/folha/FolhaDashboard";
 import { FolhaInputForm } from "@/components/folha/FolhaInputForm";
 import { FolhaResultado } from "@/components/folha/FolhaResultado";
 import { FolhaResumoObra } from "@/components/folha/FolhaResumoObra";
+import { FolhaCalculoIndividual } from "@/components/folha/FolhaCalculoIndividual";
 import { ImportarPontoPDF } from "@/components/folha/ImportarPontoPDF";
 import { FuncionariosList } from "@/components/folha/FuncionariosList";
 import { calcularFolha, type FolhaInput, type FolhaOutput } from "@/lib/motorFolha";
@@ -519,43 +520,26 @@ export default function Folha() {
 
         {/* === FUNCIONÁRIO VIEW === */}
         {view === "funcionario" && current && (
-          <div className="space-y-4">
-            <Card>
-              <CardContent className="flex items-center justify-between py-3 px-4">
-                <div className="text-center flex-1">
-                  <p className="font-semibold text-sm">{current.nome}</p>
-                  <p className="text-xs text-muted-foreground">{current.cargo} • Sal. Base: {current.salario_base.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p>
-                </div>
-                <div className="w-[120px] text-right">
-                  {current.saved && (
-                    <span className="text-xs text-muted-foreground bg-primary/10 text-primary px-2 py-1 rounded">Salvo ✓</span>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <FolhaInputForm data={current.input} onChange={handleInputChange} />
-
-            <div className="flex flex-wrap gap-3 justify-between">
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={handleCalc} className="gap-2">
-                  <Calculator className="h-4 w-4" /> Calcular
-                </Button>
-                {current.result && (
-                  <Button variant="secondary" onClick={handleSaveIndividual} disabled={saving} className="gap-2">
-                    <Save className="h-4 w-4" />
-                    {saving ? "Salvando..." : "Salvar Rascunho"}
-                  </Button>
-                )}
-              </div>
-              <Button onClick={handleFechamentoMensal} disabled={saving} className="gap-2" variant="default">
-                <CheckCircle className="h-4 w-4" />
-                {saving ? "Fechando..." : "Fechamento Mensal"}
-              </Button>
-            </div>
-
-            {current.result && <FolhaResultado result={current.result} />}
-          </div>
+          <FolhaCalculoIndividual
+            funcionario={{
+              id: current.id,
+              nome: current.nome,
+              cpf: current.cpf,
+              cargo: current.cargo,
+              salario_base: current.salario_base,
+              salario_combinado: current.salario_combinado,
+            }}
+            initialInput={current.input}
+            initialResult={current.result}
+            isSaved={current.saved}
+            mes={MESES[mes]}
+            ano={ano}
+            saving={saving}
+            onInputChange={handleInputChange}
+            onFechamento={handleFechamentoMensal}
+            onSalvarRascunho={handleSaveIndividual}
+            onVoltar={handleBackToObra}
+          />
         )}
       </div>
     </AppLayout>
