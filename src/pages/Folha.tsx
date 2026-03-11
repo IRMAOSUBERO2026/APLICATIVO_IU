@@ -4,6 +4,7 @@ import { FolhaDashboard } from "@/components/folha/FolhaDashboard";
 import { FolhaInputForm } from "@/components/folha/FolhaInputForm";
 import { FolhaResultado } from "@/components/folha/FolhaResultado";
 import { FolhaResumoObra } from "@/components/folha/FolhaResumoObra";
+import { FolhaCalculoIndividual } from "@/components/folha/FolhaCalculoIndividual";
 import { ImportarPontoPDF } from "@/components/folha/ImportarPontoPDF";
 import { FuncionariosList } from "@/components/folha/FuncionariosList";
 import { calcularFolha, type FolhaInput, type FolhaOutput } from "@/lib/motorFolha";
