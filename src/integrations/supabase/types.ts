@@ -275,6 +275,84 @@ export type Database = {
           },
         ]
       }
+      contratos_locacao: {
+        Row: {
+          cidade: string | null
+          created_at: string
+          data_fim: string | null
+          data_inicio: string
+          descricao: string
+          dia_vencimento: number
+          empresa_id: string
+          endereco: string | null
+          id: string
+          locador: string
+          locador_cpf_cnpj: string | null
+          obra_id: string | null
+          observacoes: string | null
+          status: string
+          tipo: string
+          uf: string | null
+          updated_at: string
+          valor_mensal: number
+        }
+        Insert: {
+          cidade?: string | null
+          created_at?: string
+          data_fim?: string | null
+          data_inicio: string
+          descricao: string
+          dia_vencimento?: number
+          empresa_id: string
+          endereco?: string | null
+          id?: string
+          locador: string
+          locador_cpf_cnpj?: string | null
+          obra_id?: string | null
+          observacoes?: string | null
+          status?: string
+          tipo?: string
+          uf?: string | null
+          updated_at?: string
+          valor_mensal?: number
+        }
+        Update: {
+          cidade?: string | null
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string
+          descricao?: string
+          dia_vencimento?: number
+          empresa_id?: string
+          endereco?: string | null
+          id?: string
+          locador?: string
+          locador_cpf_cnpj?: string | null
+          obra_id?: string | null
+          observacoes?: string | null
+          status?: string
+          tipo?: string
+          uf?: string | null
+          updated_at?: string
+          valor_mensal?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contratos_locacao_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contratos_locacao_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       diarios_obra: {
         Row: {
           atividades_executadas: string | null
