@@ -18,6 +18,7 @@ import {
   Building2,
   HandshakeIcon,
   FileText,
+  Home,
 } from "lucide-react";
 import logoPreto from "@/assets/logo-preto.png";
 
@@ -55,6 +56,7 @@ const menuSections = [
     items: [
       { icon: Building2, label: "Empresas", path: "/empresas" },
       { icon: Warehouse, label: "Financeiro", path: "/financeiro" },
+      { icon: Home, label: "Contratos Locação", path: "/contratos-locacao" },
       { icon: Calculator, label: "Orçamentos", path: "/orcamento" },
       { icon: Shield, label: "Controle de Acesso", path: "/acesso" },
     ],
