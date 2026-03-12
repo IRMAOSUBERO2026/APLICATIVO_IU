@@ -25,7 +25,7 @@ interface Props {
 const fmt = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-export function FuncionariosList({ funcionarios, onSelect, selectedId }: Props) {
+export function FuncionariosList({ funcionarios, onSelect, selectedId, onOpenDocuments }: Props) {
   const [search, setSearch] = useState("");
 
   const filtered = funcionarios.filter((f) => {
