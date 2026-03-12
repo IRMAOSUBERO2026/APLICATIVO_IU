@@ -81,6 +81,11 @@ export function FuncionariosList({ funcionarios, onSelect, selectedId, onOpenDoc
                 <p className="text-xs text-muted-foreground">{f.cargo} • {fmt(f.salario_base)}</p>
               </div>
               <div className="flex-shrink-0 ml-2 flex items-center gap-2">
+                {onOpenDocuments && (
+                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => onOpenDocuments(f.id, f.nome)} title="Pasta de Documentos">
+                    <FolderOpen className="h-3.5 w-3.5 text-warning" />
+                  </Button>
+                )}
                 {f.hasSaved ? (
                   <>
                     <Badge variant="default" className="text-xs">Fechado ✓</Badge>
