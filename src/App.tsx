@@ -19,6 +19,7 @@ import EntregaEPI from "./pages/EntregaEPI";
 import Ferias from "./pages/Ferias";
 import Orcamento from "./pages/Orcamento";
 import Compras from "./pages/Compras";
+import DocumentacaoMensal from "./pages/DocumentacaoMensal";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
