@@ -21,6 +21,9 @@ import Orcamento from "./pages/Orcamento";
 import Compras from "./pages/Compras";
 import DocumentacaoMensal from "./pages/DocumentacaoMensal";
 import ContratosLocacao from "./pages/ContratosLocacao";
+import DiarioObraMobile from "./pages/DiarioObraMobile";
+import Comunicacoes from "./pages/Comunicacoes";
+import Relatorios from "./pages/Relatorios";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
