@@ -16,6 +16,7 @@ import {
   Palmtree,
   Calculator,
   Building2,
+  HandshakeIcon,
 } from "lucide-react";
 import logoPreto from "@/assets/logo-preto.png";
 
