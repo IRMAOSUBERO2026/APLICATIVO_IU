@@ -1020,6 +1020,127 @@ export type Database = {
         }
         Relationships: []
       }
+      solicitacoes_exame: {
+        Row: {
+          created_at: string
+          data_realizado: string | null
+          data_solicitacao: string
+          empresa_id: string
+          exame_preco_id: string | null
+          fornecedor_id: string | null
+          funcionario_id: string
+          id: string
+          observacoes: string | null
+          status: string
+          tipo_exame: string
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          created_at?: string
+          data_realizado?: string | null
+          data_solicitacao?: string
+          empresa_id: string
+          exame_preco_id?: string | null
+          fornecedor_id?: string | null
+          funcionario_id: string
+          id?: string
+          observacoes?: string | null
+          status?: string
+          tipo_exame: string
+          updated_at?: string
+          valor?: number
+        }
+        Update: {
+          created_at?: string
+          data_realizado?: string | null
+          data_solicitacao?: string
+          empresa_id?: string
+          exame_preco_id?: string | null
+          fornecedor_id?: string | null
+          funcionario_id?: string
+          id?: string
+          observacoes?: string | null
+          status?: string
+          tipo_exame?: string
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solicitacoes_exame_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_exame_exame_preco_id_fkey"
+            columns: ["exame_preco_id"]
+            isOneToOne: false
+            referencedRelation: "tabela_precos_exames"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_exame_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_exame_funcionario_id_fkey"
+            columns: ["funcionario_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tabela_precos_exames: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          descricao: string | null
+          fornecedor_id: string | null
+          id: string
+          nome: string
+          tipo: string
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          fornecedor_id?: string | null
+          id?: string
+          nome: string
+          tipo?: string
+          updated_at?: string
+          valor?: number
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          fornecedor_id?: string | null
+          id?: string
+          nome?: string
+          tipo?: string
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tabela_precos_exames_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
