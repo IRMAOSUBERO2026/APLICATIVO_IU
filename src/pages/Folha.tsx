@@ -552,6 +552,15 @@ export default function Folha() {
           />
         )}
       </div>
+
+      {selectedFuncDoc && (
+        <DocumentManager
+          open={docManagerOpen}
+          onOpenChange={setDocManagerOpen}
+          funcionarioId={selectedFuncDoc.id}
+          funcionarioNome={selectedFuncDoc.nome}
+        />
+      )}
     </AppLayout>
   );
 }
