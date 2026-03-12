@@ -19,6 +19,7 @@ interface Props {
   funcionarios: FuncionarioItem[];
   onSelect: (id: string) => void;
   selectedId: string | null;
+  onOpenDocuments?: (id: string, nome: string) => void;
 }
 
 const fmt = (v: number) =>
