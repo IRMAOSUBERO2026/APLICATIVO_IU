@@ -165,7 +165,8 @@ export default function Folha() {
 
   // Load funcionários when entering obra view
   useEffect(() => {
-    if (view !== "obra" || !selectedObraId) { setFuncionarios([]); return; }
+    if (!selectedObraId || (view !== "obra" && view !== "funcionario")) { setFuncionarios([]); return; }
+    if (view === "funcionario") return; // don't reload when viewing individual
     setLoading(true);
     setSelectedFuncId(null);
 
