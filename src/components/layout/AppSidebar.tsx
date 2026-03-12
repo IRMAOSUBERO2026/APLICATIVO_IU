@@ -19,6 +19,8 @@ import {
   HandshakeIcon,
   FileText,
   Home,
+  MessageCircle,
+  FileSpreadsheet,
 } from "lucide-react";
 import logoPreto from "@/assets/logo-preto.png";
 
