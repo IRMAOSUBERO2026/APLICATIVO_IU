@@ -7,6 +7,7 @@ import { FolhaResumoObra } from "@/components/folha/FolhaResumoObra";
 import { FolhaCalculoIndividual } from "@/components/folha/FolhaCalculoIndividual";
 import { ImportarPontoPDF } from "@/components/folha/ImportarPontoPDF";
 import { FuncionariosList } from "@/components/folha/FuncionariosList";
+import { DocumentManager } from "@/components/rh/DocumentManager";
 import { calcularFolha, type FolhaInput, type FolhaOutput } from "@/lib/motorFolha";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
