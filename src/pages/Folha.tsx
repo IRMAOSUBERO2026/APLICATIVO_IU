@@ -508,6 +508,7 @@ export default function Folha() {
                   }))}
                   onSelect={handleSelectFunc}
                   selectedId={selectedFuncId}
+                  onOpenDocuments={openDocManager}
                 />
 
                 {showResumo && (
