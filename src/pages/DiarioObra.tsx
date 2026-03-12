@@ -1,6 +1,7 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Plus, Camera, Users, Package, AlertCircle, Calendar, MessageSquare, Send } from "lucide-react";
+import { Plus, Camera, Users, Package, AlertCircle, Calendar, MessageSquare, Send, Smartphone } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 const diarioEntries = [
   {
