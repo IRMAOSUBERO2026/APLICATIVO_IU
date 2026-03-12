@@ -36,6 +36,7 @@ const menuSections = [
       { icon: Users, label: "RH / DP", path: "/rh" },
       { icon: CreditCard, label: "Folha Salarial", path: "/folha" },
       { icon: Palmtree, label: "Férias", path: "/ferias" },
+      { icon: FileText, label: "Doc. Mensal", path: "/documentacao-mensal" },
     ],
   },
   {
