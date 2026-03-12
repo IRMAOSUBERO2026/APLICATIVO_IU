@@ -41,7 +41,7 @@ const menuSections = [
     label: "Logística",
     items: [
       { icon: ShoppingCart, label: "Compras", path: "/compras" },
-      { icon: Truck, label: "Fornecedores", path: "/fornecedores" },
+      { icon: HandshakeIcon, label: "Fornecedores", path: "/fornecedores" },
       { icon: Package, label: "Estoque", path: "/estoque" },
       { icon: HardDrive, label: "Entrega de EPI", path: "/entrega-epi" },
       { icon: Wrench, label: "Equip. Próprios", path: "/equipamentos-proprios" },
