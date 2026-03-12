@@ -15,6 +15,7 @@ import {
   HardDrive,
   Palmtree,
   Calculator,
+  Building2,
 } from "lucide-react";
 import logoPreto from "@/assets/logo-preto.png";
 
@@ -48,6 +49,7 @@ const menuSections = [
   {
     label: "Administrativo",
     items: [
+      { icon: Building2, label: "Empresas", path: "/empresas" },
       { icon: Warehouse, label: "Financeiro", path: "/financeiro" },
       { icon: Calculator, label: "Orçamentos", path: "/orcamento" },
       { icon: Shield, label: "Controle de Acesso", path: "/acesso" },

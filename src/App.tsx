@@ -12,6 +12,7 @@ import EquipamentosProprios from "./pages/EquipamentosProprios";
 import EquipamentosLocados from "./pages/EquipamentosLocados";
 import Financeiro from "./pages/Financeiro";
 import Acesso from "./pages/Acesso";
+import Empresas from "./pages/Empresas";
 import DiarioObra from "./pages/DiarioObra";
 import EntregaEPI from "./pages/EntregaEPI";
 import Ferias from "./pages/Ferias";
@@ -37,6 +38,7 @@ const App = () => (
           <Route path="/equipamentos-locados" element={<EquipamentosLocados />} />
           <Route path="/financeiro" element={<Financeiro />} />
           <Route path="/acesso" element={<Acesso />} />
+          <Route path="/empresas" element={<Empresas />} />
           <Route path="/diario-obra" element={<DiarioObra />} />
           <Route path="/entrega-epi" element={<EntregaEPI />} />
           <Route path="/ferias" element={<Ferias />} />
