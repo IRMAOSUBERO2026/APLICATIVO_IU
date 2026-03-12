@@ -88,6 +88,13 @@ export default function Folha() {
   const [selectedFuncId, setSelectedFuncId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [docManagerOpen, setDocManagerOpen] = useState(false);
+  const [selectedFuncDoc, setSelectedFuncDoc] = useState<{ id: string; nome: string } | null>(null);
+
+  const openDocManager = (id: string, nome: string) => {
+    setSelectedFuncDoc({ id, nome });
+    setDocManagerOpen(true);
+  };
 
   // Dashboard data
   const [dashboardData, setDashboardData] = useState<{
