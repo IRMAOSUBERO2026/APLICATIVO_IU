@@ -209,7 +209,6 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
               <FieldInput label="Cidade de Trabalho" value={form.cidadeTrabalho} onChange={v => update("cidadeTrabalho", v)} />
               <FieldInput label="Salário Base" value={form.salarioBase} onChange={v => update("salarioBase", v)} type="number" />
               <FieldInput label="Salário Combinado" value={form.salarioCombinado} onChange={v => update("salarioCombinado", v)} type="number" />
-              <FieldInput label="Código PIX" value={form.codigoPix} onChange={v => update("codigoPix", v)} />
               <FieldInput label="Clínica" value={form.clinica} onChange={v => update("clinica", v)} />
             </>
           )}
@@ -220,6 +219,7 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
               <FieldInput label="Agência" value={form.agencia} onChange={v => update("agencia", v)} />
               <FieldInput label="Conta" value={form.conta} onChange={v => update("conta", v)} />
               <FieldSelect label="Tipo de Conta" value={form.tipoConta} onChange={v => update("tipoConta", v)} options={["Corrente", "Poupança", "Salário"]} />
+              <FieldInput label="Código PIX" value={form.codigoPix} onChange={v => update("codigoPix", v)} placeholder="CPF, e-mail, telefone ou chave aleatória" />
             </>
           )}
         </div>
