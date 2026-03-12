@@ -20,6 +20,7 @@ import Ferias from "./pages/Ferias";
 import Orcamento from "./pages/Orcamento";
 import Compras from "./pages/Compras";
 import DocumentacaoMensal from "./pages/DocumentacaoMensal";
+import ContratosLocacao from "./pages/ContratosLocacao";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
