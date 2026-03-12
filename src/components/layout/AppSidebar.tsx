@@ -49,7 +49,7 @@ const menuSections = [
   {
     label: "Administrativo",
     items: [
-      { icon: Warehouse, label: "Empresas", path: "/empresas" },
+      { icon: Building2, label: "Empresas", path: "/empresas" },
       { icon: Warehouse, label: "Financeiro", path: "/financeiro" },
       { icon: Calculator, label: "Orçamentos", path: "/orcamento" },
       { icon: Shield, label: "Controle de Acesso", path: "/acesso" },
