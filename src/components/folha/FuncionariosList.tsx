@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, User, ClipboardCheck, Pencil } from "lucide-react";
+import { Search, User, ClipboardCheck, Pencil, FolderOpen } from "lucide-react";
 
 interface FuncionarioItem {
   id: string;
