@@ -13,6 +13,7 @@ import EquipamentosLocados from "./pages/EquipamentosLocados";
 import Financeiro from "./pages/Financeiro";
 import Acesso from "./pages/Acesso";
 import Empresas from "./pages/Empresas";
+import Fornecedores from "./pages/Fornecedores";
 import DiarioObra from "./pages/DiarioObra";
 import EntregaEPI from "./pages/EntregaEPI";
 import Ferias from "./pages/Ferias";
