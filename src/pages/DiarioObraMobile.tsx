@@ -146,7 +146,7 @@ export default function DiarioObraMobile() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="flex items-center gap-2 rounded-xl border bg-card px-3 py-2">
-              <Thermometer className="h-4 w-4 text-blue-500" />
+              <Thermometer className="h-4 w-4 text-primary" />
               <input type="number" value={tempMin} onChange={e => setTempMin(e.target.value)}
                 placeholder="Min °C" className="w-full bg-transparent text-sm outline-none" />
             </div>
