@@ -1,6 +1,20 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { HardHat, Plus, Search, MapPin, Calendar } from "lucide-react";
+import { HardHat, Plus, Search, MapPin, Calendar, FolderOpen } from "lucide-react";
 import { useState } from "react";
+import { DocumentManagerGeneric } from "@/components/shared/DocumentManagerGeneric";
+
+const SUBPASTAS_OBRA = [
+  "Contrato",
+  "Adicionais",
+  "Medições",
+  "Projetos",
+  "Notas Fiscais",
+  "Diário de Obra",
+  "Reuniões e Atas",
+  "Documentos de Segurança",
+  "Documentos Diversos",
+  "Outros",
+];
 
 const obrasData = [
   {
@@ -27,10 +41,18 @@ const obrasData = [
 
 export default function Obras() {
   const [search, setSearch] = useState("");
+  const [docOpen, setDocOpen] = useState(false);
+  const [selectedObra, setSelectedObra] = useState<{ id: string; nome: string } | null>(null);
+
   const filtered = obrasData.filter((o) =>
     o.nome.toLowerCase().includes(search.toLowerCase()) ||
     o.cliente.toLowerCase().includes(search.toLowerCase())
   );
+
+  const openDocs = (obra: typeof obrasData[0]) => {
+    setSelectedObra({ id: String(obra.id), nome: obra.nome });
+    setDocOpen(true);
+  };
 
   return (
     <AppLayout>
@@ -75,13 +97,22 @@ export default function Obras() {
                     <p className="text-xs text-muted-foreground">{obra.cliente}</p>
                   </div>
                 </div>
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                  obra.status === "Em andamento" ? "bg-success/10 text-success"
-                  : obra.status === "Medição pendente" ? "bg-warning/10 text-warning"
-                  : "bg-accent/10 text-accent"
-                }`}>
-                  {obra.status}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); openDocs(obra); }}
+                    className="p-1.5 rounded-lg text-muted-foreground hover:text-warning hover:bg-warning/10 transition-colors"
+                    title="Pasta de Documentos"
+                  >
+                    <FolderOpen className="h-4 w-4" />
+                  </button>
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                    obra.status === "Em andamento" ? "bg-success/10 text-success"
+                    : obra.status === "Medição pendente" ? "bg-warning/10 text-warning"
+                    : "bg-accent/10 text-accent"
+                  }`}>
+                    {obra.status}
+                  </span>
+                </div>
               </div>
 
               <div className="space-y-3">
@@ -119,6 +150,17 @@ export default function Obras() {
           ))}
         </div>
       </div>
+
+      {selectedObra && (
+        <DocumentManagerGeneric
+          open={docOpen}
+          onOpenChange={setDocOpen}
+          entityId={selectedObra.id}
+          entityNome={selectedObra.nome}
+          basePath="obras"
+          subpastas={SUBPASTAS_OBRA}
+        />
+      )}
     </AppLayout>
   );
 }
