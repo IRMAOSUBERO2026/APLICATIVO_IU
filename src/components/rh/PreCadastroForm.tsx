@@ -219,6 +219,7 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
               <FieldInput label="Agência" value={form.agencia} onChange={v => update("agencia", v)} />
               <FieldInput label="Conta" value={form.conta} onChange={v => update("conta", v)} />
               <FieldSelect label="Tipo de Conta" value={form.tipoConta} onChange={v => update("tipoConta", v)} options={["Corrente", "Poupança", "Salário"]} />
+              <FieldInput label="Código PIX" value={form.codigoPix} onChange={v => update("codigoPix", v)} placeholder="CPF, e-mail, telefone ou chave aleatória" />
             </>
           )}
         </div>
