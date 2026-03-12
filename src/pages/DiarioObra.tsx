@@ -1,6 +1,7 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Plus, Camera, Users, Package, AlertCircle, Calendar, MessageSquare, Send } from "lucide-react";
+import { Plus, Camera, Users, Package, AlertCircle, Calendar, MessageSquare, Send, Smartphone } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 const diarioEntries = [
   {
@@ -59,10 +60,15 @@ export default function DiarioObra() {
             <h1 className="text-2xl font-bold tracking-tight">Diário de Obra</h1>
             <p className="text-sm text-muted-foreground">Registro diário de atividades, equipe e materiais</p>
           </div>
-          <button className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors">
-            <Plus className="h-4 w-4" />
-            Novo Registro
-          </button>
+          <div className="flex gap-2">
+            <Link to="/diario-obra-mobile" className="inline-flex items-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">
+              <Smartphone className="h-4 w-4" /> Lançamento Mobile
+            </Link>
+            <button className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors">
+              <Plus className="h-4 w-4" />
+              Novo Registro
+            </button>
+          </div>
         </div>
 
         {/* Mural de Avisos */}

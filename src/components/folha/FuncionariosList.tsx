@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, User, ClipboardCheck, Pencil } from "lucide-react";
+import { Search, User, ClipboardCheck, Pencil, FolderOpen } from "lucide-react";
 
 interface FuncionarioItem {
   id: string;
@@ -19,12 +19,13 @@ interface Props {
   funcionarios: FuncionarioItem[];
   onSelect: (id: string) => void;
   selectedId: string | null;
+  onOpenDocuments?: (id: string, nome: string) => void;
 }
 
 const fmt = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-export function FuncionariosList({ funcionarios, onSelect, selectedId }: Props) {
+export function FuncionariosList({ funcionarios, onSelect, selectedId, onOpenDocuments }: Props) {
   const [search, setSearch] = useState("");
 
   const filtered = funcionarios.filter((f) => {
@@ -80,6 +81,11 @@ export function FuncionariosList({ funcionarios, onSelect, selectedId }: Props) 
                 <p className="text-xs text-muted-foreground">{f.cargo} • {fmt(f.salario_base)}</p>
               </div>
               <div className="flex-shrink-0 ml-2 flex items-center gap-2">
+                {onOpenDocuments && (
+                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => onOpenDocuments(f.id, f.nome)} title="Pasta de Documentos">
+                    <FolderOpen className="h-3.5 w-3.5 text-warning" />
+                  </Button>
+                )}
                 {f.hasSaved ? (
                   <>
                     <Badge variant="default" className="text-xs">Fechado ✓</Badge>

@@ -7,6 +7,7 @@ import { FolhaResumoObra } from "@/components/folha/FolhaResumoObra";
 import { FolhaCalculoIndividual } from "@/components/folha/FolhaCalculoIndividual";
 import { ImportarPontoPDF } from "@/components/folha/ImportarPontoPDF";
 import { FuncionariosList } from "@/components/folha/FuncionariosList";
+import { DocumentManager } from "@/components/rh/DocumentManager";
 import { calcularFolha, type FolhaInput, type FolhaOutput } from "@/lib/motorFolha";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -87,6 +88,13 @@ export default function Folha() {
   const [selectedFuncId, setSelectedFuncId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [docManagerOpen, setDocManagerOpen] = useState(false);
+  const [selectedFuncDoc, setSelectedFuncDoc] = useState<{ id: string; nome: string } | null>(null);
+
+  const openDocManager = (id: string, nome: string) => {
+    setSelectedFuncDoc({ id, nome });
+    setDocManagerOpen(true);
+  };
 
   // Dashboard data
   const [dashboardData, setDashboardData] = useState<{
@@ -500,6 +508,7 @@ export default function Folha() {
                   }))}
                   onSelect={handleSelectFunc}
                   selectedId={selectedFuncId}
+                  onOpenDocuments={openDocManager}
                 />
 
                 {showResumo && (
@@ -543,6 +552,15 @@ export default function Folha() {
           />
         )}
       </div>
+
+      {selectedFuncDoc && (
+        <DocumentManager
+          open={docManagerOpen}
+          onOpenChange={setDocManagerOpen}
+          funcionarioId={selectedFuncDoc.id}
+          funcionarioNome={selectedFuncDoc.nome}
+        />
+      )}
     </AppLayout>
   );
 }

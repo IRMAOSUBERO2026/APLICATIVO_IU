@@ -19,6 +19,8 @@ import {
   HandshakeIcon,
   FileText,
   Home,
+  MessageCircle,
+  FileSpreadsheet,
 } from "lucide-react";
 import logoPreto from "@/assets/logo-preto.png";
 
@@ -58,6 +60,8 @@ const menuSections = [
       { icon: Warehouse, label: "Financeiro", path: "/financeiro" },
       { icon: Home, label: "Contratos Locação", path: "/contratos-locacao" },
       { icon: Calculator, label: "Orçamentos", path: "/orcamento" },
+      { icon: MessageCircle, label: "Comunicações", path: "/comunicacoes" },
+      { icon: FileSpreadsheet, label: "Relatórios", path: "/relatorios" },
       { icon: Shield, label: "Controle de Acesso", path: "/acesso" },
     ],
   },
