@@ -13,6 +13,7 @@ import EquipamentosLocados from "./pages/EquipamentosLocados";
 import Financeiro from "./pages/Financeiro";
 import Acesso from "./pages/Acesso";
 import Empresas from "./pages/Empresas";
+import Fornecedores from "./pages/Fornecedores";
 import DiarioObra from "./pages/DiarioObra";
 import EntregaEPI from "./pages/EntregaEPI";
 import Ferias from "./pages/Ferias";
@@ -39,6 +40,7 @@ const App = () => (
           <Route path="/financeiro" element={<Financeiro />} />
           <Route path="/acesso" element={<Acesso />} />
           <Route path="/empresas" element={<Empresas />} />
+          <Route path="/fornecedores" element={<Fornecedores />} />
           <Route path="/diario-obra" element={<DiarioObra />} />
           <Route path="/entrega-epi" element={<EntregaEPI />} />
           <Route path="/ferias" element={<Ferias />} />

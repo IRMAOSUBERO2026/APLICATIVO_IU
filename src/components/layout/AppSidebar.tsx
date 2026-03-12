@@ -16,6 +16,7 @@ import {
   Palmtree,
   Calculator,
   Building2,
+  HandshakeIcon,
 } from "lucide-react";
 import logoPreto from "@/assets/logo-preto.png";
 
@@ -40,6 +41,7 @@ const menuSections = [
     label: "Logística",
     items: [
       { icon: ShoppingCart, label: "Compras", path: "/compras" },
+      { icon: HandshakeIcon, label: "Fornecedores", path: "/fornecedores" },
       { icon: Package, label: "Estoque", path: "/estoque" },
       { icon: HardDrive, label: "Entrega de EPI", path: "/entrega-epi" },
       { icon: Wrench, label: "Equip. Próprios", path: "/equipamentos-proprios" },
