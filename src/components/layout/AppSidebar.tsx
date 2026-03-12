@@ -17,6 +17,7 @@ import {
   Calculator,
   Building2,
   HandshakeIcon,
+  FileText,
 } from "lucide-react";
 import logoPreto from "@/assets/logo-preto.png";
 
@@ -35,6 +36,7 @@ const menuSections = [
       { icon: Users, label: "RH / DP", path: "/rh" },
       { icon: CreditCard, label: "Folha Salarial", path: "/folha" },
       { icon: Palmtree, label: "Férias", path: "/ferias" },
+      { icon: FileText, label: "Doc. Mensal", path: "/documentacao-mensal" },
     ],
   },
   {
