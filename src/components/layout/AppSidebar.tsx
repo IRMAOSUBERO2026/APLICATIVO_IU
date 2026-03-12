@@ -15,6 +15,7 @@ import {
   HardDrive,
   Palmtree,
   Calculator,
+  Building2,
 } from "lucide-react";
 import logoPreto from "@/assets/logo-preto.png";
 
