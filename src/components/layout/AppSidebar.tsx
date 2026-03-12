@@ -18,6 +18,7 @@ import {
   Building2,
   HandshakeIcon,
   FileText,
+  Home,
 } from "lucide-react";
 import logoPreto from "@/assets/logo-preto.png";
 
