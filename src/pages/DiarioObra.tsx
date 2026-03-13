@@ -1,5 +1,5 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Plus, Users, Calendar, Save, Trash2, Smartphone, Clock, Calculator, Wrench, UserPlus, Truck } from "lucide-react";
+import { Plus, Users, Calendar, Save, Trash2, Smartphone, Clock, Calculator, Wrench, UserPlus, Truck, Sparkles, Loader2 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -63,6 +63,87 @@ export default function DiarioObra() {
   const [equipsLocados, setEquipsLocados] = useState<EquipLocado[]>([]);
 
   const [saving, setSaving] = useState(false);
+
+  // AI Summary
+  const [resumoIA, setResumoIA] = useState("");
+  const [gerandoResumo, setGerandoResumo] = useState(false);
+  const [diariosSalvos, setDiariosSalvos] = useState<any[]>([]);
+
+  // Load saved diarios for the selected obra
+  useEffect(() => {
+    if (!selectedObra) { setDiariosSalvos([]); return; }
+    supabase.from("diarios_obra").select("*, obras(nome)").eq("obra_id", selectedObra).order("data", { ascending: false }).limit(30)
+      .then(({ data }) => { if (data) setDiariosSalvos(data); });
+  }, [selectedObra]);
+
+  const gerarResumoIA = async () => {
+    if (diariosSalvos.length === 0) {
+      toast({ title: "Sem registros", description: "Salve pelo menos um diário para gerar o resumo.", variant: "destructive" });
+      return;
+    }
+    setGerandoResumo(true);
+    setResumoIA("");
+
+    const diariosPayload = diariosSalvos.map(d => ({
+      data: d.data,
+      obra_nome: (d.obras as any)?.nome || "",
+      responsavel: d.responsavel,
+      clima: d.clima,
+      mao_de_obra_presente: d.mao_de_obra_presente,
+      atividades_executadas: d.atividades_executadas,
+      ocorrencias: d.ocorrencias,
+      condicoes_trabalho: d.condicoes_trabalho,
+      observacoes: d.observacoes,
+    }));
+
+    try {
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/resumo-diario`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ diarios: diariosPayload }),
+      });
+
+      if (!resp.ok || !resp.body) {
+        const errData = await resp.json().catch(() => ({}));
+        toast({ title: "Erro ao gerar resumo", description: (errData as any).error || "Tente novamente.", variant: "destructive" });
+        setGerandoResumo(false);
+        return;
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let fullText = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
+          let line = buffer.slice(0, newlineIndex);
+          buffer = buffer.slice(newlineIndex + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (!line.startsWith("data: ")) continue;
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") break;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) { fullText += content; setResumoIA(fullText); }
+          } catch { buffer = line + "\n" + buffer; break; }
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      toast({ title: "Erro de conexão", variant: "destructive" });
+    }
+    setGerandoResumo(false);
+  };
 
   useEffect(() => {
     Promise.all([
@@ -442,6 +523,28 @@ export default function DiarioObra() {
             <div className="rounded-xl border bg-card p-5 shadow-sm space-y-3">
               <label className="text-sm font-semibold">Observações Gerais</label>
               <Textarea value={observacoes} onChange={e => setObservacoes(e.target.value)} rows={3} placeholder="Ocorrências, condições climáticas, atrasos..." />
+            </div>
+
+            {/* Resumo IA */}
+            <div className="rounded-xl border bg-card p-5 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" /> Resumo Executivo com IA
+                </h2>
+                <button onClick={gerarResumoIA} disabled={gerandoResumo}
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/20 transition-colors disabled:opacity-50">
+                  {gerandoResumo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  {gerandoResumo ? "Gerando..." : "Gerar Resumo"}
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Analisa os últimos {diariosSalvos.length} registros desta obra e gera um resumo executivo com atividades, mão de obra, ocorrências e recomendações.
+              </p>
+              {resumoIA && (
+                <div className="rounded-lg border bg-muted/30 p-4 prose prose-sm max-w-none">
+                  <div className="whitespace-pre-wrap text-sm">{resumoIA}</div>
+                </div>
+              )}
             </div>
 
             {/* Salvar */}

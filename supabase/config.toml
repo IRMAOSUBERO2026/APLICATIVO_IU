@@ -1,1 +1,4 @@
 project_id = "znfxvpggckayokiphglt"
+
+[functions.resumo-diario]
+verify_jwt = false
