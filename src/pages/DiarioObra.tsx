@@ -1,60 +1,174 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Plus, Camera, Users, Package, AlertCircle, Calendar, MessageSquare, Send, Smartphone } from "lucide-react";
-import { useState } from "react";
+import { Plus, Users, Calendar, Save, Trash2, Smartphone, Clock, Calculator, Wrench, UserPlus, Truck } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-const diarioEntries = [
-  {
-    id: 1, data: "2026-03-05", obra: "Ed. Aurora", autor: "Pedro Lima",
-    clima: "Ensolarado", equipePrevista: 18, equipePresente: 16,
-    atividades: "Concretagem do 8º pavimento - laje e vigas. Desforma do 7º pavimento.",
-    materiais: "15m³ concreto fck30, 2.5t aço CA50, formas metálicas",
-    ocorrencias: "2 faltas justificadas por atestado.",
-    fotos: 4,
-    solicitacoes: [
-      { tipo: "EPI", item: "20 pares de luvas de raspa", urgencia: "Normal" },
-    ]
-  },
-  {
-    id: 2, data: "2026-03-04", obra: "Galpão Alfa", autor: "Fernando Dias",
-    clima: "Nublado", equipePrevista: 12, equipePresente: 12,
-    atividades: "Montagem de armação dos pilares P12 a P18. Preparação de formas.",
-    materiais: "3.2t aço CA50, 800kg arame recozido",
-    ocorrencias: "Nenhuma",
-    fotos: 2,
-    solicitacoes: []
-  },
-  {
-    id: 3, data: "2026-03-04", obra: "Ponte BR-101", autor: "Fernando Dias",
-    clima: "Chuvoso", equipePrevista: 22, equipePresente: 15,
-    atividades: "Trabalho parcial devido à chuva. Protensão dos cabos do trecho 3.",
-    materiais: "Cabos de protensão CP190",
-    ocorrencias: "Chuva forte a partir das 14h, trabalho interrompido.",
-    fotos: 1,
-    solicitacoes: [
-      { tipo: "Material", item: "5 lonas plásticas 4x6m", urgencia: "Urgente" },
-      { tipo: "Equipamento", item: "Bomba submersível", urgencia: "Urgente" },
-    ]
-  },
-];
+interface ObraOption { id: string; nome: string; codigo: string; }
+interface FuncOption { id: string; nome: string; cargo: string; obra_id: string | null; }
 
-const muralAvisos = [
-  { id: 1, tipo: "Solicitação", obra: "Ponte BR-101", mensagem: "URGENTE: Solicita 5 lonas plásticas e 1 bomba submersível", data: "04/03/2026" },
-  { id: 2, tipo: "Solicitação", obra: "Ed. Aurora", mensagem: "Solicita 20 pares de luvas de raspa", data: "05/03/2026" },
-  { id: 3, tipo: "Aviso", obra: "Geral", mensagem: "Entrega de holerites do mês disponível no escritório", data: "03/03/2026" },
-];
+interface FuncPresenca {
+  id: string;
+  nome: string;
+  cargo: string;
+  presente: boolean;
+  horas: number;
+}
+
+interface Atividade {
+  servico: string;
+  quantidade: number;
+  unidade: string;
+  descricao: string;
+}
+
+interface EquipProprio {
+  id: string;
+  nome: string;
+  selecionado: boolean;
+}
+
+interface EquipLocado {
+  descricao: string;
+  fornecedor: string;
+  quantidade: number;
+  valor_diario: number;
+}
+
+const SERVICOS = ["Carpintaria", "Armação", "Concretagem", "Regularização", "Alvenaria", "Elétrica", "Hidráulica", "Pintura", "Outros"];
+const UNIDADES = ["m²", "m³", "kg", "m", "un", "vb"];
 
 export default function DiarioObra() {
-  const [selectedObra, setSelectedObra] = useState("Todas");
-  const obras = ["Todas", ...new Set(diarioEntries.map(d => d.obra))];
+  const [obras, setObras] = useState<ObraOption[]>([]);
+  const [allFuncionarios, setAllFuncionarios] = useState<FuncOption[]>([]);
+  const [selectedObra, setSelectedObra] = useState("");
+  const [data, setData] = useState(new Date().toISOString().slice(0, 10));
+  const [responsavel, setResponsavel] = useState("");
+  const [observacoes, setObservacoes] = useState("");
 
-  const filtered = selectedObra === "Todas"
-    ? diarioEntries
-    : diarioEntries.filter(d => d.obra === selectedObra);
+  // Presença da obra selecionada
+  const [presencaObra, setPresencaObra] = useState<FuncPresenca[]>([]);
+  // Presença de visitantes (de outras obras)
+  const [presencaVisitantes, setPresencaVisitantes] = useState<FuncPresenca[]>([]);
+  // Atividades
+  const [atividades, setAtividades] = useState<Atividade[]>([{ servico: "", quantidade: 0, unidade: "m²", descricao: "" }]);
+  // Equipamentos próprios
+  const [equipsProprios, setEquipsProprios] = useState<EquipProprio[]>([]);
+  // Equipamentos locados
+  const [equipsLocados, setEquipsLocados] = useState<EquipLocado[]>([]);
+
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    Promise.all([
+      supabase.from("obras").select("id, nome, codigo").eq("status", "em_andamento"),
+      supabase.from("funcionarios").select("id, nome, cargo, obra_id").eq("status", "ativo"),
+    ]).then(([obrasRes, funcRes]) => {
+      if (obrasRes.data) setObras(obrasRes.data);
+      if (funcRes.data) setAllFuncionarios(funcRes.data);
+    });
+  }, []);
+
+  // Quando muda a obra, carrega funcionários dessa obra e de outras
+  useEffect(() => {
+    if (!selectedObra) {
+      setPresencaObra([]);
+      setPresencaVisitantes([]);
+      return;
+    }
+    const daObra = allFuncionarios.filter(f => f.obra_id === selectedObra);
+    const deOutras = allFuncionarios.filter(f => f.obra_id !== selectedObra);
+
+    setPresencaObra(daObra.map(f => ({ id: f.id, nome: f.nome, cargo: f.cargo, presente: true, horas: 8 })));
+    setPresencaVisitantes(deOutras.map(f => ({ id: f.id, nome: f.nome, cargo: f.cargo, presente: false, horas: 8 })));
+  }, [selectedObra, allFuncionarios]);
+
+  // Cálculos automáticos
+  const horasHomem = useMemo(() => {
+    const horasObra = presencaObra.filter(f => f.presente).reduce((s, f) => s + f.horas, 0);
+    const horasVisit = presencaVisitantes.filter(f => f.presente).reduce((s, f) => s + f.horas, 0);
+    return horasObra + horasVisit;
+  }, [presencaObra, presencaVisitantes]);
+
+  const totalPresentes = useMemo(() => {
+    return presencaObra.filter(f => f.presente).length + presencaVisitantes.filter(f => f.presente).length;
+  }, [presencaObra, presencaVisitantes]);
+
+  const totalQuantidade = useMemo(() => atividades.reduce((s, a) => s + a.quantidade, 0), [atividades]);
+  const produtividade = useMemo(() => horasHomem > 0 ? (totalQuantidade / horasHomem).toFixed(4) : "—", [totalQuantidade, horasHomem]);
+
+  const togglePresenca = (list: FuncPresenca[], setList: React.Dispatch<React.SetStateAction<FuncPresenca[]>>, id: string) => {
+    setList(prev => prev.map(f => f.id === id ? { ...f, presente: !f.presente } : f));
+  };
+
+  const updateHoras = (list: FuncPresenca[], setList: React.Dispatch<React.SetStateAction<FuncPresenca[]>>, id: string, horas: number) => {
+    setList(prev => prev.map(f => f.id === id ? { ...f, horas } : f));
+  };
+
+  const addAtividade = () => setAtividades(prev => [...prev, { servico: "", quantidade: 0, unidade: "m²", descricao: "" }]);
+  const removeAtividade = (i: number) => setAtividades(prev => prev.filter((_, idx) => idx !== i));
+  const updateAtividade = (i: number, field: keyof Atividade, value: any) => {
+    setAtividades(prev => prev.map((a, idx) => idx === i ? { ...a, [field]: value } : a));
+  };
+
+  const addEquipLocado = () => setEquipsLocados(prev => [...prev, { descricao: "", fornecedor: "", quantidade: 1, valor_diario: 0 }]);
+  const removeEquipLocado = (i: number) => setEquipsLocados(prev => prev.filter((_, idx) => idx !== i));
+  const updateEquipLocado = (i: number, field: keyof EquipLocado, value: any) => {
+    setEquipsLocados(prev => prev.map((e, idx) => idx === i ? { ...e, [field]: value } : e));
+  };
+
+  const marcarTodosObra = (presente: boolean) => {
+    setPresencaObra(prev => prev.map(f => ({ ...f, presente })));
+  };
+
+  const handleSave = async () => {
+    if (!selectedObra) { toast({ title: "Selecione uma obra", variant: "destructive" }); return; }
+    setSaving(true);
+
+    const presentes = [
+      ...presencaObra.filter(f => f.presente).map(f => ({ id: f.id, nome: f.nome, horas: f.horas, tipo: "obra" })),
+      ...presencaVisitantes.filter(f => f.presente).map(f => ({ id: f.id, nome: f.nome, horas: f.horas, tipo: "visitante" })),
+    ];
+
+    const atividadesTexto = atividades
+      .filter(a => a.servico)
+      .map(a => `${a.servico}: ${a.quantidade} ${a.unidade} - ${a.descricao}`)
+      .join("\n");
+
+    const obsCompleta = [
+      observacoes,
+      `\n---\nPresença (${presentes.length} func.): ${JSON.stringify(presentes)}`,
+      `\nAtividades estruturadas: ${JSON.stringify(atividades.filter(a => a.servico))}`,
+      equipsLocados.length > 0 ? `\nEquip. locados: ${JSON.stringify(equipsLocados)}` : "",
+      `\nHoras-Homem: ${horasHomem} | Produtividade: ${produtividade}`,
+    ].join("");
+
+    const { error } = await supabase.from("diarios_obra").insert({
+      obra_id: selectedObra,
+      data,
+      mao_de_obra_presente: totalPresentes,
+      atividades_executadas: atividadesTexto || null,
+      observacoes: obsCompleta || null,
+      responsavel: responsavel || null,
+    });
+
+    setSaving(false);
+    if (error) {
+      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Diário salvo com sucesso!" });
+    }
+  };
 
   return (
     <AppLayout>
       <div className="space-y-6">
+        {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Diário de Obra</h1>
@@ -64,122 +178,282 @@ export default function DiarioObra() {
             <Link to="/diario-obra-mobile" className="inline-flex items-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">
               <Smartphone className="h-4 w-4" /> Lançamento Mobile
             </Link>
-            <button className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors">
-              <Plus className="h-4 w-4" />
-              Novo Registro
-            </button>
           </div>
         </div>
 
-        {/* Mural de Avisos */}
-        <div className="rounded-xl border border-warning/30 bg-warning/5 p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <AlertCircle className="h-4 w-4 text-warning" />
-            <h3 className="text-sm font-semibold">Mural de Avisos e Solicitações</h3>
+        {/* Obra + Data + Responsável */}
+        <div className="rounded-xl border bg-card p-5 shadow-sm space-y-4">
+          <h2 className="text-sm font-semibold flex items-center gap-2"><Calendar className="h-4 w-4 text-primary" /> Informações Gerais</h2>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Obra *</label>
+              <select value={selectedObra} onChange={e => setSelectedObra(e.target.value)}
+                className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm focus:ring-2 focus:ring-ring">
+                <option value="">Selecione a obra...</option>
+                {obras.map(o => <option key={o.id} value={o.id}>{o.codigo} - {o.nome}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Data</label>
+              <Input type="date" value={data} onChange={e => setData(e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Responsável</label>
+              <Input value={responsavel} onChange={e => setResponsavel(e.target.value)} placeholder="Nome do responsável" />
+            </div>
           </div>
-          <div className="space-y-2">
-            {muralAvisos.map(aviso => (
-              <div key={aviso.id} className="flex items-start gap-3 rounded-lg bg-card p-3 border">
-                <span className={`mt-0.5 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                  aviso.tipo === "Solicitação" ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
-                }`}>{aviso.tipo}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm">{aviso.mensagem}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">{aviso.obra} • {aviso.data}</p>
-                </div>
-                <button className="rounded-md p-1.5 text-muted-foreground hover:bg-muted transition-colors" title="Enviar WhatsApp">
-                  <MessageSquare className="h-4 w-4" />
-                </button>
+        </div>
+
+        {selectedObra && (
+          <>
+            {/* KPIs automáticos */}
+            <div className="grid gap-4 sm:grid-cols-4">
+              <div className="rounded-xl border bg-card p-4 shadow-sm text-center">
+                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Presentes</p>
+                <p className="text-2xl font-bold text-primary">{totalPresentes}</p>
               </div>
-            ))}
-          </div>
-        </div>
+              <div className="rounded-xl border bg-card p-4 shadow-sm text-center">
+                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Horas-Homem</p>
+                <p className="text-2xl font-bold text-primary">{horasHomem}h</p>
+              </div>
+              <div className="rounded-xl border bg-card p-4 shadow-sm text-center">
+                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Qtd. Executada</p>
+                <p className="text-2xl font-bold text-primary">{totalQuantidade}</p>
+              </div>
+              <div className="rounded-xl border bg-card p-4 shadow-sm text-center">
+                <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Produtividade</p>
+                <p className="text-2xl font-bold text-primary">{produtividade}</p>
+              </div>
+            </div>
 
-        {/* Filtro por obra */}
-        <div className="flex gap-2 flex-wrap">
-          {obras.map(obra => (
-            <button
-              key={obra}
-              onClick={() => setSelectedObra(obra)}
-              className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                selectedObra === obra ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
-              }`}
-            >{obra}</button>
-          ))}
-        </div>
-
-        {/* Entries */}
-        <div className="space-y-4">
-          {filtered.map(entry => (
-            <div key={entry.id} className="rounded-xl border bg-card p-5 shadow-sm animate-fade-in">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between mb-4">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <Calendar className="h-4 w-4 text-primary" />
-                    <h3 className="font-semibold">{new Date(entry.data).toLocaleDateString("pt-BR", { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}</h3>
-                  </div>
-                  <p className="text-xs text-muted-foreground">{entry.obra} • Registrado por {entry.autor}</p>
-                </div>
+            {/* Presença - Funcionários da Obra */}
+            <div className="rounded-xl border bg-card p-5 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold flex items-center gap-2">
+                  <Users className="h-4 w-4 text-primary" /> Funcionários da Obra ({presencaObra.length})
+                </h2>
                 <div className="flex gap-2">
-                  <span className="rounded-full bg-muted px-2.5 py-1 text-[10px] font-medium">{entry.clima}</span>
+                  <button onClick={() => marcarTodosObra(true)} className="text-[10px] rounded-md border px-2 py-1 text-muted-foreground hover:bg-muted transition-colors">
+                    Marcar todos
+                  </button>
+                  <button onClick={() => marcarTodosObra(false)} className="text-[10px] rounded-md border px-2 py-1 text-muted-foreground hover:bg-muted transition-colors">
+                    Desmarcar todos
+                  </button>
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-4">
-                <div className="rounded-lg bg-muted/50 p-3">
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-                    <Users className="h-3 w-3" /> Equipe
-                  </div>
-                  <p className="text-sm font-semibold">{entry.equipePresente}/{entry.equipePrevista}</p>
-                </div>
-                <div className="rounded-lg bg-muted/50 p-3">
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-                    <Camera className="h-3 w-3" /> Fotos
-                  </div>
-                  <p className="text-sm font-semibold">{entry.fotos} registros</p>
-                </div>
-                <div className="col-span-2 rounded-lg bg-muted/50 p-3">
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-1">
-                    <Package className="h-3 w-3" /> Materiais Consumidos
-                  </div>
-                  <p className="text-xs">{entry.materiais}</p>
-                </div>
-              </div>
-
-              <div className="space-y-2 text-sm">
-                <div>
-                  <p className="text-xs font-semibold text-muted-foreground mb-1">Atividades Realizadas</p>
-                  <p className="text-sm">{entry.atividades}</p>
-                </div>
-                {entry.ocorrencias !== "Nenhuma" && (
-                  <div>
-                    <p className="text-xs font-semibold text-warning mb-1">Ocorrências</p>
-                    <p className="text-sm">{entry.ocorrencias}</p>
-                  </div>
-                )}
-              </div>
-
-              {entry.solicitacoes.length > 0 && (
-                <div className="mt-4 border-t pt-3">
-                  <p className="text-xs font-semibold text-destructive mb-2">Solicitações</p>
-                  <div className="flex flex-wrap gap-2">
-                    {entry.solicitacoes.map((s, i) => (
-                      <div key={i} className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs">
-                        <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
-                          s.urgencia === "Urgente" ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"
-                        }`}>{s.tipo}</span>
-                        {s.item}
-                        <button className="ml-1 text-primary hover:text-primary/80" title="Enviar via WhatsApp">
-                          <Send className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+              {presencaObra.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">Nenhum funcionário alocado nesta obra.</p>
+              ) : (
+                <div className="rounded-lg border overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b bg-muted/50">
+                        <th className="px-3 py-2 text-left font-medium text-muted-foreground w-10">✓</th>
+                        <th className="px-3 py-2 text-left font-medium text-muted-foreground">Funcionário</th>
+                        <th className="px-3 py-2 text-left font-medium text-muted-foreground">Cargo</th>
+                        <th className="px-3 py-2 text-center font-medium text-muted-foreground w-24">
+                          <span className="flex items-center justify-center gap-1"><Clock className="h-3 w-3" /> Horas</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {presencaObra.map(f => (
+                        <tr key={f.id} className={`border-b last:border-0 transition-colors ${f.presente ? "bg-success/5" : "bg-muted/20 opacity-60"}`}>
+                          <td className="px-3 py-2">
+                            <Checkbox checked={f.presente} onCheckedChange={() => togglePresenca(presencaObra, setPresencaObra, f.id)} />
+                          </td>
+                          <td className="px-3 py-2 font-medium">{f.nome}</td>
+                          <td className="px-3 py-2 text-muted-foreground">{f.cargo}</td>
+                          <td className="px-3 py-2">
+                            <Input type="number" min={0} max={24} step={0.5} value={f.horas}
+                              onChange={e => updateHoras(presencaObra, setPresencaObra, f.id, Number(e.target.value))}
+                              className="h-8 text-center w-20 mx-auto" disabled={!f.presente} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
-          ))}
-        </div>
+
+            {/* Funcionários visitantes (de outras obras) */}
+            <div className="rounded-xl border bg-card p-5 shadow-sm space-y-4">
+              <h2 className="text-sm font-semibold flex items-center gap-2">
+                <UserPlus className="h-4 w-4 text-warning" /> Funcionários de Outras Obras
+              </h2>
+              <p className="text-xs text-muted-foreground">Marque os funcionários de outras obras que trabalharam nesta obra hoje.</p>
+
+              {presencaVisitantes.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">Nenhum funcionário cadastrado em outras obras.</p>
+              ) : (
+                <div className="rounded-lg border overflow-hidden max-h-[300px] overflow-y-auto">
+                  <table className="w-full text-sm">
+                    <thead className="sticky top-0">
+                      <tr className="border-b bg-muted/50">
+                        <th className="px-3 py-2 text-left font-medium text-muted-foreground w-10">✓</th>
+                        <th className="px-3 py-2 text-left font-medium text-muted-foreground">Funcionário</th>
+                        <th className="px-3 py-2 text-left font-medium text-muted-foreground">Cargo</th>
+                        <th className="px-3 py-2 text-center font-medium text-muted-foreground w-24">Horas</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {presencaVisitantes.map(f => (
+                        <tr key={f.id} className={`border-b last:border-0 transition-colors ${f.presente ? "bg-warning/5" : ""}`}>
+                          <td className="px-3 py-2">
+                            <Checkbox checked={f.presente} onCheckedChange={() => togglePresenca(presencaVisitantes, setPresencaVisitantes, f.id)} />
+                          </td>
+                          <td className="px-3 py-2 font-medium">{f.nome}</td>
+                          <td className="px-3 py-2 text-muted-foreground">{f.cargo}</td>
+                          <td className="px-3 py-2">
+                            <Input type="number" min={0} max={24} step={0.5} value={f.horas}
+                              onChange={e => updateHoras(presencaVisitantes, setPresencaVisitantes, f.id, Number(e.target.value))}
+                              className="h-8 text-center w-20 mx-auto" disabled={!f.presente} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Atividades Executadas */}
+            <div className="rounded-xl border bg-card p-5 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold flex items-center gap-2">
+                  <Calculator className="h-4 w-4 text-primary" /> Atividades Executadas
+                </h2>
+                <button onClick={addAtividade} className="inline-flex items-center gap-1 text-xs rounded-lg border px-3 py-1.5 text-muted-foreground hover:bg-muted transition-colors">
+                  <Plus className="h-3 w-3" /> Adicionar
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {atividades.map((at, i) => (
+                  <div key={i} className="rounded-lg border p-4 space-y-3 bg-muted/20">
+                    <div className="flex items-start justify-between">
+                      <span className="text-xs font-medium text-muted-foreground">Atividade {i + 1}</span>
+                      {atividades.length > 1 && (
+                        <button onClick={() => removeAtividade(i)} className="p-1 text-destructive hover:bg-destructive/10 rounded transition-colors">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-4">
+                      <div>
+                        <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Serviço</label>
+                        <select value={at.servico} onChange={e => updateAtividade(i, "servico", e.target.value)}
+                          className="w-full rounded-lg border bg-background px-3 py-2 text-sm">
+                          <option value="">Selecione...</option>
+                          {SERVICOS.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Quantidade</label>
+                        <Input type="number" min={0} step={0.01} value={at.quantidade}
+                          onChange={e => updateAtividade(i, "quantidade", Number(e.target.value))} />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Unidade</label>
+                        <select value={at.unidade} onChange={e => updateAtividade(i, "unidade", e.target.value)}
+                          className="w-full rounded-lg border bg-background px-3 py-2 text-sm">
+                          {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Descrição</label>
+                        <Input value={at.descricao} onChange={e => updateAtividade(i, "descricao", e.target.value)} placeholder="Detalhes..." />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Equipamentos */}
+            <div className="rounded-xl border bg-card p-5 shadow-sm space-y-4">
+              <h2 className="text-sm font-semibold flex items-center gap-2">
+                <Wrench className="h-4 w-4 text-primary" /> Equipamentos Próprios
+              </h2>
+              <p className="text-xs text-muted-foreground">Marque os equipamentos próprios utilizados hoje.</p>
+              {equipsProprios.length === 0 && (
+                <p className="text-sm text-muted-foreground italic">Nenhum equipamento próprio cadastrado.</p>
+              )}
+              {equipsProprios.map(eq => (
+                <div key={eq.id} className="flex items-center gap-3">
+                  <Checkbox checked={eq.selecionado} onCheckedChange={() => {
+                    setEquipsProprios(prev => prev.map(e => e.id === eq.id ? { ...e, selecionado: !e.selecionado } : e));
+                  }} />
+                  <span className="text-sm">{eq.nome}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Equipamentos Locados */}
+            <div className="rounded-xl border bg-card p-5 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold flex items-center gap-2">
+                  <Truck className="h-4 w-4 text-warning" /> Equipamentos Locados
+                </h2>
+                <button onClick={addEquipLocado} className="inline-flex items-center gap-1 text-xs rounded-lg border px-3 py-1.5 text-muted-foreground hover:bg-muted transition-colors">
+                  <Plus className="h-3 w-3" /> Adicionar
+                </button>
+              </div>
+
+              {equipsLocados.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">Nenhum equipamento locado registrado.</p>
+              ) : (
+                <div className="space-y-3">
+                  {equipsLocados.map((eq, i) => (
+                    <div key={i} className="rounded-lg border p-4 space-y-3 bg-muted/20">
+                      <div className="flex items-start justify-between">
+                        <span className="text-xs font-medium text-muted-foreground">Equip. Locado {i + 1}</span>
+                        <button onClick={() => removeEquipLocado(i)} className="p-1 text-destructive hover:bg-destructive/10 rounded transition-colors">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-4">
+                        <div>
+                          <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Descrição</label>
+                          <Input value={eq.descricao} onChange={e => updateEquipLocado(i, "descricao", e.target.value)} placeholder="Ex: Retroescavadeira" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Fornecedor</label>
+                          <Input value={eq.fornecedor} onChange={e => updateEquipLocado(i, "fornecedor", e.target.value)} placeholder="Nome do locador" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Quantidade</label>
+                          <Input type="number" min={1} value={eq.quantidade} onChange={e => updateEquipLocado(i, "quantidade", Number(e.target.value))} />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Valor Diário (R$)</label>
+                          <Input type="number" min={0} step={0.01} value={eq.valor_diario} onChange={e => updateEquipLocado(i, "valor_diario", Number(e.target.value))} />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Observações */}
+            <div className="rounded-xl border bg-card p-5 shadow-sm space-y-3">
+              <label className="text-sm font-semibold">Observações Gerais</label>
+              <Textarea value={observacoes} onChange={e => setObservacoes(e.target.value)} rows={3} placeholder="Ocorrências, condições climáticas, atrasos..." />
+            </div>
+
+            {/* Salvar */}
+            <div className="flex justify-end">
+              <button onClick={handleSave} disabled={saving}
+                className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors disabled:opacity-50">
+                <Save className="h-4 w-4" />
+                {saving ? "Salvando..." : "Salvar Diário de Obra"}
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </AppLayout>
   );
