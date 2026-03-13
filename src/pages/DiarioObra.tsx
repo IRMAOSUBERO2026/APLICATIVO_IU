@@ -64,6 +64,87 @@ export default function DiarioObra() {
 
   const [saving, setSaving] = useState(false);
 
+  // AI Summary
+  const [resumoIA, setResumoIA] = useState("");
+  const [gerandoResumo, setGerandoResumo] = useState(false);
+  const [diariosSalvos, setDiariosSalvos] = useState<any[]>([]);
+
+  // Load saved diarios for the selected obra
+  useEffect(() => {
+    if (!selectedObra) { setDiariosSalvos([]); return; }
+    supabase.from("diarios_obra").select("*, obras(nome)").eq("obra_id", selectedObra).order("data", { ascending: false }).limit(30)
+      .then(({ data }) => { if (data) setDiariosSalvos(data); });
+  }, [selectedObra]);
+
+  const gerarResumoIA = async () => {
+    if (diariosSalvos.length === 0) {
+      toast({ title: "Sem registros", description: "Salve pelo menos um diário para gerar o resumo.", variant: "destructive" });
+      return;
+    }
+    setGerandoResumo(true);
+    setResumoIA("");
+
+    const diariosPayload = diariosSalvos.map(d => ({
+      data: d.data,
+      obra_nome: (d.obras as any)?.nome || "",
+      responsavel: d.responsavel,
+      clima: d.clima,
+      mao_de_obra_presente: d.mao_de_obra_presente,
+      atividades_executadas: d.atividades_executadas,
+      ocorrencias: d.ocorrencias,
+      condicoes_trabalho: d.condicoes_trabalho,
+      observacoes: d.observacoes,
+    }));
+
+    try {
+      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/resumo-diario`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ diarios: diariosPayload }),
+      });
+
+      if (!resp.ok || !resp.body) {
+        const errData = await resp.json().catch(() => ({}));
+        toast({ title: "Erro ao gerar resumo", description: (errData as any).error || "Tente novamente.", variant: "destructive" });
+        setGerandoResumo(false);
+        return;
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let fullText = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = buffer.indexOf("\n")) !== -1) {
+          let line = buffer.slice(0, newlineIndex);
+          buffer = buffer.slice(newlineIndex + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (!line.startsWith("data: ")) continue;
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") break;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) { fullText += content; setResumoIA(fullText); }
+          } catch { buffer = line + "\n" + buffer; break; }
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      toast({ title: "Erro de conexão", variant: "destructive" });
+    }
+    setGerandoResumo(false);
+  };
+
   useEffect(() => {
     Promise.all([
       supabase.from("obras").select("id, nome, codigo").eq("status", "em_andamento"),
