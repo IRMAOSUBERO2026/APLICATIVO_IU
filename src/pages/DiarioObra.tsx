@@ -525,6 +525,28 @@ export default function DiarioObra() {
               <Textarea value={observacoes} onChange={e => setObservacoes(e.target.value)} rows={3} placeholder="Ocorrências, condições climáticas, atrasos..." />
             </div>
 
+            {/* Resumo IA */}
+            <div className="rounded-xl border bg-card p-5 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" /> Resumo Executivo com IA
+                </h2>
+                <button onClick={gerarResumoIA} disabled={gerandoResumo}
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/20 transition-colors disabled:opacity-50">
+                  {gerandoResumo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  {gerandoResumo ? "Gerando..." : "Gerar Resumo"}
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Analisa os últimos {diariosSalvos.length} registros desta obra e gera um resumo executivo com atividades, mão de obra, ocorrências e recomendações.
+              </p>
+              {resumoIA && (
+                <div className="rounded-lg border bg-muted/30 p-4 prose prose-sm max-w-none">
+                  <div className="whitespace-pre-wrap text-sm">{resumoIA}</div>
+                </div>
+              )}
+            </div>
+
             {/* Salvar */}
             <div className="flex justify-end">
               <button onClick={handleSave} disabled={saving}
