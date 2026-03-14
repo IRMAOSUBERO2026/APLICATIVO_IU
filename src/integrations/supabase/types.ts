@@ -501,6 +501,157 @@ export type Database = {
         }
         Relationships: []
       }
+      equipamentos_locados: {
+        Row: {
+          created_at: string
+          data_fim: string | null
+          data_inicio: string
+          descricao: string
+          empresa_id: string
+          fornecedor_id: string | null
+          id: string
+          numero_oc: string | null
+          obra_id: string | null
+          observacoes: string | null
+          quantidade: number
+          status: string
+          tipo: string
+          tipo_contrato: string
+          updated_at: string
+          valor_diario: number | null
+          valor_mensal: number | null
+        }
+        Insert: {
+          created_at?: string
+          data_fim?: string | null
+          data_inicio: string
+          descricao: string
+          empresa_id: string
+          fornecedor_id?: string | null
+          id?: string
+          numero_oc?: string | null
+          obra_id?: string | null
+          observacoes?: string | null
+          quantidade?: number
+          status?: string
+          tipo?: string
+          tipo_contrato?: string
+          updated_at?: string
+          valor_diario?: number | null
+          valor_mensal?: number | null
+        }
+        Update: {
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string
+          descricao?: string
+          empresa_id?: string
+          fornecedor_id?: string | null
+          id?: string
+          numero_oc?: string | null
+          obra_id?: string | null
+          observacoes?: string | null
+          quantidade?: number
+          status?: string
+          tipo?: string
+          tipo_contrato?: string
+          updated_at?: string
+          valor_diario?: number | null
+          valor_mensal?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipamentos_locados_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipamentos_locados_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipamentos_locados_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      equipamentos_proprios: {
+        Row: {
+          codigo: string
+          created_at: string
+          data_aquisicao: string | null
+          descricao: string
+          empresa_id: string
+          id: string
+          marca: string | null
+          modelo: string | null
+          numero_serie: string | null
+          obra_id: string | null
+          observacoes: string | null
+          status: string
+          tipo: string
+          updated_at: string
+          valor_aquisicao: number | null
+        }
+        Insert: {
+          codigo: string
+          created_at?: string
+          data_aquisicao?: string | null
+          descricao: string
+          empresa_id: string
+          id?: string
+          marca?: string | null
+          modelo?: string | null
+          numero_serie?: string | null
+          obra_id?: string | null
+          observacoes?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+          valor_aquisicao?: number | null
+        }
+        Update: {
+          codigo?: string
+          created_at?: string
+          data_aquisicao?: string | null
+          descricao?: string
+          empresa_id?: string
+          id?: string
+          marca?: string | null
+          modelo?: string | null
+          numero_serie?: string | null
+          obra_id?: string | null
+          observacoes?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+          valor_aquisicao?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipamentos_proprios_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipamentos_proprios_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       folhas_pagamento: {
         Row: {
           ano: number
@@ -933,6 +1084,72 @@ export type Database = {
           },
         ]
       }
+      manutencoes_equipamento: {
+        Row: {
+          created_at: string
+          data_realizacao: string | null
+          data_solicitacao: string
+          descricao: string
+          empresa_id: string
+          equipamento_id: string
+          fornecedor: string | null
+          id: string
+          observacoes: string | null
+          status: string
+          tipo: string
+          updated_at: string
+          valor_aprovado: number | null
+          valor_orcamento: number | null
+        }
+        Insert: {
+          created_at?: string
+          data_realizacao?: string | null
+          data_solicitacao?: string
+          descricao: string
+          empresa_id: string
+          equipamento_id: string
+          fornecedor?: string | null
+          id?: string
+          observacoes?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+          valor_aprovado?: number | null
+          valor_orcamento?: number | null
+        }
+        Update: {
+          created_at?: string
+          data_realizacao?: string | null
+          data_solicitacao?: string
+          descricao?: string
+          empresa_id?: string
+          equipamento_id?: string
+          fornecedor?: string | null
+          id?: string
+          observacoes?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+          valor_aprovado?: number | null
+          valor_orcamento?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manutencoes_equipamento_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manutencoes_equipamento_equipamento_id_fkey"
+            columns: ["equipamento_id"]
+            isOneToOne: false
+            referencedRelation: "equipamentos_proprios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       movimentacoes_estoque: {
         Row: {
           compra_id: string | null
@@ -1097,6 +1314,72 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      solicitacoes_compra_equipamento: {
+        Row: {
+          created_at: string
+          descricao: string
+          empresa_id: string
+          id: string
+          marca: string | null
+          modelo: string | null
+          obra_id: string | null
+          observacoes: string | null
+          quantidade: number
+          solicitante: string | null
+          status: string
+          tipo: string
+          updated_at: string
+          valor_estimado: number | null
+        }
+        Insert: {
+          created_at?: string
+          descricao: string
+          empresa_id: string
+          id?: string
+          marca?: string | null
+          modelo?: string | null
+          obra_id?: string | null
+          observacoes?: string | null
+          quantidade?: number
+          solicitante?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+          valor_estimado?: number | null
+        }
+        Update: {
+          created_at?: string
+          descricao?: string
+          empresa_id?: string
+          id?: string
+          marca?: string | null
+          modelo?: string | null
+          obra_id?: string | null
+          observacoes?: string | null
+          quantidade?: number
+          solicitante?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+          valor_estimado?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "solicitacoes_compra_equipamento_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitacoes_compra_equipamento_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       solicitacoes_exame: {
         Row: {
