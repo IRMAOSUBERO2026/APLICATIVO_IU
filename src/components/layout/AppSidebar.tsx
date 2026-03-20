@@ -21,6 +21,7 @@ import {
   Home,
   MessageCircle,
   FileSpreadsheet,
+  Ruler,
 } from "lucide-react";
 import logoPreto from "@/assets/logo-preto.png";
 
