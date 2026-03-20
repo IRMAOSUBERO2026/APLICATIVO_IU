@@ -24,6 +24,7 @@ import ContratosLocacao from "./pages/ContratosLocacao";
 import DiarioObraMobile from "./pages/DiarioObraMobile";
 import Comunicacoes from "./pages/Comunicacoes";
 import Relatorios from "./pages/Relatorios";
+import Medicoes from "./pages/Medicoes";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -56,6 +57,7 @@ const App = () => (
           <Route path="/diario-obra-mobile" element={<DiarioObraMobile />} />
           <Route path="/comunicacoes" element={<Comunicacoes />} />
           <Route path="/relatorios" element={<Relatorios />} />
+          <Route path="/medicoes" element={<Medicoes />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

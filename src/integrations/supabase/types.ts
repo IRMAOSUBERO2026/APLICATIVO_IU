@@ -1150,6 +1150,278 @@ export type Database = {
           },
         ]
       }
+      medicao_boletim_itens: {
+        Row: {
+          contrato_item_id: string
+          id: string
+          medicao_id: string
+          modo_lancamento: string
+          observacoes: string | null
+          percentual_medido: number
+          quantidade_medida: number
+          valor_medido: number
+        }
+        Insert: {
+          contrato_item_id: string
+          id?: string
+          medicao_id: string
+          modo_lancamento?: string
+          observacoes?: string | null
+          percentual_medido?: number
+          quantidade_medida?: number
+          valor_medido?: number
+        }
+        Update: {
+          contrato_item_id?: string
+          id?: string
+          medicao_id?: string
+          modo_lancamento?: string
+          observacoes?: string | null
+          percentual_medido?: number
+          quantidade_medida?: number
+          valor_medido?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medicao_boletim_itens_contrato_item_id_fkey"
+            columns: ["contrato_item_id"]
+            isOneToOne: false
+            referencedRelation: "medicao_contrato_itens"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medicao_boletim_itens_medicao_id_fkey"
+            columns: ["medicao_id"]
+            isOneToOne: false
+            referencedRelation: "medicoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medicao_contrato_itens: {
+        Row: {
+          aditivo_data: string | null
+          aditivo_numero: number | null
+          created_at: string
+          descricao: string
+          empresa_id: string
+          id: string
+          is_aditivo: boolean
+          item_numero: string
+          obra_id: string
+          observacoes: string | null
+          quantidade: number
+          unidade: string
+          updated_at: string
+          valor_total: number
+          valor_unitario: number
+        }
+        Insert: {
+          aditivo_data?: string | null
+          aditivo_numero?: number | null
+          created_at?: string
+          descricao: string
+          empresa_id: string
+          id?: string
+          is_aditivo?: boolean
+          item_numero: string
+          obra_id: string
+          observacoes?: string | null
+          quantidade?: number
+          unidade?: string
+          updated_at?: string
+          valor_total?: number
+          valor_unitario?: number
+        }
+        Update: {
+          aditivo_data?: string | null
+          aditivo_numero?: number | null
+          created_at?: string
+          descricao?: string
+          empresa_id?: string
+          id?: string
+          is_aditivo?: boolean
+          item_numero?: string
+          obra_id?: string
+          observacoes?: string | null
+          quantidade?: number
+          unidade?: string
+          updated_at?: string
+          valor_total?: number
+          valor_unitario?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medicao_contrato_itens_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medicao_contrato_itens_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medicao_reajustes: {
+        Row: {
+          created_at: string
+          data_aplicacao: string
+          empresa_id: string
+          id: string
+          motivo: string | null
+          obra_id: string
+          observacoes: string | null
+          percentual: number
+          tipo: string
+        }
+        Insert: {
+          created_at?: string
+          data_aplicacao: string
+          empresa_id: string
+          id?: string
+          motivo?: string | null
+          obra_id: string
+          observacoes?: string | null
+          percentual?: number
+          tipo?: string
+        }
+        Update: {
+          created_at?: string
+          data_aplicacao?: string
+          empresa_id?: string
+          id?: string
+          motivo?: string | null
+          obra_id?: string
+          observacoes?: string | null
+          percentual?: number
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medicao_reajustes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medicao_reajustes_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medicao_retencoes_impostos: {
+        Row: {
+          aliquota: number
+          id: string
+          imposto: string
+          medicao_id: string
+          observacoes: string | null
+          valor: number
+        }
+        Insert: {
+          aliquota?: number
+          id?: string
+          imposto: string
+          medicao_id: string
+          observacoes?: string | null
+          valor?: number
+        }
+        Update: {
+          aliquota?: number
+          id?: string
+          imposto?: string
+          medicao_id?: string
+          observacoes?: string | null
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medicao_retencoes_impostos_medicao_id_fkey"
+            columns: ["medicao_id"]
+            isOneToOne: false
+            referencedRelation: "medicoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medicoes: {
+        Row: {
+          created_at: string
+          data_emissao: string
+          empresa_id: string
+          id: string
+          numero: number
+          obra_id: string
+          observacoes: string | null
+          percentual_retencao: number
+          periodo_fim: string
+          periodo_inicio: string
+          status: string
+          updated_at: string
+          valor_bruto: number
+          valor_liquido: number
+          valor_retencao: number
+        }
+        Insert: {
+          created_at?: string
+          data_emissao?: string
+          empresa_id: string
+          id?: string
+          numero: number
+          obra_id: string
+          observacoes?: string | null
+          percentual_retencao?: number
+          periodo_fim: string
+          periodo_inicio: string
+          status?: string
+          updated_at?: string
+          valor_bruto?: number
+          valor_liquido?: number
+          valor_retencao?: number
+        }
+        Update: {
+          created_at?: string
+          data_emissao?: string
+          empresa_id?: string
+          id?: string
+          numero?: number
+          obra_id?: string
+          observacoes?: string | null
+          percentual_retencao?: number
+          periodo_fim?: string
+          periodo_inicio?: string
+          status?: string
+          updated_at?: string
+          valor_bruto?: number
+          valor_liquido?: number
+          valor_retencao?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medicoes_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medicoes_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       movimentacoes_estoque: {
         Row: {
           compra_id: string | null
