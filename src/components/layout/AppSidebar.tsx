@@ -37,6 +37,7 @@ const menuSections = [
     items: [
       { icon: HardHat, label: "Obras", path: "/obras" },
       { icon: ClipboardList, label: "Diário de Obra", path: "/diario-obra" },
+      { icon: Ruler, label: "Medições", path: "/medicoes" },
       { icon: Users, label: "RH / DP", path: "/rh" },
       { icon: CreditCard, label: "Folha Salarial", path: "/folha" },
       { icon: Palmtree, label: "Férias", path: "/ferias" },
