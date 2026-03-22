@@ -900,6 +900,7 @@ export type Database = {
           nome: string
           nome_mae: string | null
           nome_pai: string | null
+          numero_registro: string | null
           obra_id: string | null
           pis: string | null
           rg: string | null
@@ -952,6 +953,7 @@ export type Database = {
           nome: string
           nome_mae?: string | null
           nome_pai?: string | null
+          numero_registro?: string | null
           obra_id?: string | null
           pis?: string | null
           rg?: string | null
@@ -1004,6 +1006,7 @@ export type Database = {
           nome?: string
           nome_mae?: string | null
           nome_pai?: string | null
+          numero_registro?: string | null
           obra_id?: string | null
           pis?: string | null
           rg?: string | null
