@@ -5,18 +5,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
 const SUBPASTAS_FUNCIONARIO = [
-  "Doc Admissionais",
   "Contrato",
+  "Doc Admissionais",
+  "Férias",
   "Ficha de EPI",
-  "Holerites",
   "Cartão Ponto",
-  "Atestados",
+  "Holerites",
+  "Rescisão",
+  "Advertências",
+  "Documentos",
   "Exames",
   "Treinamentos",
-  "Comprovantes",
-  "Advertências",
-  "Outros",
-  "Rescisão",
 ];
 
 interface DocumentManagerProps {

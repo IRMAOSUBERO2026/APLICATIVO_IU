@@ -1,0 +1,1 @@
+ALTER TABLE public.funcionarios ADD COLUMN IF NOT EXISTS numero_registro text;
