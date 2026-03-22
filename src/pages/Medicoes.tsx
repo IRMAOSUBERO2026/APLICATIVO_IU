@@ -331,7 +331,28 @@ export default function Medicoes() {
       );
     }
 
-    toast({ title: `Medição #${editingMedicao.numero} salva com sucesso` });
+    // Gerar conta a receber automaticamente
+    const contaReceber = {
+      empresa_id: obra.empresa_id,
+      obra_id: selectedObraId,
+      descricao: `Medição #${editingMedicao.numero} - ${obra.nome}`,
+      categoria: "Medição",
+      valor: vLiq,
+      data_vencimento: medicaoForm.periodo_fim,
+      status: "pendente",
+      documento: `Medição ${editingMedicao.numero}`,
+      cliente: obra.construtora || null,
+      observacoes: `Valor bruto: ${fmtBRL(vBruto)} | Retenção (${pctRet}%): ${fmtBRL(vRet)} | Impostos: ${fmtBRL(totalImpostos)}`,
+      parcela: 1,
+      total_parcelas: 1,
+    };
+    const { error: errCR } = await supabase.from("contas_receber").insert(contaReceber);
+    if (errCR) {
+      toast({ title: "Aviso", description: `Medição salva mas erro ao gerar conta a receber: ${errCR.message}`, variant: "destructive" });
+    } else {
+      toast({ title: `Medição #${editingMedicao.numero} salva e conta a receber gerada no financeiro` });
+    }
+
     setShowMedicaoDialog(false);
     loadMedicoes();
   };
