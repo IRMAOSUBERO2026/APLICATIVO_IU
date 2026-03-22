@@ -501,6 +501,74 @@ export type Database = {
         }
         Relationships: []
       }
+      entregas_epi: {
+        Row: {
+          ca_numero: string | null
+          created_at: string
+          data_entrega: string
+          empresa_id: string
+          funcionario_id: string
+          id: string
+          obra_id: string | null
+          observacoes: string | null
+          produto_id: string
+          quantidade: number
+        }
+        Insert: {
+          ca_numero?: string | null
+          created_at?: string
+          data_entrega?: string
+          empresa_id: string
+          funcionario_id: string
+          id?: string
+          obra_id?: string | null
+          observacoes?: string | null
+          produto_id: string
+          quantidade?: number
+        }
+        Update: {
+          ca_numero?: string | null
+          created_at?: string
+          data_entrega?: string
+          empresa_id?: string
+          funcionario_id?: string
+          id?: string
+          obra_id?: string | null
+          observacoes?: string | null
+          produto_id?: string
+          quantidade?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entregas_epi_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entregas_epi_funcionario_id_fkey"
+            columns: ["funcionario_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entregas_epi_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entregas_epi_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       equipamentos_locados: {
         Row: {
           created_at: string
@@ -881,6 +949,7 @@ export type Database = {
           ctps: string | null
           data_admissao: string
           data_aso: string | null
+          data_entrada_pais: string | null
           data_nascimento: string | null
           data_nr12: string | null
           data_nr18: string | null
@@ -888,6 +957,7 @@ export type Database = {
           data_nr6: string | null
           data_rescisao: string | null
           dependentes: number | null
+          dependentes_json: Json | null
           email: string | null
           empresa_id: string
           endereco: string | null
@@ -904,6 +974,7 @@ export type Database = {
           obra_id: string | null
           pis: string | null
           rg: string | null
+          rne: string | null
           salario_base: number
           salario_combinado: number | null
           secao_eleitoral: string | null
@@ -934,6 +1005,7 @@ export type Database = {
           ctps?: string | null
           data_admissao: string
           data_aso?: string | null
+          data_entrada_pais?: string | null
           data_nascimento?: string | null
           data_nr12?: string | null
           data_nr18?: string | null
@@ -941,6 +1013,7 @@ export type Database = {
           data_nr6?: string | null
           data_rescisao?: string | null
           dependentes?: number | null
+          dependentes_json?: Json | null
           email?: string | null
           empresa_id: string
           endereco?: string | null
@@ -957,6 +1030,7 @@ export type Database = {
           obra_id?: string | null
           pis?: string | null
           rg?: string | null
+          rne?: string | null
           salario_base?: number
           salario_combinado?: number | null
           secao_eleitoral?: string | null
@@ -987,6 +1061,7 @@ export type Database = {
           ctps?: string | null
           data_admissao?: string
           data_aso?: string | null
+          data_entrada_pais?: string | null
           data_nascimento?: string | null
           data_nr12?: string | null
           data_nr18?: string | null
@@ -994,6 +1069,7 @@ export type Database = {
           data_nr6?: string | null
           data_rescisao?: string | null
           dependentes?: number | null
+          dependentes_json?: Json | null
           email?: string | null
           empresa_id?: string
           endereco?: string | null
@@ -1010,6 +1086,7 @@ export type Database = {
           obra_id?: string | null
           pis?: string | null
           rg?: string | null
+          rne?: string | null
           salario_base?: number
           salario_combinado?: number | null
           secao_eleitoral?: string | null
