@@ -24,8 +24,10 @@ interface Props {
   initialResult: FolhaOutput | null;
   isSaved: boolean;
   mes: string;
+  mesIdx: number;
   ano: number;
   saving: boolean;
+  horarioPadrao: HorarioPadrao | null;
   onInputChange: (data: FolhaInput) => void;
   onFechamento: () => void;
   onSalvarRascunho: () => void;
