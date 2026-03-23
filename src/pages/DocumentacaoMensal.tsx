@@ -4,8 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import {
   FileText, FolderOpen, ChevronRight, ArrowLeft, Upload, Trash2, Download,
-  Calendar, Search, Building2, RefreshCw, Users, Loader2
+  Calendar, Search, Building2, RefreshCw, Users, Loader2, Archive
 } from "lucide-react";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
 
 const SUBPASTAS_MENSAL = [
   "Documentos Mensais",
