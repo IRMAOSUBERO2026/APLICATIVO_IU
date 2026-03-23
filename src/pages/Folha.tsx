@@ -6,6 +6,7 @@ import { FolhaResultado } from "@/components/folha/FolhaResultado";
 import { FolhaResumoObra } from "@/components/folha/FolhaResumoObra";
 import { FolhaCalculoIndividual } from "@/components/folha/FolhaCalculoIndividual";
 import { ImportarPontoPDF } from "@/components/folha/ImportarPontoPDF";
+import { HorarioPadraoEditor } from "@/components/folha/HorarioPadraoEditor";
 import { FuncionariosList } from "@/components/folha/FuncionariosList";
 import { DocumentManager } from "@/components/rh/DocumentManager";
 import { calcularFolha, type FolhaInput, type FolhaOutput } from "@/lib/motorFolha";
@@ -14,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Calculator, Save, FileText, ArrowLeft, CheckCircle } from "lucide-react";
+import { Calculator, Save, FileText, ArrowLeft, CheckCircle, Clock } from "lucide-react";
 import { getDaysInMonth } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
@@ -34,6 +35,7 @@ interface ObraOption {
   id: string;
   nome: string;
   codigo: string;
+  horario_padrao: any;
 }
 
 const MESES = [
@@ -90,6 +92,7 @@ export default function Folha() {
   const [saving, setSaving] = useState(false);
   const [docManagerOpen, setDocManagerOpen] = useState(false);
   const [selectedFuncDoc, setSelectedFuncDoc] = useState<{ id: string; nome: string } | null>(null);
+  const [showHorarioEditor, setShowHorarioEditor] = useState(false);
 
   const openDocManager = (id: string, nome: string) => {
     setSelectedFuncDoc({ id, nome });
@@ -110,10 +113,10 @@ export default function Folha() {
   useEffect(() => {
     supabase
       .from("obras")
-      .select("id, nome, codigo")
+      .select("id, nome, codigo, horario_padrao")
       .eq("status", "em_andamento")
       .order("nome")
-      .then(({ data }) => { if (data) setObras(data); });
+      .then(({ data }) => { if (data) setObras(data as any); });
   }, []);
 
   // Load dashboard data
@@ -491,10 +494,34 @@ export default function Folha() {
 
             {!loading && funcionarios.length > 0 && (
               <>
-                <ImportarPontoPDF
-                  funcionariosCpfs={funcionarios.map((f, i) => ({ cpf: f.cpf, idx: i }))}
-                  onImport={handleImportPonto}
-                />
+                <div className="flex gap-2">
+                  <ImportarPontoPDF
+                    funcionariosCpfs={funcionarios.map((f, i) => ({ cpf: f.cpf, idx: i }))}
+                    onImport={handleImportPonto}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowHorarioEditor(!showHorarioEditor)}
+                    className="gap-2"
+                  >
+                    <Clock className="h-4 w-4" />
+                    {showHorarioEditor ? "Ocultar Horário" : "Horário Padrão"}
+                  </Button>
+                </div>
+
+                {showHorarioEditor && obraNome && (
+                  <HorarioPadraoEditor
+                    obraId={selectedObraId}
+                    obraNome={obraNome.nome}
+                    initial={obraNome.horario_padrao}
+                    onSaved={(h) => {
+                      setObras(prev => prev.map(o => o.id === selectedObraId ? { ...o, horario_padrao: h } : o));
+                      setShowHorarioEditor(false);
+                    }}
+                    onClose={() => setShowHorarioEditor(false)}
+                  />
+                )}
 
                 <FuncionariosList
                   funcionarios={funcionarios.map((f) => ({
@@ -543,8 +570,10 @@ export default function Folha() {
             initialResult={current.result}
             isSaved={current.saved}
             mes={MESES[mes]}
+            mesIdx={mes}
             ano={ano}
             saving={saving}
+            horarioPadrao={obraNome?.horario_padrao ?? null}
             onInputChange={handleInputChange}
             onFechamento={handleFechamentoMensal}
             onSalvarRascunho={handleSaveIndividual}

@@ -5,8 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { FolhaInputForm } from "./FolhaInputForm";
 import { FolhaResultado } from "./FolhaResultado";
+import { EspelhoPonto, type HorarioPadrao, type PontoResult } from "./EspelhoPonto";
 import { calcularFolha, type FolhaInput, type FolhaOutput } from "@/lib/motorFolha";
-import { Calculator, CheckCircle, Save, User, ArrowLeft, RotateCcw } from "lucide-react";
+import { Calculator, CheckCircle, Save, User, ArrowLeft, RotateCcw, Clock } from "lucide-react";
 
 interface FuncionarioData {
   id: string;
@@ -23,8 +24,10 @@ interface Props {
   initialResult: FolhaOutput | null;
   isSaved: boolean;
   mes: string;
+  mesIdx: number;
   ano: number;
   saving: boolean;
+  horarioPadrao: HorarioPadrao | null;
   onInputChange: (data: FolhaInput) => void;
   onFechamento: () => void;
   onSalvarRascunho: () => void;
@@ -40,8 +43,10 @@ export function FolhaCalculoIndividual({
   initialResult,
   isSaved,
   mes,
+  mesIdx,
   ano,
   saving,
+  horarioPadrao,
   onInputChange,
   onFechamento,
   onSalvarRascunho,
@@ -50,6 +55,7 @@ export function FolhaCalculoIndividual({
   const [input, setInput] = useState<FolhaInput>(initialInput);
   const [result, setResult] = useState<FolhaOutput | null>(initialResult);
   const [calculated, setCalculated] = useState(initialResult !== null);
+  const [showPonto, setShowPonto] = useState(false);
 
   const handleChange = (data: FolhaInput) => {
     setInput(data);
@@ -62,6 +68,21 @@ export function FolhaCalculoIndividual({
     const r = calcularFolha(input);
     setResult(r);
     setCalculated(true);
+  };
+
+  const handlePontoResult = (pontoResult: PontoResult) => {
+    const updated = {
+      ...input,
+      horas_extras_semanais: pontoResult.horasExtrasSemanais,
+      horas_extras_sabado: pontoResult.horasExtrasSabado,
+      horas_extras_100: pontoResult.horasExtras100,
+      horas_negativas: pontoResult.horasNegativas,
+      faltas: pontoResult.faltas,
+    };
+    setInput(updated);
+    setResult(null);
+    setCalculated(false);
+    onInputChange(updated);
   };
 
   const handleReset = () => {
@@ -140,6 +161,22 @@ export function FolhaCalculoIndividual({
           </div>
         </CardContent>
       </Card>
+
+      {/* Espelho Ponto */}
+      <div className="flex justify-end">
+        <Button variant="outline" size="sm" onClick={() => setShowPonto(!showPonto)} className="gap-2">
+          <Clock className="h-4 w-4" /> {showPonto ? "Ocultar Espelho Ponto" : "Espelho Ponto"}
+        </Button>
+      </div>
+
+      {showPonto && (
+        <EspelhoPonto
+          mes={mesIdx}
+          ano={ano}
+          horarioPadrao={horarioPadrao}
+          onResult={handlePontoResult}
+        />
+      )}
 
       {/* Formulário de Inputs */}
       <FolhaInputForm data={input} onChange={handleChange} />
