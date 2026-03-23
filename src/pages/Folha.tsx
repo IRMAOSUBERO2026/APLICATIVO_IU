@@ -92,6 +92,7 @@ export default function Folha() {
   const [saving, setSaving] = useState(false);
   const [docManagerOpen, setDocManagerOpen] = useState(false);
   const [selectedFuncDoc, setSelectedFuncDoc] = useState<{ id: string; nome: string } | null>(null);
+  const [showHorarioEditor, setShowHorarioEditor] = useState(false);
 
   const openDocManager = (id: string, nome: string) => {
     setSelectedFuncDoc({ id, nome });
