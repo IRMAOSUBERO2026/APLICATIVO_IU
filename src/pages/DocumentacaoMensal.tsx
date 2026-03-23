@@ -4,8 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import {
   FileText, FolderOpen, ChevronRight, ArrowLeft, Upload, Trash2, Download,
-  Calendar, Search, Building2, RefreshCw, Users, Loader2
+  Calendar, Search, Building2, RefreshCw, Users, Loader2, Archive
 } from "lucide-react";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
 
 const SUBPASTAS_MENSAL = [
   "Documentos Mensais",
@@ -51,6 +53,7 @@ export default function DocumentacaoMensal() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [zipping, setZipping] = useState(false);
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [search, setSearch] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -201,6 +204,51 @@ export default function DocumentacaoMensal() {
     });
 
     if (selectedPasta) loadFiles();
+  };
+
+  const handleDownloadZip = async () => {
+    if (!selectedObra || !selectedMesAno) return;
+    setZipping(true);
+    const zip = new JSZip();
+    let totalFiles = 0;
+
+    try {
+      for (const pasta of SUBPASTAS_MENSAL) {
+        const path = `${basePath(selectedObra.id, selectedMesAno)}/${pasta}`;
+        const { data: pastaFiles } = await supabase.storage
+          .from("documentos")
+          .list(path, { limit: 200 });
+
+        const validFiles = (pastaFiles || []).filter(f => f.name !== ".emptyFolderPlaceholder");
+        if (validFiles.length === 0) continue;
+
+        const folder = zip.folder(pasta);
+        for (const file of validFiles) {
+          const { data: blob } = await supabase.storage
+            .from("documentos")
+            .download(`${path}/${file.name}`);
+          if (blob && folder) {
+            folder.file(file.name, blob);
+            totalFiles++;
+          }
+        }
+      }
+
+      if (totalFiles === 0) {
+        toast({ title: "Nenhum arquivo", description: "Não há documentos para compactar neste mês.", variant: "destructive" });
+        setZipping(false);
+        return;
+      }
+
+      const mesNum = parseInt(selectedMesAno.split("-")[1]);
+      const anoNum = selectedMesAno.split("-")[0];
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      saveAs(zipBlob, `${selectedObra.nome}_${MESES[mesNum - 1]}_${anoNum}.zip`);
+      toast({ title: "Download concluído", description: `${totalFiles} arquivo(s) compactados.` });
+    } catch (err: any) {
+      toast({ title: "Erro ao gerar ZIP", description: err.message, variant: "destructive" });
+    }
+    setZipping(false);
   };
 
   const handleSelectMesAno = () => {
@@ -359,14 +407,24 @@ export default function DocumentacaoMensal() {
               </div>
             </div>
 
-            <button
-              onClick={syncFuncionariosDocs}
-              disabled={syncing || funcionarios.length === 0}
-              className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground hover:bg-accent/80 transition-colors disabled:opacity-50"
-            >
-              {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-              {syncing ? "Sincronizando..." : "Sincronizar Docs Funcionários"}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleDownloadZip}
+                disabled={zipping}
+                className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+              >
+                {zipping ? <Loader2 className="h-4 w-4 animate-spin" /> : <Archive className="h-4 w-4" />}
+                {zipping ? "Compactando..." : "Baixar ZIP do Mês"}
+              </button>
+              <button
+                onClick={syncFuncionariosDocs}
+                disabled={syncing || funcionarios.length === 0}
+                className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground hover:bg-accent/80 transition-colors disabled:opacity-50"
+              >
+                {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                {syncing ? "Sincronizando..." : "Sincronizar Docs"}
+              </button>
+            </div>
           </div>
 
           {funcionarios.length > 0 && (
