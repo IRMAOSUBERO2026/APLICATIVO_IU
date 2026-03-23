@@ -407,14 +407,24 @@ export default function DocumentacaoMensal() {
               </div>
             </div>
 
-            <button
-              onClick={syncFuncionariosDocs}
-              disabled={syncing || funcionarios.length === 0}
-              className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground hover:bg-accent/80 transition-colors disabled:opacity-50"
-            >
-              {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-              {syncing ? "Sincronizando..." : "Sincronizar Docs Funcionários"}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleDownloadZip}
+                disabled={zipping}
+                className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+              >
+                {zipping ? <Loader2 className="h-4 w-4 animate-spin" /> : <Archive className="h-4 w-4" />}
+                {zipping ? "Compactando..." : "Baixar ZIP do Mês"}
+              </button>
+              <button
+                onClick={syncFuncionariosDocs}
+                disabled={syncing || funcionarios.length === 0}
+                className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground hover:bg-accent/80 transition-colors disabled:opacity-50"
+              >
+                {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                {syncing ? "Sincronizando..." : "Sincronizar Docs"}
+              </button>
+            </div>
           </div>
 
           {funcionarios.length > 0 && (
