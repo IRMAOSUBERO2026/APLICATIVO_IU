@@ -53,6 +53,7 @@ export default function DocumentacaoMensal() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [zipping, setZipping] = useState(false);
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [search, setSearch] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
