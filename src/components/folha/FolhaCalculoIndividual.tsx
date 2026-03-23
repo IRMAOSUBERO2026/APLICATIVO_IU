@@ -5,8 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { FolhaInputForm } from "./FolhaInputForm";
 import { FolhaResultado } from "./FolhaResultado";
+import { EspelhoPonto, type HorarioPadrao, type PontoResult } from "./EspelhoPonto";
 import { calcularFolha, type FolhaInput, type FolhaOutput } from "@/lib/motorFolha";
-import { Calculator, CheckCircle, Save, User, ArrowLeft, RotateCcw } from "lucide-react";
+import { Calculator, CheckCircle, Save, User, ArrowLeft, RotateCcw, Clock } from "lucide-react";
 
 interface FuncionarioData {
   id: string;
