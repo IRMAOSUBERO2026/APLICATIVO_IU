@@ -34,6 +34,7 @@ interface ObraOption {
   id: string;
   nome: string;
   codigo: string;
+  horario_padrao: any;
 }
 
 const MESES = [
