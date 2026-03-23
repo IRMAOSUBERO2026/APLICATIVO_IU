@@ -70,6 +70,21 @@ export function FolhaCalculoIndividual({
     setCalculated(true);
   };
 
+  const handlePontoResult = (pontoResult: PontoResult) => {
+    const updated = {
+      ...input,
+      horas_extras_semanais: pontoResult.horasExtrasSemanais,
+      horas_extras_sabado: pontoResult.horasExtrasSabado,
+      horas_extras_100: pontoResult.horasExtras100,
+      horas_negativas: pontoResult.horasNegativas,
+      faltas: pontoResult.faltas,
+    };
+    setInput(updated);
+    setResult(null);
+    setCalculated(false);
+    onInputChange(updated);
+  };
+
   const handleReset = () => {
     const sc = funcionario.salario_combinado ?? funcionario.salario_base;
     const reset: FolhaInput = {
