@@ -544,8 +544,10 @@ export default function Folha() {
             initialResult={current.result}
             isSaved={current.saved}
             mes={MESES[mes]}
+            mesIdx={mes}
             ano={ano}
             saving={saving}
+            horarioPadrao={obraNome?.horario_padrao ?? null}
             onInputChange={handleInputChange}
             onFechamento={handleFechamentoMensal}
             onSalvarRascunho={handleSaveIndividual}
