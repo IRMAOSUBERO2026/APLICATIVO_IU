@@ -206,6 +206,51 @@ export default function DocumentacaoMensal() {
     if (selectedPasta) loadFiles();
   };
 
+  const handleDownloadZip = async () => {
+    if (!selectedObra || !selectedMesAno) return;
+    setZipping(true);
+    const zip = new JSZip();
+    let totalFiles = 0;
+
+    try {
+      for (const pasta of SUBPASTAS_MENSAL) {
+        const path = `${basePath(selectedObra.id, selectedMesAno)}/${pasta}`;
+        const { data: pastaFiles } = await supabase.storage
+          .from("documentos")
+          .list(path, { limit: 200 });
+
+        const validFiles = (pastaFiles || []).filter(f => f.name !== ".emptyFolderPlaceholder");
+        if (validFiles.length === 0) continue;
+
+        const folder = zip.folder(pasta);
+        for (const file of validFiles) {
+          const { data: blob } = await supabase.storage
+            .from("documentos")
+            .download(`${path}/${file.name}`);
+          if (blob && folder) {
+            folder.file(file.name, blob);
+            totalFiles++;
+          }
+        }
+      }
+
+      if (totalFiles === 0) {
+        toast({ title: "Nenhum arquivo", description: "Não há documentos para compactar neste mês.", variant: "destructive" });
+        setZipping(false);
+        return;
+      }
+
+      const mesNum = parseInt(selectedMesAno.split("-")[1]);
+      const anoNum = selectedMesAno.split("-")[0];
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      saveAs(zipBlob, `${selectedObra.nome}_${MESES[mesNum - 1]}_${anoNum}.zip`);
+      toast({ title: "Download concluído", description: `${totalFiles} arquivo(s) compactados.` });
+    } catch (err: any) {
+      toast({ title: "Erro ao gerar ZIP", description: err.message, variant: "destructive" });
+    }
+    setZipping(false);
+  };
+
   const handleSelectMesAno = () => {
     setSelectedMesAno(`${ano}-${String(mes).padStart(2, "0")}`);
   };
