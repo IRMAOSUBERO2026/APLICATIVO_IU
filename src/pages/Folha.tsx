@@ -111,10 +111,10 @@ export default function Folha() {
   useEffect(() => {
     supabase
       .from("obras")
-      .select("id, nome, codigo")
+      .select("id, nome, codigo, horario_padrao")
       .eq("status", "em_andamento")
       .order("nome")
-      .then(({ data }) => { if (data) setObras(data); });
+      .then(({ data }) => { if (data) setObras(data as any); });
   }, []);
 
   // Load dashboard data
