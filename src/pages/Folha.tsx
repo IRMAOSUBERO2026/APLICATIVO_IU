@@ -494,10 +494,34 @@ export default function Folha() {
 
             {!loading && funcionarios.length > 0 && (
               <>
-                <ImportarPontoPDF
-                  funcionariosCpfs={funcionarios.map((f, i) => ({ cpf: f.cpf, idx: i }))}
-                  onImport={handleImportPonto}
-                />
+                <div className="flex gap-2">
+                  <ImportarPontoPDF
+                    funcionariosCpfs={funcionarios.map((f, i) => ({ cpf: f.cpf, idx: i }))}
+                    onImport={handleImportPonto}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowHorarioEditor(!showHorarioEditor)}
+                    className="gap-2"
+                  >
+                    <Clock className="h-4 w-4" />
+                    {showHorarioEditor ? "Ocultar Horário" : "Horário Padrão"}
+                  </Button>
+                </div>
+
+                {showHorarioEditor && obraNome && (
+                  <HorarioPadraoEditor
+                    obraId={selectedObraId}
+                    obraNome={obraNome.nome}
+                    initial={obraNome.horario_padrao}
+                    onSaved={(h) => {
+                      setObras(prev => prev.map(o => o.id === selectedObraId ? { ...o, horario_padrao: h } : o));
+                      setShowHorarioEditor(false);
+                    }}
+                    onClose={() => setShowHorarioEditor(false)}
+                  />
+                )}
 
                 <FuncionariosList
                   funcionarios={funcionarios.map((f) => ({
