@@ -162,6 +162,22 @@ export function FolhaCalculoIndividual({
         </CardContent>
       </Card>
 
+      {/* Espelho Ponto */}
+      <div className="flex justify-end">
+        <Button variant="outline" size="sm" onClick={() => setShowPonto(!showPonto)} className="gap-2">
+          <Clock className="h-4 w-4" /> {showPonto ? "Ocultar Espelho Ponto" : "Espelho Ponto"}
+        </Button>
+      </div>
+
+      {showPonto && (
+        <EspelhoPonto
+          mes={mesIdx}
+          ano={ano}
+          horarioPadrao={horarioPadrao}
+          onResult={handlePontoResult}
+        />
+      )}
+
       {/* Formulário de Inputs */}
       <FolhaInputForm data={input} onChange={handleChange} />
 
