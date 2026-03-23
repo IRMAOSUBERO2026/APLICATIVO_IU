@@ -43,8 +43,10 @@ export function FolhaCalculoIndividual({
   initialResult,
   isSaved,
   mes,
+  mesIdx,
   ano,
   saving,
+  horarioPadrao,
   onInputChange,
   onFechamento,
   onSalvarRascunho,
@@ -53,6 +55,7 @@ export function FolhaCalculoIndividual({
   const [input, setInput] = useState<FolhaInput>(initialInput);
   const [result, setResult] = useState<FolhaOutput | null>(initialResult);
   const [calculated, setCalculated] = useState(initialResult !== null);
+  const [showPonto, setShowPonto] = useState(false);
 
   const handleChange = (data: FolhaInput) => {
     setInput(data);
