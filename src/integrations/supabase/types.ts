@@ -1577,6 +1577,7 @@ export type Database = {
           data_previsao_fim: string | null
           empresa_id: string
           endereco: string | null
+          horario_padrao: Json | null
           id: string
           nome: string
           observacoes: string | null
@@ -1594,6 +1595,7 @@ export type Database = {
           data_previsao_fim?: string | null
           empresa_id: string
           endereco?: string | null
+          horario_padrao?: Json | null
           id?: string
           nome: string
           observacoes?: string | null
@@ -1611,6 +1613,7 @@ export type Database = {
           data_previsao_fim?: string | null
           empresa_id?: string
           endereco?: string | null
+          horario_padrao?: Json | null
           id?: string
           nome?: string
           observacoes?: string | null
