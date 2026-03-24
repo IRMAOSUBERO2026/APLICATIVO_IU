@@ -20,8 +20,18 @@ interface FuncPresenca {
   horas: number;
 }
 
+interface ContratoItem {
+  id: string;
+  item_numero: string;
+  descricao: string;
+  unidade: string;
+  quantidade: number;
+  is_aditivo: boolean;
+}
+
 interface Atividade {
   servico: string;
+  contrato_item_id: string;
   quantidade: number;
   unidade: string;
   descricao: string;
@@ -56,7 +66,8 @@ export default function DiarioObra() {
   // Presença de visitantes (de outras obras)
   const [presencaVisitantes, setPresencaVisitantes] = useState<FuncPresenca[]>([]);
   // Atividades
-  const [atividades, setAtividades] = useState<Atividade[]>([{ servico: "", quantidade: 0, unidade: "m²", descricao: "" }]);
+  const [atividades, setAtividades] = useState<Atividade[]>([{ servico: "", contrato_item_id: "", quantidade: 0, unidade: "m²", descricao: "" }]);
+  const [contratoItens, setContratoItens] = useState<ContratoItem[]>([]);
   // Equipamentos próprios
   const [equipsProprios, setEquipsProprios] = useState<EquipProprio[]>([]);
   // Equipamentos locados
@@ -160,6 +171,7 @@ export default function DiarioObra() {
     if (!selectedObra) {
       setPresencaObra([]);
       setPresencaVisitantes([]);
+      setContratoItens([]);
       return;
     }
     const daObra = allFuncionarios.filter(f => f.obra_id === selectedObra);
@@ -167,6 +179,11 @@ export default function DiarioObra() {
 
     setPresencaObra(daObra.map(f => ({ id: f.id, nome: f.nome, cargo: f.cargo, presente: true, horas: 8 })));
     setPresencaVisitantes(deOutras.map(f => ({ id: f.id, nome: f.nome, cargo: f.cargo, presente: false, horas: 8 })));
+
+    // Load contract items for this obra
+    supabase.from("medicao_contrato_itens").select("id, item_numero, descricao, unidade, quantidade, is_aditivo")
+      .eq("obra_id", selectedObra).order("item_numero")
+      .then(({ data }) => { if (data) setContratoItens(data); });
   }, [selectedObra, allFuncionarios]);
 
   // Cálculos automáticos
@@ -191,7 +208,7 @@ export default function DiarioObra() {
     setList(prev => prev.map(f => f.id === id ? { ...f, horas } : f));
   };
 
-  const addAtividade = () => setAtividades(prev => [...prev, { servico: "", quantidade: 0, unidade: "m²", descricao: "" }]);
+  const addAtividade = () => setAtividades(prev => [...prev, { servico: "", contrato_item_id: "", quantidade: 0, unidade: "m²", descricao: "" }]);
   const removeAtividade = (i: number) => setAtividades(prev => prev.filter((_, idx) => idx !== i));
   const updateAtividade = (i: number, field: keyof Atividade, value: any) => {
     setAtividades(prev => prev.map((a, idx) => idx === i ? { ...a, [field]: value } : a));
@@ -217,8 +234,12 @@ export default function DiarioObra() {
     ];
 
     const atividadesTexto = atividades
-      .filter(a => a.servico)
-      .map(a => `${a.servico}: ${a.quantidade} ${a.unidade} - ${a.descricao}`)
+      .filter(a => a.servico || a.contrato_item_id)
+      .map(a => {
+        const itemContrato = a.contrato_item_id ? contratoItens.find(c => c.id === a.contrato_item_id) : null;
+        const prefix = itemContrato ? `[${itemContrato.item_numero}] ` : "";
+        return `${prefix}${a.servico}: ${a.quantidade} ${a.unidade} - ${a.descricao}`;
+      })
       .join("\n");
 
     const obsCompleta = [
@@ -405,6 +426,9 @@ export default function DiarioObra() {
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold flex items-center gap-2">
                   <Calculator className="h-4 w-4 text-primary" /> Atividades Executadas
+                  {contratoItens.length > 0 && (
+                    <span className="text-[10px] font-normal text-muted-foreground">({contratoItens.length} itens do contrato disponíveis)</span>
+                  )}
                 </h2>
                 <button onClick={addAtividade} className="inline-flex items-center gap-1 text-xs rounded-lg border px-3 py-1.5 text-muted-foreground hover:bg-muted transition-colors">
                   <Plus className="h-3 w-3" /> Adicionar
@@ -422,6 +446,30 @@ export default function DiarioObra() {
                         </button>
                       )}
                     </div>
+
+                    {/* Item do contrato */}
+                    {contratoItens.length > 0 && (
+                      <div>
+                        <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Item do Contrato (opcional)</label>
+                        <select value={at.contrato_item_id} onChange={e => {
+                          const item = contratoItens.find(c => c.id === e.target.value);
+                          updateAtividade(i, "contrato_item_id", e.target.value);
+                          if (item) {
+                            updateAtividade(i, "unidade", item.unidade);
+                            updateAtividade(i, "descricao", item.descricao);
+                          }
+                        }}
+                          className="w-full rounded-lg border bg-background px-3 py-2 text-sm">
+                          <option value="">Sem vínculo ao contrato</option>
+                          {contratoItens.map(c => (
+                            <option key={c.id} value={c.id}>
+                              {c.item_numero} — {c.descricao} ({c.unidade}){c.is_aditivo ? " [ADITIVO]" : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
                     <div className="grid gap-3 sm:grid-cols-4">
                       <div>
                         <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Serviço</label>
@@ -444,8 +492,8 @@ export default function DiarioObra() {
                         </select>
                       </div>
                       <div>
-                        <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Descrição</label>
-                        <Input value={at.descricao} onChange={e => updateAtividade(i, "descricao", e.target.value)} placeholder="Detalhes..." />
+                        <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Descrição / Detalhes</label>
+                        <Input value={at.descricao} onChange={e => updateAtividade(i, "descricao", e.target.value)} placeholder="Ex: Pilares P2, P3, P4" />
                       </div>
                     </div>
                   </div>
