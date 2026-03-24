@@ -208,7 +208,7 @@ export default function DiarioObra() {
     setList(prev => prev.map(f => f.id === id ? { ...f, horas } : f));
   };
 
-  const addAtividade = () => setAtividades(prev => [...prev, { servico: "", quantidade: 0, unidade: "m²", descricao: "" }]);
+  const addAtividade = () => setAtividades(prev => [...prev, { servico: "", contrato_item_id: "", quantidade: 0, unidade: "m²", descricao: "" }]);
   const removeAtividade = (i: number) => setAtividades(prev => prev.filter((_, idx) => idx !== i));
   const updateAtividade = (i: number, field: keyof Atividade, value: any) => {
     setAtividades(prev => prev.map((a, idx) => idx === i ? { ...a, [field]: value } : a));
