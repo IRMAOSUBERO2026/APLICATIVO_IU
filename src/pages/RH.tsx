@@ -197,18 +197,25 @@ export default function RH() {
     }
   };
 
-  const saveRescisao = async (funcId: string) => {
-    const dt = editingRescisao[funcId];
-    if (!dt) return;
-    const { error } = await supabase.from("funcionarios").update({ 
-      data_rescisao: dt, 
-      status: "desligado" 
-    }).eq("id", funcId);
+  const openDesligamento = (func: any) => {
+    setDesligamentoFunc(func);
+    setDesligamentoData(func.data_rescisao || format(new Date(), "yyyy-MM-dd"));
+    setDesligamentoMotivo(func.motivo_rescisao || "");
+    setDesligamentoOpen(true);
+  };
+
+  const saveDesligamento = async () => {
+    if (!desligamentoFunc) return;
+    const { error } = await supabase.from("funcionarios").update({
+      data_rescisao: desligamentoData,
+      motivo_rescisao: desligamentoMotivo || null,
+      status: "desligado",
+    }).eq("id", desligamentoFunc.id);
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Data de rescisão salva — Status alterado para Desligado" });
-      setEditingRescisao(prev => { const n = { ...prev }; delete n[funcId]; return n; });
+      toast({ title: "Desligamento registrado", description: `${desligamentoFunc.nome} foi desligado.` });
+      setDesligamentoOpen(false);
       loadDbFuncionarios();
     }
   };
