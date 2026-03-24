@@ -171,6 +171,7 @@ export default function DiarioObra() {
     if (!selectedObra) {
       setPresencaObra([]);
       setPresencaVisitantes([]);
+      setContratoItens([]);
       return;
     }
     const daObra = allFuncionarios.filter(f => f.obra_id === selectedObra);
@@ -178,6 +179,11 @@ export default function DiarioObra() {
 
     setPresencaObra(daObra.map(f => ({ id: f.id, nome: f.nome, cargo: f.cargo, presente: true, horas: 8 })));
     setPresencaVisitantes(deOutras.map(f => ({ id: f.id, nome: f.nome, cargo: f.cargo, presente: false, horas: 8 })));
+
+    // Load contract items for this obra
+    supabase.from("medicao_contrato_itens").select("id, item_numero, descricao, unidade, quantidade, is_aditivo")
+      .eq("obra_id", selectedObra).order("item_numero")
+      .then(({ data }) => { if (data) setContratoItens(data); });
   }, [selectedObra, allFuncionarios]);
 
   // Cálculos automáticos
