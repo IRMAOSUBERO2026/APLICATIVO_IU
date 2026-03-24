@@ -191,7 +191,7 @@ export default function Financeiro() {
   const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   return (
-    <AppLayout title="Financeiro">
+    <AppLayout>
       <div className="space-y-6">
         {/* Filtros */}
         <div className="flex flex-wrap items-end gap-4">
