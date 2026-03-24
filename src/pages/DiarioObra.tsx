@@ -234,8 +234,12 @@ export default function DiarioObra() {
     ];
 
     const atividadesTexto = atividades
-      .filter(a => a.servico)
-      .map(a => `${a.servico}: ${a.quantidade} ${a.unidade} - ${a.descricao}`)
+      .filter(a => a.servico || a.contrato_item_id)
+      .map(a => {
+        const itemContrato = a.contrato_item_id ? contratoItens.find(c => c.id === a.contrato_item_id) : null;
+        const prefix = itemContrato ? `[${itemContrato.item_numero}] ` : "";
+        return `${prefix}${a.servico}: ${a.quantidade} ${a.unidade} - ${a.descricao}`;
+      })
       .join("\n");
 
     const obsCompleta = [
