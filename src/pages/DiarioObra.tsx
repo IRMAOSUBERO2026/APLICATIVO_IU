@@ -66,7 +66,8 @@ export default function DiarioObra() {
   // Presença de visitantes (de outras obras)
   const [presencaVisitantes, setPresencaVisitantes] = useState<FuncPresenca[]>([]);
   // Atividades
-  const [atividades, setAtividades] = useState<Atividade[]>([{ servico: "", quantidade: 0, unidade: "m²", descricao: "" }]);
+  const [atividades, setAtividades] = useState<Atividade[]>([{ servico: "", contrato_item_id: "", quantidade: 0, unidade: "m²", descricao: "" }]);
+  const [contratoItens, setContratoItens] = useState<ContratoItem[]>([]);
   // Equipamentos próprios
   const [equipsProprios, setEquipsProprios] = useState<EquipProprio[]>([]);
   // Equipamentos locados
