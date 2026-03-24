@@ -1,5 +1,5 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Search, Upload, MessageCircle, UserPlus, FolderOpen, Stethoscope, ArrowRightLeft, Save, Filter, Calendar } from "lucide-react";
+import { Search, Upload, MessageCircle, UserPlus, FolderOpen, Stethoscope, ArrowRightLeft, Save, Filter, Calendar, LogOut } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { toast } from "@/hooks/use-toast";
 import { Funcionario, funcionariosData, getExamStatus } from "@/components/rh/types";
@@ -12,6 +12,10 @@ import { ExamesModule } from "@/components/rh/ExamesModule";
 import { TransferirFuncionario } from "@/components/rh/TransferirFuncionario";
 import { supabase } from "@/integrations/supabase/client";
 import { differenceInDays, parseISO, format, addDays } from "date-fns";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type TabKey = "lista" | "exames_tab" | "exames_modulo";
 
