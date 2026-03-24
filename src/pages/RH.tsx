@@ -99,6 +99,15 @@ export default function RH() {
     });
   }, [dbFuncionarios]);
 
+  const getEmpresaInfo = (empresaId: string) => {
+    const emp = empresas.find(e => e.id === empresaId);
+    if (!emp) return { nome: "—", cnpj: "" };
+    const nome = emp.nome_fantasia || emp.razao_social || "";
+    const nomeAbrev = nome.length > 15 ? nome.substring(0, 15) + "…" : nome;
+    const cnpjCompacto = emp.cnpj ? emp.cnpj.replace(/[.\-\/]/g, "").replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5") : "";
+    return { nome: nomeAbrev, cnpj: cnpjCompacto };
+  };
+
   const allFuncionarios = [
     ...dbFuncionarios.map(f => ({
       ...f,
