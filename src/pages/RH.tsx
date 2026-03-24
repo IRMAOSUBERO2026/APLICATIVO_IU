@@ -63,8 +63,14 @@ export default function RH() {
   const [dbFuncionarios, setDbFuncionarios] = useState<any[]>([]);
   const [editingRegistro, setEditingRegistro] = useState<Record<string, string>>({});
   const [editingStatus, setEditingStatus] = useState<Record<string, string>>({});
-  const [editingRescisao, setEditingRescisao] = useState<Record<string, string>>({});
   const [obras, setObras] = useState<any[]>([]);
+  const [empresas, setEmpresas] = useState<any[]>([]);
+
+  // Desligamento modal
+  const [desligamentoOpen, setDesligamentoOpen] = useState(false);
+  const [desligamentoFunc, setDesligamentoFunc] = useState<any>(null);
+  const [desligamentoData, setDesligamentoData] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [desligamentoMotivo, setDesligamentoMotivo] = useState("");
 
   const loadDbFuncionarios = useCallback(() => {
     supabase.from("funcionarios")
@@ -77,6 +83,8 @@ export default function RH() {
     loadDbFuncionarios();
     supabase.from("obras").select("id, nome, codigo").eq("status", "em_andamento")
       .then(({ data }) => { if (data) setObras(data); });
+    supabase.from("empresas").select("id, razao_social, nome_fantasia, cnpj")
+      .then(({ data }) => { if (data) setEmpresas(data); });
   }, [loadDbFuncionarios]);
 
   // Auto-check experiencia status
