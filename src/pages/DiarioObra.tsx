@@ -20,8 +20,18 @@ interface FuncPresenca {
   horas: number;
 }
 
+interface ContratoItem {
+  id: string;
+  item_numero: string;
+  descricao: string;
+  unidade: string;
+  quantidade: number;
+  is_aditivo: boolean;
+}
+
 interface Atividade {
   servico: string;
+  contrato_item_id: string;
   quantidade: number;
   unidade: string;
   descricao: string;
