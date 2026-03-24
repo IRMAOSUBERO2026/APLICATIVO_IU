@@ -422,6 +422,9 @@ export default function DiarioObra() {
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold flex items-center gap-2">
                   <Calculator className="h-4 w-4 text-primary" /> Atividades Executadas
+                  {contratoItens.length > 0 && (
+                    <span className="text-[10px] font-normal text-muted-foreground">({contratoItens.length} itens do contrato disponíveis)</span>
+                  )}
                 </h2>
                 <button onClick={addAtividade} className="inline-flex items-center gap-1 text-xs rounded-lg border px-3 py-1.5 text-muted-foreground hover:bg-muted transition-colors">
                   <Plus className="h-3 w-3" /> Adicionar
@@ -439,6 +442,30 @@ export default function DiarioObra() {
                         </button>
                       )}
                     </div>
+
+                    {/* Item do contrato */}
+                    {contratoItens.length > 0 && (
+                      <div>
+                        <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Item do Contrato (opcional)</label>
+                        <select value={at.contrato_item_id} onChange={e => {
+                          const item = contratoItens.find(c => c.id === e.target.value);
+                          updateAtividade(i, "contrato_item_id", e.target.value);
+                          if (item) {
+                            updateAtividade(i, "unidade", item.unidade);
+                            updateAtividade(i, "descricao", item.descricao);
+                          }
+                        }}
+                          className="w-full rounded-lg border bg-background px-3 py-2 text-sm">
+                          <option value="">Sem vínculo ao contrato</option>
+                          {contratoItens.map(c => (
+                            <option key={c.id} value={c.id}>
+                              {c.item_numero} — {c.descricao} ({c.unidade}){c.is_aditivo ? " [ADITIVO]" : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
                     <div className="grid gap-3 sm:grid-cols-4">
                       <div>
                         <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Serviço</label>
@@ -461,8 +488,8 @@ export default function DiarioObra() {
                         </select>
                       </div>
                       <div>
-                        <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Descrição</label>
-                        <Input value={at.descricao} onChange={e => updateAtividade(i, "descricao", e.target.value)} placeholder="Detalhes..." />
+                        <label className="text-[10px] font-medium text-muted-foreground mb-1 block">Descrição / Detalhes</label>
+                        <Input value={at.descricao} onChange={e => updateAtividade(i, "descricao", e.target.value)} placeholder="Ex: Pilares P2, P3, P4" />
                       </div>
                     </div>
                   </div>
