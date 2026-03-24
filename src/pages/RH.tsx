@@ -345,11 +345,11 @@ export default function RH() {
                       <th className="px-3 py-3 text-left font-medium text-muted-foreground">Nº Reg.</th>
                       <th className="px-3 py-3 text-left font-medium text-muted-foreground">Nome</th>
                       <th className="px-3 py-3 text-left font-medium text-muted-foreground">CPF</th>
+                      <th className="px-3 py-3 text-left font-medium text-muted-foreground">Empresa</th>
                       <th className="px-3 py-3 text-left font-medium text-muted-foreground">Cargo</th>
                       <th className="px-3 py-3 text-left font-medium text-muted-foreground">Obra</th>
                       <th className="px-3 py-3 text-left font-medium text-muted-foreground">Admissão</th>
                       <th className="px-3 py-3 text-left font-medium text-muted-foreground">Status</th>
-                      <th className="px-3 py-3 text-left font-medium text-muted-foreground">Rescisão</th>
                       <th className="px-3 py-3 text-left font-medium text-muted-foreground">Experiência</th>
                       <th className="px-3 py-3 text-right font-medium text-muted-foreground">Salário</th>
                       <th className="px-3 py-3 text-center font-medium text-muted-foreground">Ações</th>
@@ -358,6 +358,7 @@ export default function RH() {
                   <tbody>
                     {sorted.map((f) => {
                       const expInfo = calcExperiencia(f.data_admissao);
+                      const empInfo = getEmpresaInfo(f.empresa_id);
                       return (
                         <tr key={f.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
                           {/* Nº Registro */}
@@ -379,6 +380,13 @@ export default function RH() {
                           <td className="px-3 py-2.5 font-medium">{f.nome}</td>
                           {/* CPF */}
                           <td className="px-3 py-2.5 text-xs text-muted-foreground">{f.cpf}</td>
+                          {/* Empresa */}
+                          <td className="px-3 py-2.5">
+                            <div>
+                              <p className="text-xs font-medium truncate max-w-[120px]">{empInfo.nome}</p>
+                              <p className="text-[10px] text-muted-foreground">{empInfo.cnpj}</p>
+                            </div>
+                          </td>
                           {/* Cargo */}
                           <td className="px-3 py-2.5 text-muted-foreground">{f.cargo}</td>
                           {/* Obra */}
@@ -396,20 +404,6 @@ export default function RH() {
                             >
                               {STATUS_OPTIONS.map(s => <option key={s} value={s.toLowerCase()}>{s}</option>)}
                             </select>
-                          </td>
-                          {/* Rescisão */}
-                          <td className="px-3 py-2.5">
-                            <div className="flex items-center gap-1">
-                              <input
-                                type="date"
-                                value={editingRescisao[f.id] ?? f.data_rescisao ?? ""}
-                                onChange={e => setEditingRescisao(prev => ({ ...prev, [f.id]: e.target.value }))}
-                                className="w-32 rounded border bg-background px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
-                              />
-                              {editingRescisao[f.id] && editingRescisao[f.id] !== (f.data_rescisao ?? "") && (
-                                <button onClick={() => saveRescisao(f.id)} className="p-0.5 text-primary hover:text-primary/80"><Save className="h-3 w-3" /></button>
-                              )}
-                            </div>
                           </td>
                           {/* Experiência */}
                           <td className="px-3 py-2.5">
@@ -430,6 +424,11 @@ export default function RH() {
                               <button onClick={() => openTransfer(f.id, f.nome, f.obra_id)} className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors" title="Transferir">
                                 <ArrowRightLeft className="h-4 w-4" />
                               </button>
+                              {f.status !== "desligado" && (
+                                <button onClick={() => openDesligamento(f)} className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" title="Desligar Funcionário">
+                                  <LogOut className="h-4 w-4" />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -455,6 +454,49 @@ export default function RH() {
       {selectedFuncTransfer && (
         <TransferirFuncionario open={transferOpen} onOpenChange={setTransferOpen} funcionarioId={selectedFuncTransfer.id} funcionarioNome={selectedFuncTransfer.nome} obraAtualId={selectedFuncTransfer.obraId} onTransferido={loadDbFuncionarios} />
       )}
+
+      {/* Desligamento Modal */}
+      <Dialog open={desligamentoOpen} onOpenChange={setDesligamentoOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <LogOut className="h-5 w-5 text-destructive" /> Desligamento de Funcionário
+            </DialogTitle>
+          </DialogHeader>
+          {desligamentoFunc && (
+            <div className="space-y-4">
+              <div className="rounded-lg border bg-muted/30 p-3">
+                <p className="font-medium">{desligamentoFunc.nome}</p>
+                <p className="text-xs text-muted-foreground">{desligamentoFunc.cargo} • CPF: {desligamentoFunc.cpf}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Data de Rescisão *</label>
+                <Input type="date" value={desligamentoData} onChange={e => setDesligamentoData(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Motivo</label>
+                <select value={desligamentoMotivo} onChange={e => setDesligamentoMotivo(e.target.value)}
+                  className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm focus:ring-2 focus:ring-ring">
+                  <option value="">Selecione...</option>
+                  <option value="Pediu demissão">Pediu demissão</option>
+                  <option value="Demissão sem justa causa">Demissão sem justa causa</option>
+                  <option value="Demissão por justa causa">Demissão por justa causa</option>
+                  <option value="Término de contrato">Término de contrato</option>
+                  <option value="Acordo mútuo">Acordo mútuo</option>
+                  <option value="Abandono de emprego">Abandono de emprego</option>
+                  <option value="Falecimento">Falecimento</option>
+                </select>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setDesligamentoOpen(false)}>Cancelar</Button>
+                <Button variant="destructive" onClick={saveDesligamento}>
+                  <LogOut className="h-4 w-4 mr-1" /> Confirmar Desligamento
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
