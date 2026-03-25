@@ -1,58 +1,149 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { HardHat, Plus, Search, MapPin, Calendar, FolderOpen } from "lucide-react";
-import { useState } from "react";
+import { HardHat, Plus, Search, MapPin, Calendar, FolderOpen, Eye, Edit, Trash2, Building2 } from "lucide-react";
+import { useState, useEffect } from "react";
 import { DocumentManagerGeneric } from "@/components/shared/DocumentManagerGeneric";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import ObraDetalhe from "@/components/obras/ObraDetalhe";
 
 const SUBPASTAS_OBRA = [
-  "Contrato",
-  "Adicionais",
-  "Medições",
-  "Projetos",
-  "Notas Fiscais",
-  "Diário de Obra",
-  "Reuniões e Atas",
-  "Documentos de Segurança",
-  "Documentos Diversos",
-  "Outros",
+  "Contrato", "Adicionais", "Medições", "Projetos", "Notas Fiscais",
+  "Diário de Obra", "Reuniões e Atas", "Documentos de Segurança", "Documentos Diversos", "Outros",
 ];
 
-const obrasData = [
-  {
-    id: 1, nome: "Edifício Aurora", cliente: "Construtora Horizonte", local: "São Paulo, SP",
-    inicio: "2025-08-15", previsao: "2026-12-30", contrato: 2400000, medido: 1632000,
-    status: "Em andamento", progresso: 68,
-  },
-  {
-    id: 2, nome: "Galpão Industrial Alfa", cliente: "Logística Norte", local: "Campinas, SP",
-    inicio: "2025-11-01", previsao: "2026-08-15", contrato: 1100000, medido: 495000,
-    status: "Em andamento", progresso: 45,
-  },
-  {
-    id: 3, nome: "Ponte BR-101 Km 42", cliente: "DNIT", local: "Joinville, SC",
-    inicio: "2025-03-10", previsao: "2026-06-30", contrato: 3800000, medido: 3116000,
-    status: "Medição pendente", progresso: 82,
-  },
-  {
-    id: 4, nome: "Residencial Sol Nascente", cliente: "Inc. Solar", local: "Curitiba, PR",
-    inicio: "2026-02-01", previsao: "2027-06-30", contrato: 890000, medido: 106800,
-    status: "Iniciando", progresso: 12,
-  },
+const STATUS_OPTIONS = [
+  { value: "em_andamento", label: "Em andamento", color: "bg-success/10 text-success" },
+  { value: "paralisada", label: "Paralisada", color: "bg-warning/10 text-warning" },
+  { value: "concluida", label: "Concluída", color: "bg-muted text-muted-foreground" },
+  { value: "planejamento", label: "Planejamento", color: "bg-primary/10 text-primary" },
 ];
+
+interface Obra {
+  id: string; codigo: string; nome: string; empresa_id: string; construtora?: string;
+  endereco?: string; cidade?: string; uf?: string; status: string;
+  data_inicio?: string; data_previsao_fim?: string; data_fim?: string; observacoes?: string;
+}
+interface Empresa { id: string; razao_social: string; nome_fantasia?: string; cnpj: string; }
+
+const emptyForm = {
+  codigo: "", nome: "", empresa_id: "", construtora: "", endereco: "", cidade: "", uf: "",
+  status: "em_andamento", data_inicio: "", data_previsao_fim: "", data_fim: "", observacoes: "",
+};
 
 export default function Obras() {
+  const { toast } = useToast();
+  const [obras, setObras] = useState<Obra[]>([]);
+  const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [search, setSearch] = useState("");
-  const [docOpen, setDocOpen] = useState(false);
-  const [selectedObra, setSelectedObra] = useState<{ id: string; nome: string } | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = obrasData.filter((o) =>
+  // Dialogs
+  const [docOpen, setDocOpen] = useState(false);
+  const [selectedObraDoc, setSelectedObraDoc] = useState<{ id: string; nome: string } | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingObra, setEditingObra] = useState<Obra | null>(null);
+  const [form, setForm] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
+
+  // Detalhe
+  const [detalheObra, setDetalheObra] = useState<Obra | null>(null);
+
+  useEffect(() => { loadData(); }, []);
+
+  const loadData = async () => {
+    setLoading(true);
+    const [obrasRes, empRes] = await Promise.all([
+      supabase.from("obras").select("*").order("codigo"),
+      supabase.from("empresas").select("id,razao_social,nome_fantasia,cnpj").eq("ativo", true),
+    ]);
+    if (obrasRes.data) setObras(obrasRes.data as Obra[]);
+    if (empRes.data) setEmpresas(empRes.data as Empresa[]);
+    setLoading(false);
+  };
+
+  const filtered = obras.filter(o =>
     o.nome.toLowerCase().includes(search.toLowerCase()) ||
-    o.cliente.toLowerCase().includes(search.toLowerCase())
+    o.codigo.toLowerCase().includes(search.toLowerCase()) ||
+    (o.construtora || "").toLowerCase().includes(search.toLowerCase())
   );
 
-  const openDocs = (obra: typeof obrasData[0]) => {
-    setSelectedObra({ id: String(obra.id), nome: obra.nome });
-    setDocOpen(true);
+  const openNew = () => {
+    setEditingObra(null);
+    setForm(emptyForm);
+    setFormOpen(true);
   };
+
+  const openEdit = (obra: Obra) => {
+    setEditingObra(obra);
+    setForm({
+      codigo: obra.codigo, nome: obra.nome, empresa_id: obra.empresa_id,
+      construtora: obra.construtora || "", endereco: obra.endereco || "",
+      cidade: obra.cidade || "", uf: obra.uf || "", status: obra.status,
+      data_inicio: obra.data_inicio || "", data_previsao_fim: obra.data_previsao_fim || "",
+      data_fim: obra.data_fim || "", observacoes: obra.observacoes || "",
+    });
+    setFormOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.codigo || !form.nome || !form.empresa_id) {
+      toast({ title: "Preencha código, nome e empresa", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    const payload: any = { ...form };
+    if (!payload.data_inicio) payload.data_inicio = null;
+    if (!payload.data_previsao_fim) payload.data_previsao_fim = null;
+    if (!payload.data_fim) payload.data_fim = null;
+
+    if (editingObra) {
+      const { error } = await supabase.from("obras").update(payload).eq("id", editingObra.id);
+      if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
+      else toast({ title: "Obra atualizada" });
+    } else {
+      const { error } = await supabase.from("obras").insert(payload);
+      if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
+      else toast({ title: "Obra cadastrada" });
+    }
+    setSaving(false);
+    setFormOpen(false);
+    loadData();
+  };
+
+  const handleDelete = async (obra: Obra) => {
+    if (!confirm(`Excluir obra "${obra.nome}"?`)) return;
+    const { error } = await supabase.from("obras").delete().eq("id", obra.id);
+    if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
+    else { toast({ title: "Obra excluída" }); loadData(); }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const opt = STATUS_OPTIONS.find(s => s.value === status);
+    return opt || STATUS_OPTIONS[0];
+  };
+
+  const getEmpresaNome = (empresaId: string) => {
+    const emp = empresas.find(e => e.id === empresaId);
+    return emp ? (emp.nome_fantasia || emp.razao_social) : "-";
+  };
+
+  if (detalheObra) {
+    return (
+      <ObraDetalhe
+        obra={detalheObra}
+        empresas={empresas}
+        onBack={() => { setDetalheObra(null); loadData(); }}
+        onEdit={() => openEdit(detalheObra)}
+        subpastasDoc={SUBPASTAS_OBRA}
+      />
+    );
+  }
 
   return (
     <AppLayout>
@@ -60,106 +151,117 @@ export default function Obras() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Gestão de Obras</h1>
-            <p className="text-sm text-muted-foreground">{obrasData.length} obras cadastradas</p>
+            <p className="text-sm text-muted-foreground">{obras.length} obras cadastradas</p>
           </div>
-          <button className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors">
-            <Plus className="h-4 w-4" />
-            Nova Obra
-          </button>
+          <Button onClick={openNew}><Plus className="h-4 w-4" /> Nova Obra</Button>
         </div>
 
-        {/* Search */}
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Buscar obra ou cliente..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-lg border bg-card py-2.5 pl-10 pr-4 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-          />
+          <Input placeholder="Buscar obra, código ou cliente..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
         </div>
 
-        {/* Cards grid */}
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((obra) => (
-            <div
-              key={obra.id}
-              className="group rounded-xl border bg-card p-5 shadow-sm hover:shadow-md transition-all cursor-pointer animate-fade-in"
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
-                    <HardHat className="h-4 w-4 text-primary" />
+        {loading ? (
+          <div className="py-12 text-center text-sm text-muted-foreground">Carregando...</div>
+        ) : filtered.length === 0 ? (
+          <div className="py-12 text-center text-sm text-muted-foreground">Nenhuma obra encontrada</div>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {filtered.map(obra => {
+              const badge = getStatusBadge(obra.status);
+              return (
+                <div key={obra.id} className="group rounded-xl border bg-card p-5 shadow-sm hover:shadow-md transition-all animate-fade-in">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 flex-shrink-0">
+                        <HardHat className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-sm truncate">{obra.codigo} — {obra.nome}</h3>
+                        <p className="text-xs text-muted-foreground truncate">{obra.construtora || getEmpresaNome(obra.empresa_id)}</p>
+                      </div>
+                    </div>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold flex-shrink-0 ${badge.color}`}>{badge.label}</span>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-sm">{obra.nome}</h3>
-                    <p className="text-xs text-muted-foreground">{obra.cliente}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); openDocs(obra); }}
-                    className="p-1.5 rounded-lg text-muted-foreground hover:text-warning hover:bg-warning/10 transition-colors"
-                    title="Pasta de Documentos"
-                  >
-                    <FolderOpen className="h-4 w-4" />
-                  </button>
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                    obra.status === "Em andamento" ? "bg-success/10 text-success"
-                    : obra.status === "Medição pendente" ? "bg-warning/10 text-warning"
-                    : "bg-accent/10 text-accent"
-                  }`}>
-                    {obra.status}
-                  </span>
-                </div>
-              </div>
 
-              <div className="space-y-3">
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <MapPin className="h-3 w-3" /> {obra.local}
-                </div>
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Calendar className="h-3 w-3" /> Previsão: {new Date(obra.previsao).toLocaleDateString("pt-BR")}
-                </div>
+                  <div className="space-y-2 mb-3">
+                    {(obra.cidade || obra.uf) && (
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <MapPin className="h-3 w-3" /> {obra.cidade}{obra.uf ? `/${obra.uf}` : ""}
+                      </div>
+                    )}
+                    {obra.data_previsao_fim && (
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Calendar className="h-3 w-3" /> Previsão: {new Date(obra.data_previsao_fim + "T12:00:00").toLocaleDateString("pt-BR")}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Building2 className="h-3 w-3" /> {getEmpresaNome(obra.empresa_id)}
+                    </div>
+                  </div>
 
-                {/* Progress */}
-                <div>
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-muted-foreground">Progresso</span>
-                    <span className="font-medium">{obra.progresso}%</span>
-                  </div>
-                  <div className="h-2 rounded-full bg-muted">
-                    <div className="h-2 rounded-full bg-primary transition-all" style={{ width: `${obra.progresso}%` }} />
-                  </div>
-                </div>
-
-                {/* Values */}
-                <div className="flex justify-between border-t pt-3 text-xs">
-                  <div>
-                    <p className="text-muted-foreground">Contrato</p>
-                    <p className="font-semibold">R$ {(obra.contrato / 1000).toFixed(0)}K</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-muted-foreground">Medido</p>
-                    <p className="font-semibold">R$ {(obra.medido / 1000).toFixed(0)}K</p>
+                  <div className="flex items-center gap-1 border-t pt-3">
+                    <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setDetalheObra(obra)}>
+                      <Eye className="h-3.5 w-3.5 mr-1" /> Detalhes
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => openEdit(obra)}>
+                      <Edit className="h-3.5 w-3.5 mr-1" /> Editar
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => { setSelectedObraDoc({ id: obra.id, nome: obra.nome }); setDocOpen(true); }}>
+                      <FolderOpen className="h-3.5 w-3.5 mr-1" /> Docs
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-8 text-xs text-destructive hover:text-destructive" onClick={() => handleDelete(obra)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {selectedObra && (
-        <DocumentManagerGeneric
-          open={docOpen}
-          onOpenChange={setDocOpen}
-          entityId={selectedObra.id}
-          entityNome={selectedObra.nome}
-          basePath="obras"
-          subpastas={SUBPASTAS_OBRA}
-        />
+      {/* Form Dialog */}
+      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingObra ? "Editar Obra" : "Nova Obra"}</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div><Label>Código *</Label><Input value={form.codigo} onChange={e => setForm(f => ({ ...f, codigo: e.target.value }))} placeholder="OBR-001" /></div>
+            <div><Label>Nome *</Label><Input value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} placeholder="Nome da obra" /></div>
+            <div>
+              <Label>Empresa *</Label>
+              <Select value={form.empresa_id} onValueChange={v => setForm(f => ({ ...f, empresa_id: v }))}>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent>{empresas.map(e => <SelectItem key={e.id} value={e.id}>{e.nome_fantasia || e.razao_social}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div><Label>Contratante</Label><Input value={form.construtora} onChange={e => setForm(f => ({ ...f, construtora: e.target.value }))} /></div>
+            <div className="sm:col-span-2"><Label>Endereço</Label><Input value={form.endereco} onChange={e => setForm(f => ({ ...f, endereco: e.target.value }))} /></div>
+            <div><Label>Cidade</Label><Input value={form.cidade} onChange={e => setForm(f => ({ ...f, cidade: e.target.value }))} /></div>
+            <div><Label>UF</Label><Input value={form.uf} onChange={e => setForm(f => ({ ...f, uf: e.target.value }))} maxLength={2} /></div>
+            <div>
+              <Label>Status</Label>
+              <Select value={form.status} onValueChange={v => setForm(f => ({ ...f, status: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div><Label>Data Início</Label><Input type="date" value={form.data_inicio} onChange={e => setForm(f => ({ ...f, data_inicio: e.target.value }))} /></div>
+            <div><Label>Previsão Término</Label><Input type="date" value={form.data_previsao_fim} onChange={e => setForm(f => ({ ...f, data_previsao_fim: e.target.value }))} /></div>
+            <div><Label>Data Conclusão</Label><Input type="date" value={form.data_fim} onChange={e => setForm(f => ({ ...f, data_fim: e.target.value }))} /></div>
+            <div className="sm:col-span-2"><Label>Observações</Label><Textarea value={form.observacoes} onChange={e => setForm(f => ({ ...f, observacoes: e.target.value }))} rows={3} /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFormOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSave} disabled={saving}>{saving ? "Salvando..." : "Salvar"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {selectedObraDoc && (
+        <DocumentManagerGeneric open={docOpen} onOpenChange={setDocOpen} entityId={selectedObraDoc.id} entityNome={selectedObraDoc.nome} basePath="obras" subpastas={SUBPASTAS_OBRA} />
       )}
     </AppLayout>
   );
