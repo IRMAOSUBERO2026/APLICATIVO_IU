@@ -30,26 +30,27 @@ describe("motorFolha", () => {
     expect(r.total_descontos).toBe(0);
   });
 
-  it("calcula HE semanais com salário sindicato", () => {
+  it("calcula HE semanais com salário sindicato (base /220)", () => {
     const r = calcularFolha({ ...baseInput, horas_extras_semanais: 10 });
-    // base_hora = 2500/200 = 12.5
-    expect(r.base_hora).toBe(12.5);
-    expect(r.HE_semanal).toBe(187.5); // 12.5 * 1.5 * 10
-    expect(r.total_HE).toBe(187.5);
-    // DSR = (187.5 / 25) * 5 = 37.5
-    expect(r.DSR_HE).toBe(37.5);
-    expect(r.salario_final).toBe(3200 + 187.5 + 37.5);
+    // base_hora = 2500/220 = 11.36
+    expect(r.base_hora).toBe(11.36);
+    // HE_semanal = 11.36 * 1.5 * 10 = 170.40
+    expect(r.HE_semanal).toBe(170.4);
+    expect(r.total_HE).toBe(170.4);
+    // Sem DSR_HE
+    expect(r.salario_final).toBe(3200 + 170.4);
   });
 
-  it("calcula HE com salário combinado", () => {
+  it("calcula HE com salário combinado (base /220)", () => {
     const r = calcularFolha({
       ...baseInput,
       usar_salario_sindicato_para_HE: false,
       horas_extras_semanais: 10,
     });
-    // base_hora = 3200/200 = 16
-    expect(r.base_hora).toBe(16);
-    expect(r.HE_semanal).toBe(240); // 16 * 1.5 * 10
+    // base_hora = 3200/220 = 14.55
+    expect(r.base_hora).toBe(14.55);
+    // HE_semanal = 14.55 * 1.5 * 10 = 218.25
+    expect(r.HE_semanal).toBe(218.25);
   });
 
   it("desconta faltas e DSR perdido", () => {
@@ -70,8 +71,8 @@ describe("motorFolha", () => {
 
   it("calcula HE 100%", () => {
     const r = calcularFolha({ ...baseInput, horas_extras_100: 8 });
-    // 12.5 * 2 * 8 = 200
-    expect(r.HE_100).toBe(200);
+    // 11.36 * 2 * 8 = 181.76
+    expect(r.HE_100).toBe(181.76);
   });
 
   it("funciona com todos os valores zerados", () => {

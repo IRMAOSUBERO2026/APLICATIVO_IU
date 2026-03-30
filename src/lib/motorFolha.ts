@@ -136,7 +136,6 @@ export function calcularFolha(input: FolhaInput): FolhaOutput {
     HE_sabado,
     HE_100,
     total_HE,
-    DSR_HE,
     valor_atestados,
     desconto_faltas,
     desconto_horas_negativas,

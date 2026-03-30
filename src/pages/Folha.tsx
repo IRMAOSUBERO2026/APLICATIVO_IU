@@ -431,7 +431,7 @@ export default function Folha() {
       head: [["Nome", "CPF", "Função", "Salário Base", "Receitas", "Descontos", "Saldo de Pagamento"]],
       body: funcsComResultado.map(f => {
         const r = f.result!;
-        const receitas = r.total_HE + r.DSR_HE + r.valor_atestados + r.total_bonificacoes;
+        const receitas = r.total_HE + r.valor_atestados + r.total_bonificacoes;
         return [
           f.nome,
           f.cpf,
