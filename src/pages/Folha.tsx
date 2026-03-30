@@ -440,8 +440,8 @@ export default function Folha() {
           )}
         </div>
 
-        {/* Seleção de Período (sempre visível) */}
-        <div className="flex gap-3 items-end">
+        {/* Seleção de Período e Obra */}
+        <div className="flex flex-wrap gap-3 items-end">
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">Mês</Label>
             <Select value={String(mes)} onValueChange={(v) => setMes(Number(v))}>
@@ -464,6 +464,19 @@ export default function Folha() {
               </SelectContent>
             </Select>
           </div>
+          {view === "dashboard" && (
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Obra</Label>
+              <Select value={selectedObraId} onValueChange={handleSelectObra}>
+                <SelectTrigger className="w-[250px]"><SelectValue placeholder="Selecione uma obra..." /></SelectTrigger>
+                <SelectContent>
+                  {obras.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>{o.codigo} — {o.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
 
         {/* === DASHBOARD === */}
