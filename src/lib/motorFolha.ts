@@ -93,12 +93,6 @@ export function calcularFolha(input: FolhaInput): FolhaOutput {
   // 5. Total HE
   const total_HE = r2(HE_semanal + HE_sabado + HE_100);
 
-  // 6. DSR sobre HE
-  const dias_uteis = dias_do_mes - domingos_feriados_no_mes;
-  const DSR_HE = dias_uteis > 0
-    ? r2((total_HE / dias_uteis) * domingos_feriados_no_mes)
-    : 0;
-
   // 7. Horas negativas
   const desconto_horas_negativas = r2(base_hora * horas_negativas);
 
