@@ -421,6 +421,9 @@ export default function RH() {
                           {/* Ações */}
                           <td className="px-3 py-2.5">
                             <div className="flex items-center justify-center gap-1">
+                              <button onClick={() => { setEditFuncId(f.id); setEditFuncOpen(true); }} className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors" title="Editar Funcionário">
+                                <Pencil className="h-4 w-4" />
+                              </button>
                               <button onClick={() => openDocManager(f.id, f.nome)} className="p-1.5 rounded-lg text-muted-foreground hover:text-warning hover:bg-warning/10 transition-colors" title="Pasta de Documentos">
                                 <FolderOpen className="h-4 w-4" />
                               </button>
