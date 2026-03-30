@@ -39,7 +39,6 @@ export interface FolhaOutput {
   HE_100: number;
 
   total_HE: number;
-  DSR_HE: number;
 
   valor_atestados: number;
 
