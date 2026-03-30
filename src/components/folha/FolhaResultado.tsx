@@ -38,7 +38,6 @@ export function FolhaResultado({ result }: Props) {
         <Line label="HE Sábado (50%)" value={result.HE_sabado} />
         <Line label="HE 100%" value={result.HE_100} />
         <Line label="Total HE" value={result.total_HE} />
-        <Line label="DSR s/ HE" value={result.DSR_HE} />
 
         <Separator />
         <p className="text-xs font-semibold text-muted-foreground pt-2">PROVENTOS</p>

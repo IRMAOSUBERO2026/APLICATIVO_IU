@@ -34,20 +34,19 @@ export function FolhaResumoObra({ funcionarios, obra, mes, ano }: Props) {
     autoTable(doc, {
       startY: 28,
       head: [[
-        "Funcionário", "Cargo", "Sal. Combinado", "Total HE", "DSR HE",
+        "Funcionário", "Cargo", "Sal. Combinado", "Total HE",
         "Bonificações", "Descontos", "Salário Final",
       ]],
       body: funcionarios.map((f) => [
         f.nome,
         f.cargo,
-        fmt(f.result.salario_final - f.result.total_HE - f.result.DSR_HE - f.result.valor_atestados - f.result.total_bonificacoes + f.result.total_descontos),
+        fmt(f.result.salario_final - f.result.total_HE - f.result.valor_atestados - f.result.total_bonificacoes + f.result.total_descontos),
         fmt(f.result.total_HE),
-        fmt(f.result.DSR_HE),
         fmt(f.result.total_bonificacoes),
         fmt(f.result.total_descontos),
         fmt(f.result.salario_final),
       ]),
-      foot: [["", "", "", "", "", "", "TOTAL", fmt(totalGeral)]],
+      foot: [["", "", "", "", "", "TOTAL", fmt(totalGeral)]],
       styles: { fontSize: 8 },
       headStyles: { fillColor: [41, 50, 65] },
       footStyles: { fillColor: [41, 50, 65], textColor: 255, fontStyle: "bold" },
@@ -75,7 +74,6 @@ export function FolhaResumoObra({ funcionarios, obra, mes, ano }: Props) {
                 <TableHead>Funcionário</TableHead>
                 <TableHead>Cargo</TableHead>
                 <TableHead className="text-right">Total HE</TableHead>
-                <TableHead className="text-right">DSR HE</TableHead>
                 <TableHead className="text-right">Bonificações</TableHead>
                 <TableHead className="text-right">Descontos</TableHead>
                 <TableHead className="text-right font-bold">Salário Final</TableHead>
@@ -87,7 +85,6 @@ export function FolhaResumoObra({ funcionarios, obra, mes, ano }: Props) {
                   <TableCell className="font-medium">{f.nome}</TableCell>
                   <TableCell className="text-muted-foreground">{f.cargo}</TableCell>
                   <TableCell className="text-right">{fmt(f.result.total_HE)}</TableCell>
-                  <TableCell className="text-right">{fmt(f.result.DSR_HE)}</TableCell>
                   <TableCell className="text-right">{fmt(f.result.total_bonificacoes)}</TableCell>
                   <TableCell className="text-right text-destructive">{fmt(f.result.total_descontos)}</TableCell>
                   <TableCell className="text-right font-bold">{fmt(f.result.salario_final)}</TableCell>

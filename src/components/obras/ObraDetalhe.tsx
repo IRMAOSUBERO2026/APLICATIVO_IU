@@ -16,7 +16,7 @@ import { DocumentManagerGeneric } from "@/components/shared/DocumentManagerGener
 import {
   ArrowLeft, Edit, HardHat, MapPin, Calendar, Building2, FolderOpen,
   Plus, Trash2, FileText, TrendingUp, Percent, RefreshCw, Users, ClipboardList,
-  DollarSign
+  DollarSign, Clock, Save
 } from "lucide-react";
 
 interface Obra {
@@ -53,6 +53,39 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
   const [diariosCount, setDiariosCount] = useState(0);
   const [medicoesCount, setMedicoesCount] = useState(0);
   const [docOpen, setDocOpen] = useState(false);
+
+  // Escala (horário padrão)
+  const DIAS_SEMANA = ["seg", "ter", "qua", "qui", "sex", "sab", "dom"] as const;
+  const DIAS_LABELS: Record<string, string> = { seg: "Segunda", ter: "Terça", qua: "Quarta", qui: "Quinta", sex: "Sexta", sab: "Sábado", dom: "Domingo" };
+  const defaultHorario = () => Object.fromEntries(DIAS_SEMANA.map(d => [d, { e1: "", s1: "", e2: "", s2: "" }]));
+  const [escala, setEscala] = useState<Record<string, { e1: string; s1: string; e2: string; s2: string }>>(
+    (obra as any).horario_padrao ? (typeof (obra as any).horario_padrao === "string" ? JSON.parse((obra as any).horario_padrao) : (obra as any).horario_padrao) : defaultHorario()
+  );
+  const [escalaSaving, setEscalaSaving] = useState(false);
+
+  const calcHorasDia = (h: { e1: string; s1: string; e2: string; s2: string }) => {
+    const toMin = (t: string) => { const [hh, mm] = t.split(":").map(Number); return hh * 60 + (mm || 0); };
+    if (!h.e1 || !s1Valid(h)) return 0;
+    let total = 0;
+    if (h.e1 && h.s1) total += toMin(h.s1) - toMin(h.e1);
+    if (h.e2 && h.s2) total += toMin(h.s2) - toMin(h.e2);
+    return total / 60;
+  };
+  const s1Valid = (h: { e1: string; s1: string }) => h.e1 && h.s1;
+
+  const handleEscalaChange = (dia: string, field: string, value: string) => {
+    setEscala(prev => ({ ...prev, [dia]: { ...prev[dia], [field]: value } }));
+  };
+
+  const handleSalvarEscala = async () => {
+    setEscalaSaving(true);
+    const { error } = await supabase.from("obras").update({ horario_padrao: escala }).eq("id", obra.id);
+    if (error) toast({ title: "Erro ao salvar escala", variant: "destructive" });
+    else toast({ title: "Escala salva com sucesso!" });
+    setEscalaSaving(false);
+  };
+
+  const totalHorasSemana = DIAS_SEMANA.reduce((s, d) => s + calcHorasDia(escala[d] || { e1: "", s1: "", e2: "", s2: "" }), 0);
 
   // Item dialog
   const [showItemDialog, setShowItemDialog] = useState(false);
@@ -240,7 +273,8 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
         {/* Tabs */}
         <Tabs defaultValue="dados" className="space-y-4">
           <TabsList>
-            <TabsTrigger value="dados">Dados Gerais</TabsTrigger>
+           <TabsTrigger value="dados">Dados Gerais</TabsTrigger>
+            <TabsTrigger value="escala">Escala</TabsTrigger>
             <TabsTrigger value="planilha">Planilha de Contrato</TabsTrigger>
             <TabsTrigger value="aditivos">Aditivos</TabsTrigger>
             <TabsTrigger value="reajustes">Reajustes</TabsTrigger>
@@ -268,7 +302,70 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
             </Card>
           </TabsContent>
 
-          {/* Planilha de Contrato */}
+          {/* Escala */}
+          <TabsContent value="escala">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Clock className="h-4 w-4" /> Escala de Horários
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="rounded-lg border overflow-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-24">Dia</TableHead>
+                          <TableHead className="text-center">Entrada 1</TableHead>
+                          <TableHead className="text-center">Saída 1</TableHead>
+                          <TableHead className="text-center">Entrada 2</TableHead>
+                          <TableHead className="text-center">Saída 2</TableHead>
+                          <TableHead className="text-center w-20">Horas</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {DIAS_SEMANA.map(dia => {
+                          const h = escala[dia] || { e1: "", s1: "", e2: "", s2: "" };
+                          const horas = calcHorasDia(h);
+                          return (
+                            <TableRow key={dia}>
+                              <TableCell className="font-medium">{DIAS_LABELS[dia]}</TableCell>
+                              {(["e1", "s1", "e2", "s2"] as const).map(field => (
+                                <TableCell key={field} className="text-center p-1">
+                                  <Input
+                                    type="time"
+                                    value={h[field]}
+                                    onChange={e => handleEscalaChange(dia, field, e.target.value)}
+                                    className="h-8 text-center w-28 mx-auto"
+                                  />
+                                </TableCell>
+                              ))}
+                              <TableCell className="text-center font-mono text-sm font-medium">
+                                {horas > 0 ? `${horas.toFixed(1)}h` : "—"}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                      <TableFooter>
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-right font-semibold">Total Semanal:</TableCell>
+                          <TableCell className="text-center font-bold">{totalHorasSemana.toFixed(1)}h</TableCell>
+                        </TableRow>
+                      </TableFooter>
+                    </Table>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button onClick={handleSalvarEscala} disabled={escalaSaving} className="gap-2">
+                      <Save className="h-4 w-4" /> {escalaSaving ? "Salvando..." : "Salvar Escala"}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="planilha">
             {renderItemTable(itensContrato, "Itens do Contrato Original", false)}
           </TabsContent>

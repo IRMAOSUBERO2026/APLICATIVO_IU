@@ -39,7 +39,6 @@ export interface FolhaOutput {
   HE_100: number;
 
   total_HE: number;
-  DSR_HE: number;
 
   valor_atestados: number;
 
@@ -84,7 +83,7 @@ export function calcularFolha(input: FolhaInput): FolhaOutput {
 
   // 3. Bases
   const base_dia = r2(salario_combinado / dias_do_mes);
-  const base_hora = r2(salario_calculo / 200);
+  const base_hora = r2(salario_calculo / 220);
 
   // 4. Horas extras
   const HE_semanal = r2(base_hora * 1.5 * horas_extras_semanais);
@@ -93,12 +92,6 @@ export function calcularFolha(input: FolhaInput): FolhaOutput {
 
   // 5. Total HE
   const total_HE = r2(HE_semanal + HE_sabado + HE_100);
-
-  // 6. DSR sobre HE
-  const dias_uteis = dias_do_mes - domingos_feriados_no_mes;
-  const DSR_HE = dias_uteis > 0
-    ? r2((total_HE / dias_uteis) * domingos_feriados_no_mes)
-    : 0;
 
   // 7. Horas negativas
   const desconto_horas_negativas = r2(base_hora * horas_negativas);
@@ -131,7 +124,6 @@ export function calcularFolha(input: FolhaInput): FolhaOutput {
   const salario_final = r2(
     salario_combinado +
     total_HE +
-    DSR_HE +
     valor_atestados +
     total_bonificacoes -
     total_descontos
@@ -144,7 +136,6 @@ export function calcularFolha(input: FolhaInput): FolhaOutput {
     HE_sabado,
     HE_100,
     total_HE,
-    DSR_HE,
     valor_atestados,
     desconto_faltas,
     desconto_horas_negativas,
