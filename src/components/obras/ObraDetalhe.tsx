@@ -54,6 +54,39 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
   const [medicoesCount, setMedicoesCount] = useState(0);
   const [docOpen, setDocOpen] = useState(false);
 
+  // Escala (horário padrão)
+  const DIAS_SEMANA = ["seg", "ter", "qua", "qui", "sex", "sab", "dom"] as const;
+  const DIAS_LABELS: Record<string, string> = { seg: "Segunda", ter: "Terça", qua: "Quarta", qui: "Quinta", sex: "Sexta", sab: "Sábado", dom: "Domingo" };
+  const defaultHorario = () => Object.fromEntries(DIAS_SEMANA.map(d => [d, { e1: "", s1: "", e2: "", s2: "" }]));
+  const [escala, setEscala] = useState<Record<string, { e1: string; s1: string; e2: string; s2: string }>>(
+    (obra as any).horario_padrao ? (typeof (obra as any).horario_padrao === "string" ? JSON.parse((obra as any).horario_padrao) : (obra as any).horario_padrao) : defaultHorario()
+  );
+  const [escalaSaving, setEscalaSaving] = useState(false);
+
+  const calcHorasDia = (h: { e1: string; s1: string; e2: string; s2: string }) => {
+    const toMin = (t: string) => { const [hh, mm] = t.split(":").map(Number); return hh * 60 + (mm || 0); };
+    if (!h.e1 || !s1Valid(h)) return 0;
+    let total = 0;
+    if (h.e1 && h.s1) total += toMin(h.s1) - toMin(h.e1);
+    if (h.e2 && h.s2) total += toMin(h.s2) - toMin(h.e2);
+    return total / 60;
+  };
+  const s1Valid = (h: { e1: string; s1: string }) => h.e1 && h.s1;
+
+  const handleEscalaChange = (dia: string, field: string, value: string) => {
+    setEscala(prev => ({ ...prev, [dia]: { ...prev[dia], [field]: value } }));
+  };
+
+  const handleSalvarEscala = async () => {
+    setEscalaSaving(true);
+    const { error } = await supabase.from("obras").update({ horario_padrao: escala }).eq("id", obra.id);
+    if (error) toast({ title: "Erro ao salvar escala", variant: "destructive" });
+    else toast({ title: "Escala salva com sucesso!" });
+    setEscalaSaving(false);
+  };
+
+  const totalHorasSemana = DIAS_SEMANA.reduce((s, d) => s + calcHorasDia(escala[d] || { e1: "", s1: "", e2: "", s2: "" }), 0);
+
   // Item dialog
   const [showItemDialog, setShowItemDialog] = useState(false);
   const [editingItem, setEditingItem] = useState<ContratoItem | null>(null);
