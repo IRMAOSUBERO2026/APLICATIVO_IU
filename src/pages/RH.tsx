@@ -461,6 +461,9 @@ export default function RH() {
         <TransferirFuncionario open={transferOpen} onOpenChange={setTransferOpen} funcionarioId={selectedFuncTransfer.id} funcionarioNome={selectedFuncTransfer.nome} obraAtualId={selectedFuncTransfer.obraId} onTransferido={loadDbFuncionarios} />
       )}
 
+      {/* Edit Modal */}
+      <EditFuncionarioForm open={editFuncOpen} onOpenChange={setEditFuncOpen} funcionarioId={editFuncId} onSaved={loadDbFuncionarios} />
+
       {/* Desligamento Modal */}
       <Dialog open={desligamentoOpen} onOpenChange={setDesligamentoOpen}>
         <DialogContent className="sm:max-w-md">
