@@ -298,7 +298,7 @@ export default function Folha() {
     he_sabado: result.HE_sabado,
     he_100: result.HE_100,
     total_he: result.total_HE,
-    dsr_he: result.DSR_HE,
+    dsr_he: 0,
     valor_atestados: result.valor_atestados,
     desconto_faltas: result.desconto_faltas,
     desconto_horas_negativas: result.desconto_horas_negativas,
