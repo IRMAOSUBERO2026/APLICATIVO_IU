@@ -302,7 +302,70 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
             </Card>
           </TabsContent>
 
-          {/* Planilha de Contrato */}
+          {/* Escala */}
+          <TabsContent value="escala">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Clock className="h-4 w-4" /> Escala de Horários
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="rounded-lg border overflow-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-24">Dia</TableHead>
+                          <TableHead className="text-center">Entrada 1</TableHead>
+                          <TableHead className="text-center">Saída 1</TableHead>
+                          <TableHead className="text-center">Entrada 2</TableHead>
+                          <TableHead className="text-center">Saída 2</TableHead>
+                          <TableHead className="text-center w-20">Horas</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {DIAS_SEMANA.map(dia => {
+                          const h = escala[dia] || { e1: "", s1: "", e2: "", s2: "" };
+                          const horas = calcHorasDia(h);
+                          return (
+                            <TableRow key={dia}>
+                              <TableCell className="font-medium">{DIAS_LABELS[dia]}</TableCell>
+                              {(["e1", "s1", "e2", "s2"] as const).map(field => (
+                                <TableCell key={field} className="text-center p-1">
+                                  <Input
+                                    type="time"
+                                    value={h[field]}
+                                    onChange={e => handleEscalaChange(dia, field, e.target.value)}
+                                    className="h-8 text-center w-28 mx-auto"
+                                  />
+                                </TableCell>
+                              ))}
+                              <TableCell className="text-center font-mono text-sm font-medium">
+                                {horas > 0 ? `${horas.toFixed(1)}h` : "—"}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                      <TableFooter>
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-right font-semibold">Total Semanal:</TableCell>
+                          <TableCell className="text-center font-bold">{totalHorasSemana.toFixed(1)}h</TableCell>
+                        </TableRow>
+                      </TableFooter>
+                    </Table>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button onClick={handleSalvarEscala} disabled={escalaSaving} className="gap-2">
+                      <Save className="h-4 w-4" /> {escalaSaving ? "Salvando..." : "Salvar Escala"}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="planilha">
             {renderItemTable(itensContrato, "Itens do Contrato Original", false)}
           </TabsContent>
