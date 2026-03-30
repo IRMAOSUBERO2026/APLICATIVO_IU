@@ -273,7 +273,8 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
         {/* Tabs */}
         <Tabs defaultValue="dados" className="space-y-4">
           <TabsList>
-            <TabsTrigger value="dados">Dados Gerais</TabsTrigger>
+           <TabsTrigger value="dados">Dados Gerais</TabsTrigger>
+            <TabsTrigger value="escala">Escala</TabsTrigger>
             <TabsTrigger value="planilha">Planilha de Contrato</TabsTrigger>
             <TabsTrigger value="aditivos">Aditivos</TabsTrigger>
             <TabsTrigger value="reajustes">Reajustes</TabsTrigger>
