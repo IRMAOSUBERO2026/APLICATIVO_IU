@@ -83,7 +83,7 @@ export function calcularFolha(input: FolhaInput): FolhaOutput {
 
   // 3. Bases
   const base_dia = r2(salario_combinado / dias_do_mes);
-  const base_hora = r2(salario_calculo / 200);
+  const base_hora = r2(salario_calculo / 220);
 
   // 4. Horas extras
   const HE_semanal = r2(base_hora * 1.5 * horas_extras_semanais);
