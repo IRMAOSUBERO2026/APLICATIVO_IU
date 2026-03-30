@@ -124,7 +124,6 @@ export function calcularFolha(input: FolhaInput): FolhaOutput {
   const salario_final = r2(
     salario_combinado +
     total_HE +
-    DSR_HE +
     valor_atestados +
     total_bonificacoes -
     total_descontos
