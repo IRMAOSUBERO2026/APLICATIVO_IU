@@ -16,7 +16,7 @@ import { DocumentManagerGeneric } from "@/components/shared/DocumentManagerGener
 import {
   ArrowLeft, Edit, HardHat, MapPin, Calendar, Building2, FolderOpen,
   Plus, Trash2, FileText, TrendingUp, Percent, RefreshCw, Users, ClipboardList,
-  DollarSign
+  DollarSign, Clock, Save
 } from "lucide-react";
 
 interface Obra {
