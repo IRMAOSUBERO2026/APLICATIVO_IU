@@ -1,5 +1,5 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Search, Upload, MessageCircle, UserPlus, FolderOpen, Stethoscope, ArrowRightLeft, Save, Filter, Calendar, LogOut } from "lucide-react";
+import { Search, Upload, MessageCircle, UserPlus, FolderOpen, Stethoscope, ArrowRightLeft, Save, Filter, Calendar, LogOut, Pencil } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { toast } from "@/hooks/use-toast";
 import { Funcionario, funcionariosData, getExamStatus } from "@/components/rh/types";
@@ -10,6 +10,7 @@ import { PreCadastroForm } from "@/components/rh/PreCadastroForm";
 import { DocumentManager } from "@/components/rh/DocumentManager";
 import { ExamesModule } from "@/components/rh/ExamesModule";
 import { TransferirFuncionario } from "@/components/rh/TransferirFuncionario";
+import { EditFuncionarioForm } from "@/components/rh/EditFuncionarioForm";
 import { supabase } from "@/integrations/supabase/client";
 import { differenceInDays, parseISO, format, addDays } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -59,6 +60,8 @@ export default function RH() {
   const [selectedFuncDoc, setSelectedFuncDoc] = useState<{ id: string; nome: string } | null>(null);
   const [transferOpen, setTransferOpen] = useState(false);
   const [selectedFuncTransfer, setSelectedFuncTransfer] = useState<{ id: string; nome: string; obraId: string | null } | null>(null);
+  const [editFuncOpen, setEditFuncOpen] = useState(false);
+  const [editFuncId, setEditFuncId] = useState<string>("");
 
   const [dbFuncionarios, setDbFuncionarios] = useState<any[]>([]);
   const [editingRegistro, setEditingRegistro] = useState<Record<string, string>>({});
@@ -418,6 +421,9 @@ export default function RH() {
                           {/* Ações */}
                           <td className="px-3 py-2.5">
                             <div className="flex items-center justify-center gap-1">
+                              <button onClick={() => { setEditFuncId(f.id); setEditFuncOpen(true); }} className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors" title="Editar Funcionário">
+                                <Pencil className="h-4 w-4" />
+                              </button>
                               <button onClick={() => openDocManager(f.id, f.nome)} className="p-1.5 rounded-lg text-muted-foreground hover:text-warning hover:bg-warning/10 transition-colors" title="Pasta de Documentos">
                                 <FolderOpen className="h-4 w-4" />
                               </button>
@@ -454,6 +460,9 @@ export default function RH() {
       {selectedFuncTransfer && (
         <TransferirFuncionario open={transferOpen} onOpenChange={setTransferOpen} funcionarioId={selectedFuncTransfer.id} funcionarioNome={selectedFuncTransfer.nome} obraAtualId={selectedFuncTransfer.obraId} onTransferido={loadDbFuncionarios} />
       )}
+
+      {/* Edit Modal */}
+      <EditFuncionarioForm open={editFuncOpen} onOpenChange={setEditFuncOpen} funcionarioId={editFuncId} onSaved={loadDbFuncionarios} />
 
       {/* Desligamento Modal */}
       <Dialog open={desligamentoOpen} onOpenChange={setDesligamentoOpen}>
