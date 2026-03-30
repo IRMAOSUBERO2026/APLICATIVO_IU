@@ -565,6 +565,15 @@ export default function Folha() {
                     <Clock className="h-4 w-4" />
                     {showHorarioEditor ? "Ocultar Horário" : "Horário Padrão"}
                   </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={exportRelatorioObra}
+                    className="gap-2"
+                  >
+                    <FileDown className="h-4 w-4" />
+                    Exportar Relatório PDF
+                  </Button>
                 </div>
 
                 {showHorarioEditor && obraNome && (
