@@ -11,29 +11,27 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import ObraDetalhe from "@/components/obras/ObraDetalhe";
+import { ObraPipeline, PIPELINE_STAGES, getStage } from "@/components/obras/ObraPipeline";
 
 const SUBPASTAS_OBRA = [
-  "Contrato", "Adicionais", "Medições", "Projetos", "Notas Fiscais",
-  "Diário de Obra", "Reuniões e Atas", "Documentos de Segurança", "Documentos Diversos", "Outros",
-];
-
-const STATUS_OPTIONS = [
-  { value: "em_andamento", label: "Em andamento", color: "bg-success/10 text-success" },
-  { value: "paralisada", label: "Paralisada", color: "bg-warning/10 text-warning" },
-  { value: "concluida", label: "Concluída", color: "bg-muted text-muted-foreground" },
-  { value: "planejamento", label: "Planejamento", color: "bg-primary/10 text-primary" },
+  "Projetos", "Orçamentos", "Contratos", "Emails", "Anexos",
+  "Notas Fiscais", "Medições", "Diário de Obra", "Reuniões e Atas",
+  "Documentos de Segurança", "Outros",
 ];
 
 interface Obra {
   id: string; codigo: string; nome: string; empresa_id: string; construtora?: string;
   endereco?: string; cidade?: string; uf?: string; status: string;
   data_inicio?: string; data_previsao_fim?: string; data_fim?: string; observacoes?: string;
+  tipo_obra?: string; engenheiro_responsavel?: string; cliente?: string;
+  horario_padrao?: any;
 }
 interface Empresa { id: string; razao_social: string; nome_fantasia?: string; cnpj: string; }
 
 const emptyForm = {
-  codigo: "", nome: "", empresa_id: "", construtora: "", endereco: "", cidade: "", uf: "",
-  status: "em_andamento", data_inicio: "", data_previsao_fim: "", data_fim: "", observacoes: "",
+  codigo: "", nome: "", empresa_id: "", construtora: "", cliente: "", endereco: "", cidade: "", uf: "",
+  status: "prospeccao", data_inicio: "", data_previsao_fim: "", data_fim: "", observacoes: "",
+  tipo_obra: "", engenheiro_responsavel: "",
 };
 
 export default function Obras() {
@@ -41,17 +39,14 @@ export default function Obras() {
   const [obras, setObras] = useState<Obra[]>([]);
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState("todos");
   const [loading, setLoading] = useState(true);
-
-  // Dialogs
   const [docOpen, setDocOpen] = useState(false);
   const [selectedObraDoc, setSelectedObraDoc] = useState<{ id: string; nome: string } | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editingObra, setEditingObra] = useState<Obra | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
-
-  // Detalhe
   const [detalheObra, setDetalheObra] = useState<Obra | null>(null);
 
   useEffect(() => { loadData(); }, []);
@@ -67,34 +62,34 @@ export default function Obras() {
     setLoading(false);
   };
 
-  const filtered = obras.filter(o =>
-    o.nome.toLowerCase().includes(search.toLowerCase()) ||
-    o.codigo.toLowerCase().includes(search.toLowerCase()) ||
-    (o.construtora || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = obras.filter(o => {
+    const matchSearch = o.nome.toLowerCase().includes(search.toLowerCase()) ||
+      o.codigo.toLowerCase().includes(search.toLowerCase()) ||
+      (o.construtora || "").toLowerCase().includes(search.toLowerCase()) ||
+      (o.cliente || "").toLowerCase().includes(search.toLowerCase());
+    const matchStatus = filterStatus === "todos" || o.status === filterStatus;
+    return matchSearch && matchStatus;
+  });
 
-  const openNew = () => {
-    setEditingObra(null);
-    setForm(emptyForm);
-    setFormOpen(true);
-  };
+  const openNew = () => { setEditingObra(null); setForm(emptyForm); setFormOpen(true); };
 
   const openEdit = (obra: Obra) => {
     setEditingObra(obra);
     setForm({
       codigo: obra.codigo, nome: obra.nome, empresa_id: obra.empresa_id,
-      construtora: obra.construtora || "", endereco: obra.endereco || "",
-      cidade: obra.cidade || "", uf: obra.uf || "", status: obra.status,
-      data_inicio: obra.data_inicio || "", data_previsao_fim: obra.data_previsao_fim || "",
-      data_fim: obra.data_fim || "", observacoes: obra.observacoes || "",
+      construtora: obra.construtora || "", cliente: obra.cliente || "",
+      endereco: obra.endereco || "", cidade: obra.cidade || "", uf: obra.uf || "",
+      status: obra.status, data_inicio: obra.data_inicio || "",
+      data_previsao_fim: obra.data_previsao_fim || "", data_fim: obra.data_fim || "",
+      observacoes: obra.observacoes || "", tipo_obra: obra.tipo_obra || "",
+      engenheiro_responsavel: obra.engenheiro_responsavel || "",
     });
     setFormOpen(true);
   };
 
   const handleSave = async () => {
     if (!form.codigo || !form.nome || !form.empresa_id) {
-      toast({ title: "Preencha código, nome e empresa", variant: "destructive" });
-      return;
+      toast({ title: "Preencha código, nome e empresa", variant: "destructive" }); return;
     }
     setSaving(true);
     const payload: any = { ...form };
@@ -111,9 +106,7 @@ export default function Obras() {
       if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
       else toast({ title: "Obra cadastrada" });
     }
-    setSaving(false);
-    setFormOpen(false);
-    loadData();
+    setSaving(false); setFormOpen(false); loadData();
   };
 
   const handleDelete = async (obra: Obra) => {
@@ -121,11 +114,6 @@ export default function Obras() {
     const { error } = await supabase.from("obras").delete().eq("id", obra.id);
     if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
     else { toast({ title: "Obra excluída" }); loadData(); }
-  };
-
-  const getStatusBadge = (status: string) => {
-    const opt = STATUS_OPTIONS.find(s => s.value === status);
-    return opt || STATUS_OPTIONS[0];
   };
 
   const getEmpresaNome = (empresaId: string) => {
@@ -136,8 +124,7 @@ export default function Obras() {
   if (detalheObra) {
     return (
       <ObraDetalhe
-        obra={detalheObra}
-        empresas={empresas}
+        obra={detalheObra} empresas={empresas}
         onBack={() => { setDetalheObra(null); loadData(); }}
         onEdit={() => openEdit(detalheObra)}
         subpastasDoc={SUBPASTAS_OBRA}
@@ -156,9 +143,19 @@ export default function Obras() {
           <Button onClick={openNew}><Plus className="h-4 w-4" /> Nova Obra</Button>
         </div>
 
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Buscar obra, código ou cliente..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input placeholder="Buscar obra, código ou cliente..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
+          </div>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-48"><SelectValue placeholder="Filtrar status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos os status</SelectItem>
+              {PIPELINE_STAGES.map(s => <SelectItem key={s.value} value={s.value}>{s.emoji} {s.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
 
         {loading ? (
@@ -168,7 +165,7 @@ export default function Obras() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {filtered.map(obra => {
-              const badge = getStatusBadge(obra.status);
+              const stage = getStage(obra.status);
               return (
                 <div key={obra.id} className="group rounded-xl border bg-card p-5 shadow-sm hover:shadow-md transition-all animate-fade-in">
                   <div className="flex items-start justify-between mb-3">
@@ -178,10 +175,10 @@ export default function Obras() {
                       </div>
                       <div className="min-w-0">
                         <h3 className="font-semibold text-sm truncate">{obra.codigo} — {obra.nome}</h3>
-                        <p className="text-xs text-muted-foreground truncate">{obra.construtora || getEmpresaNome(obra.empresa_id)}</p>
+                        <p className="text-xs text-muted-foreground truncate">{obra.cliente || obra.construtora || getEmpresaNome(obra.empresa_id)}</p>
                       </div>
                     </div>
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold flex-shrink-0 ${badge.color}`}>{badge.label}</span>
+                    <ObraPipeline currentStatus={obra.status} compact />
                   </div>
 
                   <div className="space-y-2 mb-3">
@@ -231,23 +228,26 @@ export default function Obras() {
             <div><Label>Código *</Label><Input value={form.codigo} onChange={e => setForm(f => ({ ...f, codigo: e.target.value }))} placeholder="OBR-001" /></div>
             <div><Label>Nome *</Label><Input value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} placeholder="Nome da obra" /></div>
             <div>
-              <Label>Empresa *</Label>
+              <Label>Empresa (CNPJ) *</Label>
               <Select value={form.empresa_id} onValueChange={v => setForm(f => ({ ...f, empresa_id: v }))}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>{empresas.map(e => <SelectItem key={e.id} value={e.id}>{e.nome_fantasia || e.razao_social}</SelectItem>)}</SelectContent>
+                <SelectContent>{empresas.map(e => <SelectItem key={e.id} value={e.id}>{(e.nome_fantasia || e.razao_social)} — {e.cnpj}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div><Label>Contratante</Label><Input value={form.construtora} onChange={e => setForm(f => ({ ...f, construtora: e.target.value }))} /></div>
-            <div className="sm:col-span-2"><Label>Endereço</Label><Input value={form.endereco} onChange={e => setForm(f => ({ ...f, endereco: e.target.value }))} /></div>
-            <div><Label>Cidade</Label><Input value={form.cidade} onChange={e => setForm(f => ({ ...f, cidade: e.target.value }))} /></div>
-            <div><Label>UF</Label><Input value={form.uf} onChange={e => setForm(f => ({ ...f, uf: e.target.value }))} maxLength={2} /></div>
+            <div><Label>Cliente / Contratante</Label><Input value={form.cliente} onChange={e => setForm(f => ({ ...f, cliente: e.target.value }))} /></div>
+            <div><Label>Construtora</Label><Input value={form.construtora} onChange={e => setForm(f => ({ ...f, construtora: e.target.value }))} /></div>
+            <div><Label>Tipo de Obra</Label><Input value={form.tipo_obra} onChange={e => setForm(f => ({ ...f, tipo_obra: e.target.value }))} placeholder="Concreto armado, reforma..." /></div>
+            <div><Label>Engenheiro Responsável</Label><Input value={form.engenheiro_responsavel} onChange={e => setForm(f => ({ ...f, engenheiro_responsavel: e.target.value }))} /></div>
             <div>
               <Label>Status</Label>
               <Select value={form.status} onValueChange={v => setForm(f => ({ ...f, status: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{STATUS_OPTIONS.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
+                <SelectContent>{PIPELINE_STAGES.map(s => <SelectItem key={s.value} value={s.value}>{s.emoji} {s.label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
+            <div className="sm:col-span-2"><Label>Endereço</Label><Input value={form.endereco} onChange={e => setForm(f => ({ ...f, endereco: e.target.value }))} /></div>
+            <div><Label>Cidade</Label><Input value={form.cidade} onChange={e => setForm(f => ({ ...f, cidade: e.target.value }))} /></div>
+            <div><Label>UF</Label><Input value={form.uf} onChange={e => setForm(f => ({ ...f, uf: e.target.value }))} maxLength={2} /></div>
             <div><Label>Data Início</Label><Input type="date" value={form.data_inicio} onChange={e => setForm(f => ({ ...f, data_inicio: e.target.value }))} /></div>
             <div><Label>Previsão Término</Label><Input type="date" value={form.data_previsao_fim} onChange={e => setForm(f => ({ ...f, data_previsao_fim: e.target.value }))} /></div>
             <div><Label>Data Conclusão</Label><Input type="date" value={form.data_fim} onChange={e => setForm(f => ({ ...f, data_fim: e.target.value }))} /></div>

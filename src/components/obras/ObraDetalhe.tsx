@@ -13,16 +13,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DocumentManagerGeneric } from "@/components/shared/DocumentManagerGeneric";
+import { ObraPipeline, isContractClosed, getStage } from "./ObraPipeline";
+import ObraOrcamento from "./ObraOrcamento";
+import ObraServicosExtras from "./ObraServicosExtras";
+import ObraAndamento from "./ObraAndamento";
 import {
-  ArrowLeft, Edit, HardHat, MapPin, Calendar, Building2, FolderOpen,
-  Plus, Trash2, FileText, TrendingUp, Percent, RefreshCw, Users, ClipboardList,
-  DollarSign, Clock, Save
+  ArrowLeft, Edit, HardHat, FolderOpen,
+  Plus, Trash2, FileText, TrendingUp,
+  DollarSign, Clock, Save, Users, ClipboardList, Download
 } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 interface Obra {
   id: string; codigo: string; nome: string; empresa_id: string; construtora?: string;
   endereco?: string; cidade?: string; uf?: string; status: string;
   data_inicio?: string; data_previsao_fim?: string; data_fim?: string; observacoes?: string;
+  tipo_obra?: string; engenheiro_responsavel?: string; cliente?: string;
+  horario_padrao?: any;
 }
 interface Empresa { id: string; razao_social: string; nome_fantasia?: string; cnpj: string; }
 interface ContratoItem {
@@ -47,31 +55,30 @@ const fmtBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", cur
 
 export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasDoc }: Props) {
   const { toast } = useToast();
+  const [currentObra, setCurrentObra] = useState(obra);
   const [contratoItens, setContratoItens] = useState<ContratoItem[]>([]);
   const [reajustes, setReajustes] = useState<Reajuste[]>([]);
   const [funcionariosCount, setFuncionariosCount] = useState(0);
-  const [diariosCount, setDiariosCount] = useState(0);
   const [medicoesCount, setMedicoesCount] = useState(0);
   const [docOpen, setDocOpen] = useState(false);
 
-  // Escala (horário padrão)
+  // Escala
   const DIAS_SEMANA = ["seg", "ter", "qua", "qui", "sex", "sab", "dom"] as const;
   const DIAS_LABELS: Record<string, string> = { seg: "Segunda", ter: "Terça", qua: "Quarta", qui: "Quinta", sex: "Sexta", sab: "Sábado", dom: "Domingo" };
   const defaultHorario = () => Object.fromEntries(DIAS_SEMANA.map(d => [d, { e1: "", s1: "", e2: "", s2: "" }]));
   const [escala, setEscala] = useState<Record<string, { e1: string; s1: string; e2: string; s2: string }>>(
-    (obra as any).horario_padrao ? (typeof (obra as any).horario_padrao === "string" ? JSON.parse((obra as any).horario_padrao) : (obra as any).horario_padrao) : defaultHorario()
+    currentObra.horario_padrao ? (typeof currentObra.horario_padrao === "string" ? JSON.parse(currentObra.horario_padrao) : currentObra.horario_padrao) : defaultHorario()
   );
   const [escalaSaving, setEscalaSaving] = useState(false);
 
   const calcHorasDia = (h: { e1: string; s1: string; e2: string; s2: string }) => {
     const toMin = (t: string) => { const [hh, mm] = t.split(":").map(Number); return hh * 60 + (mm || 0); };
-    if (!h.e1 || !s1Valid(h)) return 0;
+    if (!h.e1 || !h.s1) return 0;
     let total = 0;
     if (h.e1 && h.s1) total += toMin(h.s1) - toMin(h.e1);
     if (h.e2 && h.s2) total += toMin(h.s2) - toMin(h.e2);
     return total / 60;
   };
-  const s1Valid = (h: { e1: string; s1: string }) => h.e1 && h.s1;
 
   const handleEscalaChange = (dia: string, field: string, value: string) => {
     setEscala(prev => ({ ...prev, [dia]: { ...prev[dia], [field]: value } }));
@@ -79,7 +86,7 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
 
   const handleSalvarEscala = async () => {
     setEscalaSaving(true);
-    const { error } = await supabase.from("obras").update({ horario_padrao: escala }).eq("id", obra.id);
+    const { error } = await supabase.from("obras").update({ horario_padrao: escala }).eq("id", currentObra.id);
     if (error) toast({ title: "Erro ao salvar escala", variant: "destructive" });
     else toast({ title: "Escala salva com sucesso!" });
     setEscalaSaving(false);
@@ -96,20 +103,18 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
   const [showReajusteDialog, setShowReajusteDialog] = useState(false);
   const [reajusteForm, setReajusteForm] = useState({ data_aplicacao: "", percentual: 0, tipo: "anual", motivo: "", observacoes: "" });
 
-  useEffect(() => { loadAll(); }, [obra.id]);
+  useEffect(() => { loadAll(); }, [currentObra.id]);
 
   const loadAll = async () => {
-    const [itensRes, reajRes, funcRes, diarRes, medRes] = await Promise.all([
-      supabase.from("medicao_contrato_itens").select("*").eq("obra_id", obra.id).order("item_numero"),
-      supabase.from("medicao_reajustes").select("*").eq("obra_id", obra.id).order("data_aplicacao"),
-      supabase.from("funcionarios").select("id", { count: "exact", head: true }).eq("obra_id", obra.id).eq("status", "ativo"),
-      supabase.from("diarios_obra").select("id", { count: "exact", head: true }).eq("obra_id", obra.id),
-      supabase.from("medicoes").select("id", { count: "exact", head: true }).eq("obra_id", obra.id),
+    const [itensRes, reajRes, funcRes, medRes] = await Promise.all([
+      supabase.from("medicao_contrato_itens").select("*").eq("obra_id", currentObra.id).order("item_numero"),
+      supabase.from("medicao_reajustes").select("*").eq("obra_id", currentObra.id).order("data_aplicacao"),
+      supabase.from("funcionarios").select("id", { count: "exact", head: true }).eq("obra_id", currentObra.id).eq("status", "ativo"),
+      supabase.from("medicoes").select("id", { count: "exact", head: true }).eq("obra_id", currentObra.id),
     ]);
     if (itensRes.data) setContratoItens(itensRes.data as ContratoItem[]);
     if (reajRes.data) setReajustes(reajRes.data as Reajuste[]);
     setFuncionariosCount(funcRes.count || 0);
-    setDiariosCount(diarRes.count || 0);
     setMedicoesCount(medRes.count || 0);
   };
 
@@ -121,12 +126,17 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
 
   const itensContrato = contratoItens.filter(i => !i.is_aditivo);
   const itensAditivo = contratoItens.filter(i => i.is_aditivo);
-
   const totalContrato = useMemo(() => itensContrato.reduce((s, i) => s + i.quantidade * i.valor_unitario, 0), [itensContrato]);
   const totalAditivos = useMemo(() => itensAditivo.reduce((s, i) => s + i.quantidade * i.valor_unitario, 0), [itensAditivo]);
   const totalGeralReajustado = (totalContrato + totalAditivos) * fatorReajuste;
+  const empresa = empresas.find(e => e.id === currentObra.empresa_id);
 
-  const empresa = empresas.find(e => e.id === obra.empresa_id);
+  const handleChangeStatus = async (newStatus: string) => {
+    const { error } = await supabase.from("obras").update({ status: newStatus }).eq("id", currentObra.id);
+    if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
+    setCurrentObra(prev => ({ ...prev, status: newStatus }));
+    toast({ title: `Status alterado para "${getStage(newStatus).label}"` });
+  };
 
   // CRUD Item
   const openNewItem = (isAditivo: boolean) => {
@@ -143,7 +153,7 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
 
   const handleSaveItem = async () => {
     if (!itemForm.item_numero || !itemForm.descricao) { toast({ title: "Preencha item e descrição", variant: "destructive" }); return; }
-    const payload = { ...itemForm, obra_id: obra.id, empresa_id: obra.empresa_id, valor_total: itemForm.quantidade * itemForm.valor_unitario };
+    const payload = { ...itemForm, obra_id: currentObra.id, empresa_id: currentObra.empresa_id, valor_total: itemForm.quantidade * itemForm.valor_unitario };
     if (editingItem) {
       await supabase.from("medicao_contrato_itens").update(payload).eq("id", editingItem.id);
     } else {
@@ -163,7 +173,7 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
   // CRUD Reajuste
   const handleSaveReajuste = async () => {
     if (!reajusteForm.data_aplicacao || !reajusteForm.percentual) { toast({ title: "Preencha data e percentual", variant: "destructive" }); return; }
-    await supabase.from("medicao_reajustes").insert({ ...reajusteForm, obra_id: obra.id, empresa_id: obra.empresa_id });
+    await supabase.from("medicao_reajustes").insert({ ...reajusteForm, obra_id: currentObra.id, empresa_id: currentObra.empresa_id });
     toast({ title: "Reajuste aplicado" });
     setShowReajusteDialog(false);
     setReajusteForm({ data_aplicacao: "", percentual: 0, tipo: "anual", motivo: "", observacoes: "" });
@@ -175,6 +185,99 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
     toast({ title: "Reajuste removido" });
     loadAll();
   };
+
+  // PDF: Proposta
+  const gerarPropostaPDF = () => {
+    const doc = new jsPDF();
+    const empNome = empresa?.nome_fantasia || empresa?.razao_social || "";
+    doc.setFontSize(18);
+    doc.text("PROPOSTA COMERCIAL", 105, 30, { align: "center" });
+    doc.setFontSize(10);
+    doc.text(empNome, 105, 40, { align: "center" });
+    if (empresa?.cnpj) doc.text(`CNPJ: ${empresa.cnpj}`, 105, 46, { align: "center" });
+
+    doc.setFontSize(12);
+    doc.text("Dados da Obra", 14, 60);
+    doc.setFontSize(10);
+    const info = [
+      `Obra: ${currentObra.codigo} — ${currentObra.nome}`,
+      `Cliente: ${currentObra.cliente || currentObra.construtora || "—"}`,
+      `Local: ${currentObra.cidade || ""}${currentObra.uf ? "/" + currentObra.uf : ""}`,
+      `Endereço: ${currentObra.endereco || "—"}`,
+    ];
+    info.forEach((t, i) => doc.text(t, 14, 68 + i * 6));
+
+    if (contratoItens.length > 0) {
+      doc.setFontSize(12);
+      doc.text("Escopo de Serviços", 14, 98);
+      autoTable(doc, {
+        startY: 104,
+        head: [["Item", "Descrição", "Un.", "Qtd.", "V. Unit.", "Total"]],
+        body: contratoItens.map(i => [
+          i.item_numero, i.descricao, i.unidade,
+          i.quantidade.toLocaleString("pt-BR", { minimumFractionDigits: 2 }),
+          fmtBRL(i.valor_unitario), fmtBRL(i.quantidade * i.valor_unitario)
+        ]),
+        foot: [["", "", "", "", "TOTAL:", fmtBRL(totalContrato + totalAditivos)]],
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [41, 65, 148] },
+      });
+    }
+
+    doc.save(`Proposta_${currentObra.codigo}.pdf`);
+    toast({ title: "Proposta PDF gerada!" });
+  };
+
+  // PDF: Contrato
+  const gerarContratoPDF = () => {
+    const doc = new jsPDF();
+    const empNome = empresa?.nome_fantasia || empresa?.razao_social || "";
+    doc.setFontSize(16);
+    doc.text("CONTRATO DE PRESTAÇÃO DE SERVIÇOS", 105, 25, { align: "center" });
+
+    doc.setFontSize(10);
+    let y = 45;
+    const addLine = (text: string) => { doc.text(text, 14, y); y += 6; };
+
+    addLine("CONTRATANTE:");
+    addLine(`Razão Social: ${currentObra.cliente || currentObra.construtora || "—"}`);
+    y += 4;
+    addLine("CONTRATADA:");
+    addLine(`Razão Social: ${empNome}`);
+    addLine(`CNPJ: ${empresa?.cnpj || ""}`);
+    y += 4;
+    addLine("OBJETO:");
+    addLine(`Execução de serviços na obra ${currentObra.codigo} — ${currentObra.nome}`);
+    addLine(`Local: ${currentObra.endereco || ""}, ${currentObra.cidade || ""}/${currentObra.uf || ""}`);
+    y += 4;
+    addLine(`VALOR: ${fmtBRL(totalGeralReajustado)}`);
+    y += 4;
+    if (currentObra.data_inicio) addLine(`Início: ${new Date(currentObra.data_inicio + "T12:00:00").toLocaleDateString("pt-BR")}`);
+    if (currentObra.data_previsao_fim) addLine(`Prazo: ${new Date(currentObra.data_previsao_fim + "T12:00:00").toLocaleDateString("pt-BR")}`);
+
+    if (contratoItens.length > 0) {
+      y += 6;
+      doc.setFontSize(12);
+      doc.text("ESCOPO DE SERVIÇOS", 14, y);
+      y += 6;
+      autoTable(doc, {
+        startY: y,
+        head: [["Item", "Descrição", "Un.", "Qtd.", "V. Unit.", "Total"]],
+        body: contratoItens.map(i => [
+          i.item_numero, i.descricao, i.unidade,
+          i.quantidade.toLocaleString("pt-BR", { minimumFractionDigits: 2 }),
+          fmtBRL(i.valor_unitario), fmtBRL(i.quantidade * i.valor_unitario)
+        ]),
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [41, 65, 148] },
+      });
+    }
+
+    doc.save(`Contrato_${currentObra.codigo}.pdf`);
+    toast({ title: "Contrato PDF gerado!" });
+  };
+
+  const contractClosed = isContractClosed(currentObra.status);
 
   const renderItemTable = (items: ContratoItem[], title: string, isAditivo: boolean) => (
     <div className="space-y-3">
@@ -241,15 +344,20 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
             <Button variant="ghost" size="icon" onClick={onBack}><ArrowLeft className="h-5 w-5" /></Button>
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10"><HardHat className="h-5 w-5 text-primary" /></div>
             <div>
-              <h1 className="text-xl font-bold tracking-tight">{obra.codigo} — {obra.nome}</h1>
-              <p className="text-sm text-muted-foreground">{obra.construtora || (empresa?.nome_fantasia || empresa?.razao_social)}</p>
+              <h1 className="text-xl font-bold tracking-tight">{currentObra.codigo} — {currentObra.nome}</h1>
+              <p className="text-sm text-muted-foreground">{currentObra.cliente || currentObra.construtora || (empresa?.nome_fantasia || empresa?.razao_social)}</p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <Button variant="outline" size="sm" onClick={gerarPropostaPDF}><Download className="h-4 w-4 mr-1" /> Proposta</Button>
+            <Button variant="outline" size="sm" onClick={gerarContratoPDF}><Download className="h-4 w-4 mr-1" /> Contrato</Button>
             <Button variant="outline" size="sm" onClick={() => setDocOpen(true)}><FolderOpen className="h-4 w-4 mr-1" /> Documentos</Button>
             <Button variant="outline" size="sm" onClick={onEdit}><Edit className="h-4 w-4 mr-1" /> Editar</Button>
           </div>
         </div>
+
+        {/* Pipeline */}
+        <ObraPipeline currentStatus={currentObra.status} onChangeStatus={handleChangeStatus} />
 
         {/* KPIs */}
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
@@ -272,12 +380,15 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
 
         {/* Tabs */}
         <Tabs defaultValue="dados" className="space-y-4">
-          <TabsList>
-           <TabsTrigger value="dados">Dados Gerais</TabsTrigger>
-            <TabsTrigger value="escala">Escala</TabsTrigger>
-            <TabsTrigger value="planilha">Planilha de Contrato</TabsTrigger>
+          <TabsList className="flex-wrap h-auto gap-1">
+            <TabsTrigger value="dados">Dados Gerais</TabsTrigger>
+            <TabsTrigger value="orcamento">Orçamento</TabsTrigger>
+            <TabsTrigger value="planilha">Planilha Contrato</TabsTrigger>
             <TabsTrigger value="aditivos">Aditivos</TabsTrigger>
             <TabsTrigger value="reajustes">Reajustes</TabsTrigger>
+            <TabsTrigger value="extras">Serviços Extras</TabsTrigger>
+            <TabsTrigger value="escala">Escala</TabsTrigger>
+            {contractClosed && <TabsTrigger value="andamento">Andamento</TabsTrigger>}
           </TabsList>
 
           {/* Dados Gerais */}
@@ -285,87 +396,30 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
             <Card>
               <CardContent className="p-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-                  <div><span className="text-muted-foreground">Código:</span> <span className="font-medium ml-1">{obra.codigo}</span></div>
-                  <div><span className="text-muted-foreground">Nome:</span> <span className="font-medium ml-1">{obra.nome}</span></div>
+                  <div><span className="text-muted-foreground">Código:</span> <span className="font-medium ml-1">{currentObra.codigo}</span></div>
+                  <div><span className="text-muted-foreground">Nome:</span> <span className="font-medium ml-1">{currentObra.nome}</span></div>
                   <div><span className="text-muted-foreground">Empresa:</span> <span className="font-medium ml-1">{empresa?.nome_fantasia || empresa?.razao_social || "—"}</span></div>
-                  <div><span className="text-muted-foreground">Contratante:</span> <span className="font-medium ml-1">{obra.construtora || "—"}</span></div>
-                  <div><span className="text-muted-foreground">Endereço:</span> <span className="font-medium ml-1">{obra.endereco || "—"}</span></div>
-                  <div><span className="text-muted-foreground">Local:</span> <span className="font-medium ml-1">{obra.cidade || ""}{obra.uf ? `/${obra.uf}` : ""}</span></div>
-                  <div><span className="text-muted-foreground">Início:</span> <span className="font-medium ml-1">{obra.data_inicio ? new Date(obra.data_inicio + "T12:00:00").toLocaleDateString("pt-BR") : "—"}</span></div>
-                  <div><span className="text-muted-foreground">Previsão:</span> <span className="font-medium ml-1">{obra.data_previsao_fim ? new Date(obra.data_previsao_fim + "T12:00:00").toLocaleDateString("pt-BR") : "—"}</span></div>
-                  <div><span className="text-muted-foreground">Conclusão:</span> <span className="font-medium ml-1">{obra.data_fim ? new Date(obra.data_fim + "T12:00:00").toLocaleDateString("pt-BR") : "—"}</span></div>
-                  <div><span className="text-muted-foreground">Status:</span> <Badge variant="outline" className="ml-1">{obra.status}</Badge></div>
-                  <div><span className="text-muted-foreground">Diários:</span> <span className="font-medium ml-1">{diariosCount}</span></div>
-                  {obra.observacoes && <div className="sm:col-span-2 lg:col-span-3"><span className="text-muted-foreground">Observações:</span> <span className="ml-1">{obra.observacoes}</span></div>}
+                  <div><span className="text-muted-foreground">CNPJ:</span> <span className="font-medium ml-1">{empresa?.cnpj || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Cliente:</span> <span className="font-medium ml-1">{currentObra.cliente || currentObra.construtora || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Tipo de Obra:</span> <span className="font-medium ml-1">{currentObra.tipo_obra || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Engenheiro:</span> <span className="font-medium ml-1">{currentObra.engenheiro_responsavel || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Endereço:</span> <span className="font-medium ml-1">{currentObra.endereco || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Local:</span> <span className="font-medium ml-1">{currentObra.cidade || ""}{currentObra.uf ? `/${currentObra.uf}` : ""}</span></div>
+                  <div><span className="text-muted-foreground">Início:</span> <span className="font-medium ml-1">{currentObra.data_inicio ? new Date(currentObra.data_inicio + "T12:00:00").toLocaleDateString("pt-BR") : "—"}</span></div>
+                  <div><span className="text-muted-foreground">Previsão:</span> <span className="font-medium ml-1">{currentObra.data_previsao_fim ? new Date(currentObra.data_previsao_fim + "T12:00:00").toLocaleDateString("pt-BR") : "—"}</span></div>
+                  <div><span className="text-muted-foreground">Conclusão:</span> <span className="font-medium ml-1">{currentObra.data_fim ? new Date(currentObra.data_fim + "T12:00:00").toLocaleDateString("pt-BR") : "—"}</span></div>
+                  {currentObra.observacoes && <div className="sm:col-span-2 lg:col-span-3"><span className="text-muted-foreground">Observações:</span> <span className="ml-1">{currentObra.observacoes}</span></div>}
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Escala */}
-          <TabsContent value="escala">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Clock className="h-4 w-4" /> Escala de Horários
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="rounded-lg border overflow-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-24">Dia</TableHead>
-                          <TableHead className="text-center">Entrada 1</TableHead>
-                          <TableHead className="text-center">Saída 1</TableHead>
-                          <TableHead className="text-center">Entrada 2</TableHead>
-                          <TableHead className="text-center">Saída 2</TableHead>
-                          <TableHead className="text-center w-20">Horas</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {DIAS_SEMANA.map(dia => {
-                          const h = escala[dia] || { e1: "", s1: "", e2: "", s2: "" };
-                          const horas = calcHorasDia(h);
-                          return (
-                            <TableRow key={dia}>
-                              <TableCell className="font-medium">{DIAS_LABELS[dia]}</TableCell>
-                              {(["e1", "s1", "e2", "s2"] as const).map(field => (
-                                <TableCell key={field} className="text-center p-1">
-                                  <Input
-                                    type="time"
-                                    value={h[field]}
-                                    onChange={e => handleEscalaChange(dia, field, e.target.value)}
-                                    className="h-8 text-center w-28 mx-auto"
-                                  />
-                                </TableCell>
-                              ))}
-                              <TableCell className="text-center font-mono text-sm font-medium">
-                                {horas > 0 ? `${horas.toFixed(1)}h` : "—"}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                      <TableFooter>
-                        <TableRow>
-                          <TableCell colSpan={5} className="text-right font-semibold">Total Semanal:</TableCell>
-                          <TableCell className="text-center font-bold">{totalHorasSemana.toFixed(1)}h</TableCell>
-                        </TableRow>
-                      </TableFooter>
-                    </Table>
-                  </div>
-                  <div className="flex justify-end">
-                    <Button onClick={handleSalvarEscala} disabled={escalaSaving} className="gap-2">
-                      <Save className="h-4 w-4" /> {escalaSaving ? "Salvando..." : "Salvar Escala"}
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          {/* Orçamento */}
+          <TabsContent value="orcamento">
+            <ObraOrcamento obraId={currentObra.id} empresaId={currentObra.empresa_id} />
           </TabsContent>
 
+          {/* Planilha Contrato */}
           <TabsContent value="planilha">
             {renderItemTable(itensContrato, "Itens do Contrato Original", false)}
           </TabsContent>
@@ -384,7 +438,6 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
                   <Plus className="h-3.5 w-3.5 mr-1" /> Novo Reajuste
                 </Button>
               </div>
-
               {fatorReajuste !== 1 && (
                 <div className="rounded-lg bg-primary/5 border border-primary/20 p-3 text-sm">
                   <span className="text-muted-foreground">Fator acumulado:</span> <span className="font-bold text-primary">{fatorReajuste.toFixed(4)} ({((fatorReajuste - 1) * 100).toFixed(2)}%)</span>
@@ -392,7 +445,6 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
                   <span className="text-muted-foreground ml-4">Saldo reajustado:</span> <span className="font-bold text-primary">{fmtBRL(totalGeralReajustado)}</span>
                 </div>
               )}
-
               {reajustes.length === 0 ? (
                 <div className="py-8 text-center text-sm text-muted-foreground border rounded-lg">Nenhum reajuste aplicado</div>
               ) : (
@@ -425,6 +477,71 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
               )}
             </div>
           </TabsContent>
+
+          {/* Serviços Extras */}
+          <TabsContent value="extras">
+            <ObraServicosExtras obraId={currentObra.id} empresaId={currentObra.empresa_id} />
+          </TabsContent>
+
+          {/* Escala */}
+          <TabsContent value="escala">
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2"><Clock className="h-4 w-4" /> Escala de Horários</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="rounded-lg border overflow-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-24">Dia</TableHead>
+                          <TableHead className="text-center">Entrada 1</TableHead>
+                          <TableHead className="text-center">Saída 1</TableHead>
+                          <TableHead className="text-center">Entrada 2</TableHead>
+                          <TableHead className="text-center">Saída 2</TableHead>
+                          <TableHead className="text-center w-20">Horas</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {DIAS_SEMANA.map(dia => {
+                          const h = escala[dia] || { e1: "", s1: "", e2: "", s2: "" };
+                          const horas = calcHorasDia(h);
+                          return (
+                            <TableRow key={dia}>
+                              <TableCell className="font-medium">{DIAS_LABELS[dia]}</TableCell>
+                              {(["e1", "s1", "e2", "s2"] as const).map(field => (
+                                <TableCell key={field} className="text-center p-1">
+                                  <Input type="time" value={h[field]} onChange={e => handleEscalaChange(dia, field, e.target.value)} className="h-8 text-center w-28 mx-auto" />
+                                </TableCell>
+                              ))}
+                              <TableCell className="text-center font-mono text-sm font-medium">{horas > 0 ? `${horas.toFixed(1)}h` : "—"}</TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                      <TableFooter>
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-right font-semibold">Total Semanal:</TableCell>
+                          <TableCell className="text-center font-bold">{totalHorasSemana.toFixed(1)}h</TableCell>
+                        </TableRow>
+                      </TableFooter>
+                    </Table>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button onClick={handleSalvarEscala} disabled={escalaSaving} className="gap-2"><Save className="h-4 w-4" /> {escalaSaving ? "Salvando..." : "Salvar Escala"}</Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Andamento */}
+          {contractClosed && (
+            <TabsContent value="andamento">
+              <ObraAndamento obraId={currentObra.id} empresaId={currentObra.empresa_id} status={currentObra.status} />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
 
@@ -443,9 +560,7 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
             <div className="col-span-2"><Label>Descrição *</Label><Input value={itemForm.descricao} onChange={e => setItemForm(f => ({ ...f, descricao: e.target.value }))} /></div>
             <div><Label>Quantidade</Label><Input type="number" value={itemForm.quantidade || ""} onChange={e => setItemForm(f => ({ ...f, quantidade: Number(e.target.value) }))} /></div>
             <div><Label>Valor Unitário</Label><Input type="number" step="0.01" value={itemForm.valor_unitario || ""} onChange={e => setItemForm(f => ({ ...f, valor_unitario: Number(e.target.value) }))} /></div>
-            {itemForm.is_aditivo && (
-              <div><Label>Nº Aditivo</Label><Input type="number" value={itemForm.aditivo_numero || ""} onChange={e => setItemForm(f => ({ ...f, aditivo_numero: Number(e.target.value) }))} /></div>
-            )}
+            {itemForm.is_aditivo && <div><Label>Nº Aditivo</Label><Input type="number" value={itemForm.aditivo_numero || ""} onChange={e => setItemForm(f => ({ ...f, aditivo_numero: Number(e.target.value) }))} /></div>}
             <div className={itemForm.is_aditivo ? "" : "col-span-2"}><Label>Observações</Label><Textarea value={itemForm.observacoes} onChange={e => setItemForm(f => ({ ...f, observacoes: e.target.value }))} rows={2} /></div>
           </div>
           <DialogFooter>
@@ -479,7 +594,7 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
       </Dialog>
 
       {/* Document Manager */}
-      <DocumentManagerGeneric open={docOpen} onOpenChange={setDocOpen} entityId={obra.id} entityNome={obra.nome} basePath="obras" subpastas={subpastasDoc} />
+      <DocumentManagerGeneric open={docOpen} onOpenChange={setDocOpen} entityId={currentObra.id} entityNome={currentObra.nome} basePath="obras" subpastas={subpastasDoc} />
     </AppLayout>
   );
 }
