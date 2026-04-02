@@ -22,6 +22,7 @@ import {
   MessageCircle,
   FileSpreadsheet,
   Ruler,
+  CalendarDays,
 } from "lucide-react";
 import logoPreto from "@/assets/logo-preto.png";
 
