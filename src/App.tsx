@@ -25,6 +25,7 @@ import DiarioObraMobile from "./pages/DiarioObraMobile";
 import Comunicacoes from "./pages/Comunicacoes";
 import Relatorios from "./pages/Relatorios";
 import Medicoes from "./pages/Medicoes";
+import AreaFuncionario from "./pages/AreaFuncionario";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
