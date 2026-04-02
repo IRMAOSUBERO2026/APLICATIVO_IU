@@ -25,6 +25,7 @@ import DiarioObraMobile from "./pages/DiarioObraMobile";
 import Comunicacoes from "./pages/Comunicacoes";
 import Relatorios from "./pages/Relatorios";
 import Medicoes from "./pages/Medicoes";
+import AreaFuncionario from "./pages/AreaFuncionario";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -58,6 +59,7 @@ const App = () => (
           <Route path="/comunicacoes" element={<Comunicacoes />} />
           <Route path="/relatorios" element={<Relatorios />} />
           <Route path="/medicoes" element={<Medicoes />} />
+          <Route path="/area-funcionario" element={<AreaFuncionario />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

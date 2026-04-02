@@ -22,6 +22,7 @@ import {
   MessageCircle,
   FileSpreadsheet,
   Ruler,
+  CalendarDays,
 } from "lucide-react";
 import logoPreto from "@/assets/logo-preto.png";
 
@@ -30,6 +31,7 @@ const menuSections = [
     label: "Principal",
     items: [
       { icon: LayoutDashboard, label: "Dashboard", path: "/" },
+      { icon: CalendarDays, label: "Área do Funcionário", path: "/area-funcionario" },
     ],
   },
   {

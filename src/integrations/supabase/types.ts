@@ -14,6 +14,70 @@ export type Database = {
   }
   public: {
     Tables: {
+      avisos: {
+        Row: {
+          categoria: string
+          created_at: string
+          data_expiracao: string | null
+          empresa_id: string | null
+          funcionario_id: string | null
+          id: string
+          lido: boolean
+          mensagem: string
+          obra_id: string | null
+          tipo: string
+          titulo: string
+        }
+        Insert: {
+          categoria?: string
+          created_at?: string
+          data_expiracao?: string | null
+          empresa_id?: string | null
+          funcionario_id?: string | null
+          id?: string
+          lido?: boolean
+          mensagem: string
+          obra_id?: string | null
+          tipo?: string
+          titulo: string
+        }
+        Update: {
+          categoria?: string
+          created_at?: string
+          data_expiracao?: string | null
+          empresa_id?: string | null
+          funcionario_id?: string | null
+          id?: string
+          lido?: boolean
+          mensagem?: string
+          obra_id?: string | null
+          tipo?: string
+          titulo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "avisos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avisos_funcionario_id_fkey"
+            columns: ["funcionario_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "avisos_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       compras: {
         Row: {
           created_at: string
@@ -713,6 +777,75 @@ export type Database = {
           },
           {
             foreignKeyName: "equipamentos_proprios_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      eventos_agenda: {
+        Row: {
+          cor: string | null
+          created_at: string
+          data_fim: string | null
+          data_inicio: string
+          descricao: string | null
+          empresa_id: string | null
+          id: string
+          local: string | null
+          obra_id: string | null
+          recorrencia_tipo: string | null
+          recorrente: boolean
+          responsaveis: string[] | null
+          tipo: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          cor?: string | null
+          created_at?: string
+          data_fim?: string | null
+          data_inicio: string
+          descricao?: string | null
+          empresa_id?: string | null
+          id?: string
+          local?: string | null
+          obra_id?: string | null
+          recorrencia_tipo?: string | null
+          recorrente?: boolean
+          responsaveis?: string[] | null
+          tipo?: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          cor?: string | null
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string
+          descricao?: string | null
+          empresa_id?: string | null
+          id?: string
+          local?: string | null
+          obra_id?: string | null
+          recorrencia_tipo?: string | null
+          recorrente?: boolean
+          responsaveis?: string[] | null
+          tipo?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eventos_agenda_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_agenda_obra_id_fkey"
             columns: ["obra_id"]
             isOneToOne: false
             referencedRelation: "obras"
@@ -1502,6 +1635,50 @@ export type Database = {
           },
         ]
       }
+      mensagens_internas: {
+        Row: {
+          anexo_url: string | null
+          conteudo: string
+          created_at: string
+          destinatario_id: string | null
+          destinatario_tipo: string
+          id: string
+          lida: boolean
+          obra_id: string | null
+          remetente: string
+        }
+        Insert: {
+          anexo_url?: string | null
+          conteudo: string
+          created_at?: string
+          destinatario_id?: string | null
+          destinatario_tipo?: string
+          id?: string
+          lida?: boolean
+          obra_id?: string | null
+          remetente: string
+        }
+        Update: {
+          anexo_url?: string | null
+          conteudo?: string
+          created_at?: string
+          destinatario_id?: string | null
+          destinatario_tipo?: string
+          id?: string
+          lida?: boolean
+          obra_id?: string | null
+          remetente?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mensagens_internas_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       movimentacoes_estoque: {
         Row: {
           compra_id: string | null
@@ -2029,6 +2206,115 @@ export type Database = {
             columns: ["fornecedor_id"]
             isOneToOne: false
             referencedRelation: "fornecedores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tarefa_comentarios: {
+        Row: {
+          autor: string
+          conteudo: string
+          created_at: string
+          id: string
+          tarefa_id: string
+        }
+        Insert: {
+          autor: string
+          conteudo: string
+          created_at?: string
+          id?: string
+          tarefa_id: string
+        }
+        Update: {
+          autor?: string
+          conteudo?: string
+          created_at?: string
+          id?: string
+          tarefa_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tarefa_comentarios_tarefa_id_fkey"
+            columns: ["tarefa_id"]
+            isOneToOne: false
+            referencedRelation: "tarefas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tarefas: {
+        Row: {
+          anexos: string[] | null
+          atribuido_para: string | null
+          created_at: string
+          data_limite: string | null
+          descricao: string | null
+          empresa_id: string | null
+          funcionario_id: string | null
+          id: string
+          obra_id: string | null
+          prioridade: string
+          status: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          anexos?: string[] | null
+          atribuido_para?: string | null
+          created_at?: string
+          data_limite?: string | null
+          descricao?: string | null
+          empresa_id?: string | null
+          funcionario_id?: string | null
+          id?: string
+          obra_id?: string | null
+          prioridade?: string
+          status?: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          anexos?: string[] | null
+          atribuido_para?: string | null
+          created_at?: string
+          data_limite?: string | null
+          descricao?: string | null
+          empresa_id?: string | null
+          funcionario_id?: string | null
+          id?: string
+          obra_id?: string | null
+          prioridade?: string
+          status?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tarefas_atribuido_para_fkey"
+            columns: ["atribuido_para"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tarefas_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tarefas_funcionario_id_fkey"
+            columns: ["funcionario_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tarefas_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
             referencedColumns: ["id"]
           },
         ]
