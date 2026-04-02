@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CalendarDays, CheckCircle2, AlertTriangle, Bell, ClipboardList, FileText, Shield } from "lucide-react";
+import { CalendarDays, ClipboardList, Bell, Shield } from "lucide-react";
 import { format, addYears, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -11,13 +11,11 @@ interface Funcionario {
   id: string;
   nome: string;
   cargo: string;
-  obra_id: string | null;
   data_aso: string | null;
   data_nr6: string | null;
   data_nr12: string | null;
   data_nr18: string | null;
   data_nr35: string | null;
-  status: string;
 }
 
 export function DashboardFuncionario() {
@@ -28,7 +26,7 @@ export function DashboardFuncionario() {
   const [avisos, setAvisos] = useState<any[]>([]);
 
   useEffect(() => {
-    supabase.from("funcionarios").select("id, nome, cargo, obra_id, data_aso, data_nr6, data_nr12, data_nr18, data_nr35, status")
+    supabase.from("funcionarios").select("id, nome, cargo, data_aso, data_nr6, data_nr12, data_nr18, data_nr35")
       .eq("status", "ativo").order("nome").then(({ data }) => { if (data) setFuncionarios(data); });
   }, []);
 
@@ -48,13 +46,21 @@ export function DashboardFuncionario() {
   const func = funcionarios.find(f => f.id === selectedId);
 
   const getTrainingStatus = (data: string | null, anos: number) => {
-    if (!data) return { status: "missing", label: "Não realizado", color: "text-muted-foreground" };
+    if (!data) return { label: "Não realizado", variant: "secondary" as const };
     const venc = addYears(new Date(data), anos);
     const dias = differenceInDays(venc, new Date());
-    if (dias < 0) return { status: "expired", label: `Vencido há ${Math.abs(dias)}d`, color: "text-red-600" };
-    if (dias <= 30) return { status: "warning", label: `Vence em ${dias}d`, color: "text-amber-600" };
-    return { status: "ok", label: `Válido até ${format(venc, "dd/MM/yy")}`, color: "text-green-600" };
+    if (dias < 0) return { label: `Vencido há ${Math.abs(dias)}d`, variant: "destructive" as const };
+    if (dias <= 30) return { label: `Vence em ${dias}d`, variant: "outline" as const };
+    return { label: format(venc, "dd/MM/yy"), variant: "default" as const };
   };
+
+  const trainings = func ? [
+    { name: "ASO", ...getTrainingStatus(func.data_aso, 1) },
+    { name: "NR6", ...getTrainingStatus(func.data_nr6, 1) },
+    { name: "NR12", ...getTrainingStatus(func.data_nr12, 2) },
+    { name: "NR18", ...getTrainingStatus(func.data_nr18, 2) },
+    { name: "NR35", ...getTrainingStatus(func.data_nr35, 2) },
+  ] : [];
 
   return (
     <div className="space-y-4">
@@ -69,7 +75,6 @@ export function DashboardFuncionario() {
 
       {func && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {/* Tarefas Pendentes */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2"><ClipboardList className="h-4 w-4 text-primary" /> Tarefas Pendentes</CardTitle>
@@ -82,9 +87,7 @@ export function DashboardFuncionario() {
                   {tarefas.slice(0, 5).map(t => (
                     <div key={t.id} className="flex items-center justify-between text-xs border rounded-lg p-2">
                       <span className="truncate flex-1">{t.titulo}</span>
-                      <Badge variant="outline" className={cn("text-[10px] ml-2", t.prioridade === "alta" ? "border-red-200 text-red-600" : t.prioridade === "media" ? "border-amber-200 text-amber-600" : "border-green-200 text-green-600")}>
-                        {t.prioridade}
-                      </Badge>
+                      <Badge variant={t.prioridade === "alta" ? "destructive" : "secondary"} className="text-[10px] ml-2">{t.prioridade}</Badge>
                     </div>
                   ))}
                   {tarefas.length > 5 && <p className="text-[10px] text-muted-foreground text-center">+{tarefas.length - 5} mais</p>}
@@ -93,7 +96,6 @@ export function DashboardFuncionario() {
             </CardContent>
           </Card>
 
-          {/* Eventos Próximos */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2"><CalendarDays className="h-4 w-4 text-primary" /> Próximos Eventos</CardTitle>
@@ -114,7 +116,6 @@ export function DashboardFuncionario() {
             </CardContent>
           </Card>
 
-          {/* Avisos */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2"><Bell className="h-4 w-4 text-primary" /> Avisos Recentes</CardTitle>
@@ -125,9 +126,9 @@ export function DashboardFuncionario() {
               ) : (
                 <div className="space-y-2">
                   {avisos.map(a => (
-                    <div key={a.id} className={cn("text-xs border rounded-lg p-2", a.tipo === "urgente" ? "border-red-200 bg-red-50" : a.tipo === "atencao" ? "border-amber-200 bg-amber-50" : "")}>
+                    <div key={a.id} className="text-xs border rounded-lg p-2">
                       <div className="font-medium">{a.titulo}</div>
-                      <div className="text-muted-foreground">{a.mensagem}</div>
+                      <div className="text-muted-foreground truncate">{a.mensagem}</div>
                     </div>
                   ))}
                 </div>
@@ -135,26 +136,16 @@ export function DashboardFuncionario() {
             </CardContent>
           </Card>
 
-          {/* Treinamentos / Segurança */}
           <Card className="md:col-span-2 xl:col-span-3">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm flex items-center gap-2"><Shield className="h-4 w-4 text-primary" /> Status de Treinamentos e Exames</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                {[
-                  { label: "ASO", ...getTrainingStatus(func.data_aso, 1) },
-                  { label: "NR6", ...getTrainingStatus(func.data_nr6, 1) },
-                  { label: "NR12", ...getTrainingStatus(func.data_nr12, 2) },
-                  { label: "NR18", ...getTrainingStatus(func.data_nr18, 2) },
-                  { label: "NR35", ...getTrainingStatus(func.data_nr35, 2) },
-                ].map(item => (
-                  <div key={item.label} className="border rounded-lg p-3 text-center">
-                    <div className="text-xs font-semibold">{item.label}</div>
-                    <div className={cn("text-[11px] mt-1", item.color)}>{item.label === "ASO" || item.label === "NR6" || item.label === "NR12" || item.label === "NR18" || item.label === "NR35" ? item.label : ""}</div>
-                    <div className={cn("text-[11px] mt-1", item.color)}>{item.label && item.label}</div>
-                    <div className={cn("text-[10px] mt-0.5", item.color)}>{(item as any).label ? (item as any).label : ""}</div>
-                    <Badge variant="outline" className={cn("text-[10px] mt-1", item.color)}>{(item as any).label ? (item as any).label : ""}</Badge>
+                {trainings.map(item => (
+                  <div key={item.name} className="border rounded-lg p-3 text-center space-y-1">
+                    <div className="text-xs font-semibold">{item.name}</div>
+                    <Badge variant={item.variant} className="text-[10px]">{item.label}</Badge>
                   </div>
                 ))}
               </div>
