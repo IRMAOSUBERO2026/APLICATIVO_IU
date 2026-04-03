@@ -67,6 +67,7 @@ const menuSections = [
       { icon: MessageCircle, label: "Comunicações", path: "/comunicacoes" },
       { icon: FileSpreadsheet, label: "Relatórios", path: "/relatorios" },
       { icon: Shield, label: "Controle de Acesso", path: "/acesso" },
+      { icon: FileText, label: "Config. Documentos", path: "/config-documentos" },
     ],
   },
 ];
