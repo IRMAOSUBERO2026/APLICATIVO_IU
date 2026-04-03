@@ -414,30 +414,39 @@ export default function Folha() {
 
   const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-  const exportRelatorioObra = () => {
+  const exportRelatorioObra = async () => {
     const funcsComResultado = funcionarios.filter(f => f.result);
     if (funcsComResultado.length === 0) {
       toast({ title: "Nenhum cálculo realizado", description: "Calcule ao menos um funcionário antes de exportar.", variant: "destructive" });
       return;
     }
-    const doc = new jsPDF({ orientation: "landscape" });
-    doc.setFontSize(14);
-    doc.text(`Relatório de Folha Salarial — ${obraNome?.nome || ""}`, 14, 15);
-    doc.setFontSize(10);
-    doc.text(`Referência: ${MESES[mes]}/${ano}`, 14, 22);
+
+    // Load empresa branding
+    const empresaId = obraNome?.empresa_id;
+    let branding: EmpresaBranding = { razao_social: "Empresa", cnpj: "" };
+    if (empresaId) {
+      const { data: empData } = await supabase.from("empresas").select("*").eq("id", empresaId).single();
+      if (empData) branding = empData as any;
+    }
+
+    const { doc, startY, colors } = await createBrandedPDF({
+      titulo: "Relatório de Folha Salarial",
+      subtitulo: `Referência: ${MESES[mes]}/${ano}`,
+      empresa: branding,
+      obraNome: `${obraNome?.codigo} — ${obraNome?.nome}`,
+      orientation: "landscape",
+    });
 
     const totalGeral = funcsComResultado.reduce((s, f) => s + (f.result?.salario_final ?? 0), 0);
 
     autoTable(doc, {
-      startY: 28,
+      startY,
       head: [["Nome", "CPF", "Função", "Salário Base", "Receitas", "Descontos", "Saldo de Pagamento"]],
       body: funcsComResultado.map(f => {
         const r = f.result!;
         const receitas = r.total_HE + r.valor_atestados + r.total_bonificacoes;
         return [
-          f.nome,
-          f.cpf,
-          f.cargo,
+          f.nome, f.cpf, f.cargo,
           fmt(f.input.salario_combinado),
           fmt(receitas),
           fmt(r.total_descontos),
@@ -445,11 +454,10 @@ export default function Folha() {
         ];
       }),
       foot: [["", "", "", "", "", "TOTAL", fmt(totalGeral)]],
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [41, 50, 65] },
-      footStyles: { fillColor: [41, 50, 65], textColor: 255, fontStyle: "bold" },
+      ...getAutoTableStyles(colors.primary),
     });
 
+    addPDFFooter(doc, branding);
     doc.save(`folha-${(obraNome?.codigo || "obra").replace(/\s/g, "-")}-${MESES[mes]}-${ano}.pdf`);
     toast({ title: "PDF exportado com sucesso!" });
   };
