@@ -188,31 +188,31 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
   };
 
   // PDF: Proposta
-  const gerarPropostaPDF = () => {
-    const doc = new jsPDF();
-    const empNome = empresa?.nome_fantasia || empresa?.razao_social || "";
-    doc.setFontSize(18);
-    doc.text("PROPOSTA COMERCIAL", 105, 30, { align: "center" });
-    doc.setFontSize(10);
-    doc.text(empNome, 105, 40, { align: "center" });
-    if (empresa?.cnpj) doc.text(`CNPJ: ${empresa.cnpj}`, 105, 46, { align: "center" });
+  const gerarPropostaPDF = async () => {
+    if (!empresa) return;
+    const branding: EmpresaBranding = empresa as any;
+    const { doc, startY, colors } = await createBrandedPDF({
+      titulo: "PROPOSTA COMERCIAL",
+      subtitulo: `${currentObra.codigo} — ${currentObra.nome}`,
+      empresa: branding,
+      obraNome: `${currentObra.codigo} — ${currentObra.nome}`,
+      obraEndereco: `${currentObra.endereco || ""} ${currentObra.cidade || ""}${currentObra.uf ? "/" + currentObra.uf : ""}`,
+    });
 
-    doc.setFontSize(12);
-    doc.text("Dados da Obra", 14, 60);
+    let y = startY;
     doc.setFontSize(10);
-    const info = [
-      `Obra: ${currentObra.codigo} — ${currentObra.nome}`,
-      `Cliente: ${currentObra.cliente || currentObra.construtora || "—"}`,
-      `Local: ${currentObra.cidade || ""}${currentObra.uf ? "/" + currentObra.uf : ""}`,
-      `Endereço: ${currentObra.endereco || "—"}`,
-    ];
-    info.forEach((t, i) => doc.text(t, 14, 68 + i * 6));
+    doc.setTextColor(60, 60, 60);
+    doc.text(`Cliente: ${currentObra.cliente || currentObra.construtora || "—"}`, 14, y);
+    y += 8;
 
     if (contratoItens.length > 0) {
       doc.setFontSize(12);
-      doc.text("Escopo de Serviços", 14, 98);
+      doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
+      doc.setFont("helvetica", "bold");
+      doc.text("Escopo de Serviços", 14, y);
+      y += 4;
       autoTable(doc, {
-        startY: 104,
+        startY: y,
         head: [["Item", "Descrição", "Un.", "Qtd.", "V. Unit.", "Total"]],
         body: contratoItens.map(i => [
           i.item_numero, i.descricao, i.unidade,
@@ -220,11 +220,12 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
           fmtBRL(i.valor_unitario), fmtBRL(i.quantidade * i.valor_unitario)
         ]),
         foot: [["", "", "", "", "TOTAL:", fmtBRL(totalContrato + totalAditivos)]],
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [41, 65, 148] },
+        ...getAutoTableStyles(colors.primary),
       });
     }
 
+    addSignatureBlock(doc, branding);
+    addPDFFooter(doc, branding);
     doc.save(`Proposta_${currentObra.codigo}.pdf`);
     toast({ title: "Proposta PDF gerada!" });
   };
