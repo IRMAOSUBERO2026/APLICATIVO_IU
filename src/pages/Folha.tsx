@@ -117,7 +117,7 @@ export default function Folha() {
   useEffect(() => {
     supabase
       .from("obras")
-      .select("id, nome, codigo, horario_padrao")
+      .select("id, nome, codigo, horario_padrao, empresa_id")
       .eq("status", "em_andamento")
       .order("nome")
       .then(({ data }) => { if (data) setObras(data as any); });
