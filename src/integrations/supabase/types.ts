@@ -517,15 +517,20 @@ export type Database = {
       empresas: {
         Row: {
           ativo: boolean
+          cargo_responsavel: string | null
           cep: string | null
           cidade: string | null
           cnpj: string
+          cor_primaria: string | null
+          cor_secundaria: string | null
           created_at: string
           email: string | null
           endereco: string | null
           id: string
           inscricao_estadual: string | null
+          logo_url: string | null
           nome_fantasia: string | null
+          nome_responsavel: string | null
           razao_social: string
           telefone: string | null
           uf: string | null
@@ -533,15 +538,20 @@ export type Database = {
         }
         Insert: {
           ativo?: boolean
+          cargo_responsavel?: string | null
           cep?: string | null
           cidade?: string | null
           cnpj: string
+          cor_primaria?: string | null
+          cor_secundaria?: string | null
           created_at?: string
           email?: string | null
           endereco?: string | null
           id?: string
           inscricao_estadual?: string | null
+          logo_url?: string | null
           nome_fantasia?: string | null
+          nome_responsavel?: string | null
           razao_social: string
           telefone?: string | null
           uf?: string | null
@@ -549,15 +559,20 @@ export type Database = {
         }
         Update: {
           ativo?: boolean
+          cargo_responsavel?: string | null
           cep?: string | null
           cidade?: string | null
           cnpj?: string
+          cor_primaria?: string | null
+          cor_secundaria?: string | null
           created_at?: string
           email?: string | null
           endereco?: string | null
           id?: string
           inscricao_estadual?: string | null
+          logo_url?: string | null
           nome_fantasia?: string | null
+          nome_responsavel?: string | null
           razao_social?: string
           telefone?: string | null
           uf?: string | null

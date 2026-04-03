@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { createBrandedPDF, addPDFFooter, getAutoTableStyles, addSignatureBlock, type EmpresaBranding } from "@/lib/pdfTemplate";
 
 interface Obra {
   id: string; codigo: string; nome: string; empresa_id: string; construtora?: string;
@@ -32,7 +33,7 @@ interface Obra {
   tipo_obra?: string; engenheiro_responsavel?: string; cliente?: string;
   horario_padrao?: any;
 }
-interface Empresa { id: string; razao_social: string; nome_fantasia?: string; cnpj: string; }
+interface Empresa { id: string; razao_social: string; nome_fantasia?: string; cnpj: string; telefone?: string; email?: string; endereco?: string; cidade?: string; uf?: string; logo_url?: string; cor_primaria?: string; cor_secundaria?: string; nome_responsavel?: string; cargo_responsavel?: string; }
 interface ContratoItem {
   id: string; obra_id: string; empresa_id: string; item_numero: string; descricao: string;
   unidade: string; quantidade: number; valor_unitario: number; valor_total: number;
@@ -187,79 +188,29 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
   };
 
   // PDF: Proposta
-  const gerarPropostaPDF = () => {
-    const doc = new jsPDF();
-    const empNome = empresa?.nome_fantasia || empresa?.razao_social || "";
-    doc.setFontSize(18);
-    doc.text("PROPOSTA COMERCIAL", 105, 30, { align: "center" });
-    doc.setFontSize(10);
-    doc.text(empNome, 105, 40, { align: "center" });
-    if (empresa?.cnpj) doc.text(`CNPJ: ${empresa.cnpj}`, 105, 46, { align: "center" });
+  const gerarPropostaPDF = async () => {
+    if (!empresa) return;
+    const branding: EmpresaBranding = empresa as any;
+    const { doc, startY, colors } = await createBrandedPDF({
+      titulo: "PROPOSTA COMERCIAL",
+      subtitulo: `${currentObra.codigo} — ${currentObra.nome}`,
+      empresa: branding,
+      obraNome: `${currentObra.codigo} — ${currentObra.nome}`,
+      obraEndereco: `${currentObra.endereco || ""} ${currentObra.cidade || ""}${currentObra.uf ? "/" + currentObra.uf : ""}`,
+    });
 
-    doc.setFontSize(12);
-    doc.text("Dados da Obra", 14, 60);
+    let y = startY;
     doc.setFontSize(10);
-    const info = [
-      `Obra: ${currentObra.codigo} — ${currentObra.nome}`,
-      `Cliente: ${currentObra.cliente || currentObra.construtora || "—"}`,
-      `Local: ${currentObra.cidade || ""}${currentObra.uf ? "/" + currentObra.uf : ""}`,
-      `Endereço: ${currentObra.endereco || "—"}`,
-    ];
-    info.forEach((t, i) => doc.text(t, 14, 68 + i * 6));
+    doc.setTextColor(60, 60, 60);
+    doc.text(`Cliente: ${currentObra.cliente || currentObra.construtora || "—"}`, 14, y);
+    y += 8;
 
     if (contratoItens.length > 0) {
       doc.setFontSize(12);
-      doc.text("Escopo de Serviços", 14, 98);
-      autoTable(doc, {
-        startY: 104,
-        head: [["Item", "Descrição", "Un.", "Qtd.", "V. Unit.", "Total"]],
-        body: contratoItens.map(i => [
-          i.item_numero, i.descricao, i.unidade,
-          i.quantidade.toLocaleString("pt-BR", { minimumFractionDigits: 2 }),
-          fmtBRL(i.valor_unitario), fmtBRL(i.quantidade * i.valor_unitario)
-        ]),
-        foot: [["", "", "", "", "TOTAL:", fmtBRL(totalContrato + totalAditivos)]],
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [41, 65, 148] },
-      });
-    }
-
-    doc.save(`Proposta_${currentObra.codigo}.pdf`);
-    toast({ title: "Proposta PDF gerada!" });
-  };
-
-  // PDF: Contrato
-  const gerarContratoPDF = () => {
-    const doc = new jsPDF();
-    const empNome = empresa?.nome_fantasia || empresa?.razao_social || "";
-    doc.setFontSize(16);
-    doc.text("CONTRATO DE PRESTAÇÃO DE SERVIÇOS", 105, 25, { align: "center" });
-
-    doc.setFontSize(10);
-    let y = 45;
-    const addLine = (text: string) => { doc.text(text, 14, y); y += 6; };
-
-    addLine("CONTRATANTE:");
-    addLine(`Razão Social: ${currentObra.cliente || currentObra.construtora || "—"}`);
-    y += 4;
-    addLine("CONTRATADA:");
-    addLine(`Razão Social: ${empNome}`);
-    addLine(`CNPJ: ${empresa?.cnpj || ""}`);
-    y += 4;
-    addLine("OBJETO:");
-    addLine(`Execução de serviços na obra ${currentObra.codigo} — ${currentObra.nome}`);
-    addLine(`Local: ${currentObra.endereco || ""}, ${currentObra.cidade || ""}/${currentObra.uf || ""}`);
-    y += 4;
-    addLine(`VALOR: ${fmtBRL(totalGeralReajustado)}`);
-    y += 4;
-    if (currentObra.data_inicio) addLine(`Início: ${new Date(currentObra.data_inicio + "T12:00:00").toLocaleDateString("pt-BR")}`);
-    if (currentObra.data_previsao_fim) addLine(`Prazo: ${new Date(currentObra.data_previsao_fim + "T12:00:00").toLocaleDateString("pt-BR")}`);
-
-    if (contratoItens.length > 0) {
-      y += 6;
-      doc.setFontSize(12);
-      doc.text("ESCOPO DE SERVIÇOS", 14, y);
-      y += 6;
+      doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
+      doc.setFont("helvetica", "bold");
+      doc.text("Escopo de Serviços", 14, y);
+      y += 4;
       autoTable(doc, {
         startY: y,
         head: [["Item", "Descrição", "Un.", "Qtd.", "V. Unit.", "Total"]],
@@ -268,11 +219,76 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
           i.quantidade.toLocaleString("pt-BR", { minimumFractionDigits: 2 }),
           fmtBRL(i.valor_unitario), fmtBRL(i.quantidade * i.valor_unitario)
         ]),
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [41, 65, 148] },
+        foot: [["", "", "", "", "TOTAL:", fmtBRL(totalContrato + totalAditivos)]],
+        ...getAutoTableStyles(colors.primary),
       });
     }
 
+    addSignatureBlock(doc, branding);
+    addPDFFooter(doc, branding);
+    doc.save(`Proposta_${currentObra.codigo}.pdf`);
+    toast({ title: "Proposta PDF gerada!" });
+  };
+
+  // PDF: Contrato
+  const gerarContratoPDF = async () => {
+    if (!empresa) return;
+    const branding: EmpresaBranding = empresa as any;
+    const { doc, startY, colors } = await createBrandedPDF({
+      titulo: "CONTRATO DE PRESTAÇÃO DE SERVIÇOS",
+      empresa: branding,
+      obraNome: `${currentObra.codigo} — ${currentObra.nome}`,
+      obraEndereco: `${currentObra.endereco || ""} ${currentObra.cidade || ""}${currentObra.uf ? "/" + currentObra.uf : ""}`,
+    });
+
+    let y = startY;
+    doc.setFontSize(10);
+    doc.setTextColor(60, 60, 60);
+    const addLine = (text: string) => { doc.text(text, 14, y); y += 6; };
+
+    doc.setFont("helvetica", "bold");
+    addLine("CONTRATANTE:");
+    doc.setFont("helvetica", "normal");
+    addLine(`Razão Social: ${currentObra.cliente || currentObra.construtora || "—"}`);
+    y += 2;
+    doc.setFont("helvetica", "bold");
+    addLine("CONTRATADA:");
+    doc.setFont("helvetica", "normal");
+    addLine(`Razão Social: ${empresa.nome_fantasia || empresa.razao_social}`);
+    addLine(`CNPJ: ${empresa.cnpj}`);
+    y += 2;
+    doc.setFont("helvetica", "bold");
+    addLine("OBJETO:");
+    doc.setFont("helvetica", "normal");
+    addLine(`Execução de serviços na obra ${currentObra.codigo} — ${currentObra.nome}`);
+    addLine(`Local: ${currentObra.endereco || ""}, ${currentObra.cidade || ""}/${currentObra.uf || ""}`);
+    y += 2;
+    addLine(`VALOR: ${fmtBRL(totalGeralReajustado)}`);
+    y += 2;
+    if (currentObra.data_inicio) addLine(`Início: ${new Date(currentObra.data_inicio + "T12:00:00").toLocaleDateString("pt-BR")}`);
+    if (currentObra.data_previsao_fim) addLine(`Prazo: ${new Date(currentObra.data_previsao_fim + "T12:00:00").toLocaleDateString("pt-BR")}`);
+
+    if (contratoItens.length > 0) {
+      y += 6;
+      doc.setFontSize(12);
+      doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
+      doc.setFont("helvetica", "bold");
+      doc.text("ESCOPO DE SERVIÇOS", 14, y);
+      y += 4;
+      autoTable(doc, {
+        startY: y,
+        head: [["Item", "Descrição", "Un.", "Qtd.", "V. Unit.", "Total"]],
+        body: contratoItens.map(i => [
+          i.item_numero, i.descricao, i.unidade,
+          i.quantidade.toLocaleString("pt-BR", { minimumFractionDigits: 2 }),
+          fmtBRL(i.valor_unitario), fmtBRL(i.quantidade * i.valor_unitario)
+        ]),
+        ...getAutoTableStyles(colors.primary),
+      });
+    }
+
+    addSignatureBlock(doc, branding);
+    addPDFFooter(doc, branding);
     doc.save(`Contrato_${currentObra.codigo}.pdf`);
     toast({ title: "Contrato PDF gerado!" });
   };

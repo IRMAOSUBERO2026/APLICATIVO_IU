@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import logoPreto from "@/assets/logo-preto.png";
+import { createBrandedPDF, addPDFFooter, getAutoTableStyles, addSignatureBlock, type EmpresaBranding } from "@/lib/pdfTemplate";
 
 // Types
 interface Obra { id: string; nome: string; codigo: string; empresa_id: string; construtora?: string; cidade?: string; uf?: string; }
@@ -358,33 +358,29 @@ export default function Medicoes() {
   };
 
   // PDF Export
-  const exportarBoletimPDF = (med: Medicao) => {
-    const doc = new jsPDF();
+  const exportarBoletimPDF = async (med: Medicao) => {
     const items = boletimItens[med.id] || [];
     const taxes = retencoes[med.id] || [];
     const obra = selectedObra;
     if (!obra) return;
 
-    // Header with logo
-    const img = new Image();
-    img.src = logoPreto;
-    try { doc.addImage(img, "PNG", 14, 10, 40, 16); } catch {}
-    doc.setFontSize(16);
-    doc.text("BOLETIM DE MEDIÇÃO", 105, 18, { align: "center" });
-    doc.setFontSize(10);
-    doc.text(`Medição Nº ${med.numero}`, 105, 25, { align: "center" });
+    // Load empresa branding
+    const { data: empData } = await supabase.from("empresas").select("*").eq("id", obra.empresa_id).single();
+    const branding: EmpresaBranding = empData || { razao_social: "Empresa", cnpj: "" };
 
-    // Info
-    let y = 35;
-    doc.setFontSize(9);
-    doc.text(`Obra: ${obra.codigo} - ${obra.nome}`, 14, y);
-    doc.text(`Contratante: ${obra.construtora || "-"}`, 14, y + 5);
-    doc.text(`Local: ${obra.cidade || ""}/${obra.uf || ""}`, 14, y + 10);
-    doc.text(`Período: ${new Date(med.periodo_inicio).toLocaleDateString("pt-BR")} a ${new Date(med.periodo_fim).toLocaleDateString("pt-BR")}`, 120, y);
-    doc.text(`Emissão: ${new Date(med.data_emissao).toLocaleDateString("pt-BR")}`, 120, y + 5);
-    doc.text(`Fator Reajuste: ${fatorReajuste.toFixed(4)}`, 120, y + 10);
+    const { doc, startY, colors } = await createBrandedPDF({
+      titulo: `BOLETIM DE MEDIÇÃO Nº ${med.numero}`,
+      subtitulo: `Período: ${new Date(med.periodo_inicio).toLocaleDateString("pt-BR")} a ${new Date(med.periodo_fim).toLocaleDateString("pt-BR")}`,
+      empresa: branding,
+      obraNome: `${obra.codigo} — ${obra.nome}`,
+      obraEndereco: `${obra.cidade || ""}/${obra.uf || ""} — Contratante: ${obra.construtora || "—"}`,
+    });
 
-    y += 20;
+    let y = startY;
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Fator de Reajuste: ${fatorReajuste.toFixed(4)}`, 14, y);
+    y += 6;
 
     // Items table
     const rows = items.map(bi => {
@@ -405,36 +401,41 @@ export default function Medicoes() {
       startY: y,
       head: [["Item", "Descrição", "Un.", "Qtd. Contrato", "V. Unit. Reaj.", "Qtd. Medida", "% Medido", "Valor Medido"]],
       body: rows,
-      styles: { fontSize: 7 },
-      headStyles: { fillColor: [41, 65, 122] },
+      ...getAutoTableStyles(colors.primary),
     });
 
     y = (doc as any).lastAutoTable.finalY + 10;
 
     // Summary
     doc.setFontSize(10);
+    doc.setTextColor(colors.secondary[0], colors.secondary[1], colors.secondary[2]);
+    doc.setFont("helvetica", "bold");
     doc.text("RESUMO FINANCEIRO", 14, y);
     y += 6;
     doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(60, 60, 60);
     doc.text(`Valor Bruto da Medição: ${fmtBRL(med.valor_bruto)}`, 14, y);
     doc.text(`Retenção Contratual (${med.percentual_retencao}%): ${fmtBRL(med.valor_retencao)}`, 14, y + 5);
 
     if (taxes.length > 0) {
       y += 15;
-      doc.text("RETENÇÕES DE IMPOSTOS SUGERIDAS PARA EMISSÃO NF:", 14, y);
+      doc.text("RETENÇÕES DE IMPOSTOS:", 14, y);
       y += 5;
       for (const t of taxes) {
         doc.text(`${t.imposto} (${fmtPct(t.aliquota)}): ${fmtBRL(t.valor)}`, 20, y);
         y += 5;
       }
-      const totalTax = taxes.reduce((s, t) => s + t.valor, 0);
-      doc.text(`Total Impostos: ${fmtBRL(totalTax)}`, 20, y);
     }
 
-    y += 10;
+    y += 8;
     doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(colors.primary[0], colors.primary[1], colors.primary[2]);
     doc.text(`VALOR LÍQUIDO: ${fmtBRL(med.valor_liquido)}`, 14, y);
 
+    addSignatureBlock(doc, branding);
+    addPDFFooter(doc, branding);
     doc.save(`Boletim_Medicao_${med.numero}_${obra.codigo}.pdf`);
     toast({ title: "PDF exportado" });
   };

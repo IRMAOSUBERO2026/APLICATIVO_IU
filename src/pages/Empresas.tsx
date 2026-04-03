@@ -25,6 +25,11 @@ interface Empresa {
   cep: string | null;
   inscricao_estadual: string | null;
   ativo: boolean;
+  logo_url: string | null;
+  cor_primaria: string | null;
+  cor_secundaria: string | null;
+  nome_responsavel: string | null;
+  cargo_responsavel: string | null;
 }
 
 const emptyForm = {
