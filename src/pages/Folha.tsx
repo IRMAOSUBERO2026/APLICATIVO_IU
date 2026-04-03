@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Calculator, Save, FileText, ArrowLeft, CheckCircle, Clock, FileDown } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { createBrandedPDF, addPDFFooter, getAutoTableStyles, type EmpresaBranding } from "@/lib/pdfTemplate";
 import { getDaysInMonth } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 
