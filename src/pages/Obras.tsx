@@ -26,7 +26,7 @@ interface Obra {
   tipo_obra?: string; engenheiro_responsavel?: string; cliente?: string;
   horario_padrao?: any;
 }
-interface Empresa { id: string; razao_social: string; nome_fantasia?: string; cnpj: string; }
+interface Empresa { id: string; razao_social: string; nome_fantasia?: string; cnpj: string; telefone?: string; email?: string; endereco?: string; cidade?: string; uf?: string; logo_url?: string; cor_primaria?: string; cor_secundaria?: string; nome_responsavel?: string; cargo_responsavel?: string; }
 
 const emptyForm = {
   codigo: "", nome: "", empresa_id: "", construtora: "", cliente: "", endereco: "", cidade: "", uf: "",
