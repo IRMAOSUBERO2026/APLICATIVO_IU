@@ -38,6 +38,7 @@ interface ContratoItem {
   id: string; obra_id: string; empresa_id: string; item_numero: string; descricao: string;
   unidade: string; quantidade: number; valor_unitario: number; valor_total: number;
   is_aditivo: boolean; aditivo_numero?: number; aditivo_data?: string; observacoes?: string;
+  categoria?: string;
 }
 interface Reajuste {
   id: string; obra_id: string; data_aplicacao: string; percentual: number;
@@ -98,7 +99,7 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
   // Item dialog
   const [showItemDialog, setShowItemDialog] = useState(false);
   const [editingItem, setEditingItem] = useState<ContratoItem | null>(null);
-  const [itemForm, setItemForm] = useState({ item_numero: "", descricao: "", unidade: "un", quantidade: 0, valor_unitario: 0, is_aditivo: false, aditivo_numero: 0, observacoes: "" });
+  const [itemForm, setItemForm] = useState({ item_numero: "", descricao: "", unidade: "un", quantidade: 0, valor_unitario: 0, is_aditivo: false, aditivo_numero: 0, observacoes: "", categoria: "servico" });
 
   // Reajuste dialog
   const [showReajusteDialog, setShowReajusteDialog] = useState(false);
@@ -142,13 +143,13 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
   // CRUD Item
   const openNewItem = (isAditivo: boolean) => {
     setEditingItem(null);
-    setItemForm({ item_numero: "", descricao: "", unidade: "un", quantidade: 0, valor_unitario: 0, is_aditivo: isAditivo, aditivo_numero: isAditivo ? (itensAditivo.length > 0 ? Math.max(...itensAditivo.map(i => i.aditivo_numero || 0)) : 1) : 0, observacoes: "" });
+    setItemForm({ item_numero: "", descricao: "", unidade: "un", quantidade: 0, valor_unitario: 0, is_aditivo: isAditivo, aditivo_numero: isAditivo ? (itensAditivo.length > 0 ? Math.max(...itensAditivo.map(i => i.aditivo_numero || 0)) : 1) : 0, observacoes: "", categoria: "servico" });
     setShowItemDialog(true);
   };
 
   const openEditItem = (item: ContratoItem) => {
     setEditingItem(item);
-    setItemForm({ item_numero: item.item_numero, descricao: item.descricao, unidade: item.unidade, quantidade: item.quantidade, valor_unitario: item.valor_unitario, is_aditivo: item.is_aditivo, aditivo_numero: item.aditivo_numero || 0, observacoes: item.observacoes || "" });
+    setItemForm({ item_numero: item.item_numero, descricao: item.descricao, unidade: item.unidade, quantidade: item.quantidade, valor_unitario: item.valor_unitario, is_aditivo: item.is_aditivo, aditivo_numero: item.aditivo_numero || 0, observacoes: item.observacoes || "", categoria: item.categoria || "servico" });
     setShowItemDialog(true);
   };
 
@@ -310,6 +311,7 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
               <TableRow>
                 <TableHead className="w-20">Item</TableHead>
                 <TableHead>Descrição</TableHead>
+                <TableHead className="w-24">Categoria</TableHead>
                 <TableHead className="w-16">Un.</TableHead>
                 <TableHead className="w-20 text-right">Qtd.</TableHead>
                 <TableHead className="w-28 text-right">V. Unit.</TableHead>
@@ -323,6 +325,7 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
                 <TableRow key={item.id}>
                   <TableCell className="font-mono text-xs">{item.item_numero}</TableCell>
                   <TableCell className="text-sm">{item.descricao}</TableCell>
+                  <TableCell><Badge variant={item.categoria === "administrativo" ? "secondary" : "outline"} className="text-[10px]">{item.categoria === "administrativo" ? "Admin" : "Serviço"}</Badge></TableCell>
                   <TableCell className="text-xs">{item.unidade}</TableCell>
                   <TableCell className="text-right text-sm">{item.quantidade.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
                   <TableCell className="text-right text-sm">{fmtBRL(item.valor_unitario)}</TableCell>
@@ -339,7 +342,7 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
             </TableBody>
             <TableFooter>
               <TableRow>
-                <TableCell colSpan={5} className="text-right font-semibold">Total:</TableCell>
+                <TableCell colSpan={6} className="text-right font-semibold">Total:</TableCell>
                 <TableCell className="text-right font-bold">{fmtBRL(items.reduce((s, i) => s + i.quantidade * i.valor_unitario, 0))}</TableCell>
                 {fatorReajuste !== 1 && <TableCell className="text-right font-bold text-primary">{fmtBRL(items.reduce((s, i) => s + i.quantidade * i.valor_unitario * fatorReajuste, 0))}</TableCell>}
                 <TableCell />
@@ -567,15 +570,30 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
           <DialogHeader><DialogTitle>{editingItem ? "Editar Item" : (itemForm.is_aditivo ? "Novo Item Aditivo" : "Novo Item de Contrato")}</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Nº Item *</Label><Input value={itemForm.item_numero} onChange={e => setItemForm(f => ({ ...f, item_numero: e.target.value }))} placeholder="1.1" /></div>
+            <div><Label>Categoria</Label>
+              <Select value={itemForm.categoria} onValueChange={v => setItemForm(f => ({ ...f, categoria: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="servico">Serviço</SelectItem>
+                  <SelectItem value="administrativo">Administrativo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div><Label>Unidade</Label>
               <Select value={itemForm.unidade} onValueChange={v => setItemForm(f => ({ ...f, unidade: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>{["un", "m²", "m³", "m", "kg", "t", "vb", "mês", "h", "l"].map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div className="col-span-2"><Label>Descrição *</Label><Input value={itemForm.descricao} onChange={e => setItemForm(f => ({ ...f, descricao: e.target.value }))} /></div>
+            <div><Label>Descrição *</Label><Input value={itemForm.descricao} onChange={e => setItemForm(f => ({ ...f, descricao: e.target.value }))} /></div>
             <div><Label>Quantidade</Label><Input type="number" value={itemForm.quantidade || ""} onChange={e => setItemForm(f => ({ ...f, quantidade: Number(e.target.value) }))} /></div>
             <div><Label>Valor Unitário</Label><Input type="number" step="0.01" value={itemForm.valor_unitario || ""} onChange={e => setItemForm(f => ({ ...f, valor_unitario: Number(e.target.value) }))} /></div>
+            {itemForm.quantidade > 0 && itemForm.valor_unitario > 0 && (
+              <div className="col-span-2 rounded-lg bg-muted/50 p-2 text-sm">
+                <span className="text-muted-foreground">Preço Total: </span>
+                <span className="font-bold">{fmtBRL(itemForm.quantidade * itemForm.valor_unitario)}</span>
+              </div>
+            )}
             {itemForm.is_aditivo && <div><Label>Nº Aditivo</Label><Input type="number" value={itemForm.aditivo_numero || ""} onChange={e => setItemForm(f => ({ ...f, aditivo_numero: Number(e.target.value) }))} /></div>}
             <div className={itemForm.is_aditivo ? "" : "col-span-2"}><Label>Observações</Label><Textarea value={itemForm.observacoes} onChange={e => setItemForm(f => ({ ...f, observacoes: e.target.value }))} rows={2} /></div>
           </div>
