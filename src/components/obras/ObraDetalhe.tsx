@@ -143,13 +143,13 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
   // CRUD Item
   const openNewItem = (isAditivo: boolean) => {
     setEditingItem(null);
-    setItemForm({ item_numero: "", descricao: "", unidade: "un", quantidade: 0, valor_unitario: 0, is_aditivo: isAditivo, aditivo_numero: isAditivo ? (itensAditivo.length > 0 ? Math.max(...itensAditivo.map(i => i.aditivo_numero || 0)) : 1) : 0, observacoes: "" });
+    setItemForm({ item_numero: "", descricao: "", unidade: "un", quantidade: 0, valor_unitario: 0, is_aditivo: isAditivo, aditivo_numero: isAditivo ? (itensAditivo.length > 0 ? Math.max(...itensAditivo.map(i => i.aditivo_numero || 0)) : 1) : 0, observacoes: "", categoria: "servico" });
     setShowItemDialog(true);
   };
 
   const openEditItem = (item: ContratoItem) => {
     setEditingItem(item);
-    setItemForm({ item_numero: item.item_numero, descricao: item.descricao, unidade: item.unidade, quantidade: item.quantidade, valor_unitario: item.valor_unitario, is_aditivo: item.is_aditivo, aditivo_numero: item.aditivo_numero || 0, observacoes: item.observacoes || "" });
+    setItemForm({ item_numero: item.item_numero, descricao: item.descricao, unidade: item.unidade, quantidade: item.quantidade, valor_unitario: item.valor_unitario, is_aditivo: item.is_aditivo, aditivo_numero: item.aditivo_numero || 0, observacoes: item.observacoes || "", categoria: item.categoria || "servico" });
     setShowItemDialog(true);
   };
 
