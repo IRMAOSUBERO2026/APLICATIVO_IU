@@ -311,6 +311,7 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
               <TableRow>
                 <TableHead className="w-20">Item</TableHead>
                 <TableHead>Descrição</TableHead>
+                <TableHead className="w-24">Categoria</TableHead>
                 <TableHead className="w-16">Un.</TableHead>
                 <TableHead className="w-20 text-right">Qtd.</TableHead>
                 <TableHead className="w-28 text-right">V. Unit.</TableHead>
@@ -324,6 +325,7 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
                 <TableRow key={item.id}>
                   <TableCell className="font-mono text-xs">{item.item_numero}</TableCell>
                   <TableCell className="text-sm">{item.descricao}</TableCell>
+                  <TableCell><Badge variant={item.categoria === "administrativo" ? "secondary" : "outline"} className="text-[10px]">{item.categoria === "administrativo" ? "Admin" : "Serviço"}</Badge></TableCell>
                   <TableCell className="text-xs">{item.unidade}</TableCell>
                   <TableCell className="text-right text-sm">{item.quantidade.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
                   <TableCell className="text-right text-sm">{fmtBRL(item.valor_unitario)}</TableCell>
@@ -340,7 +342,7 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
             </TableBody>
             <TableFooter>
               <TableRow>
-                <TableCell colSpan={5} className="text-right font-semibold">Total:</TableCell>
+                <TableCell colSpan={6} className="text-right font-semibold">Total:</TableCell>
                 <TableCell className="text-right font-bold">{fmtBRL(items.reduce((s, i) => s + i.quantidade * i.valor_unitario, 0))}</TableCell>
                 {fatorReajuste !== 1 && <TableCell className="text-right font-bold text-primary">{fmtBRL(items.reduce((s, i) => s + i.quantidade * i.valor_unitario * fatorReajuste, 0))}</TableCell>}
                 <TableCell />
