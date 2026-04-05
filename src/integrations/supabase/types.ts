@@ -1430,6 +1430,7 @@ export type Database = {
         Row: {
           aditivo_data: string | null
           aditivo_numero: number | null
+          categoria: string
           created_at: string
           descricao: string
           empresa_id: string
@@ -1447,6 +1448,7 @@ export type Database = {
         Insert: {
           aditivo_data?: string | null
           aditivo_numero?: number | null
+          categoria?: string
           created_at?: string
           descricao: string
           empresa_id: string
@@ -1464,6 +1466,7 @@ export type Database = {
         Update: {
           aditivo_data?: string | null
           aditivo_numero?: number | null
+          categoria?: string
           created_at?: string
           descricao?: string
           empresa_id?: string
