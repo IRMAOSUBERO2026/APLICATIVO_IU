@@ -570,15 +570,30 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
           <DialogHeader><DialogTitle>{editingItem ? "Editar Item" : (itemForm.is_aditivo ? "Novo Item Aditivo" : "Novo Item de Contrato")}</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Nº Item *</Label><Input value={itemForm.item_numero} onChange={e => setItemForm(f => ({ ...f, item_numero: e.target.value }))} placeholder="1.1" /></div>
+            <div><Label>Categoria</Label>
+              <Select value={itemForm.categoria} onValueChange={v => setItemForm(f => ({ ...f, categoria: v }))}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="servico">Serviço</SelectItem>
+                  <SelectItem value="administrativo">Administrativo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div><Label>Unidade</Label>
               <Select value={itemForm.unidade} onValueChange={v => setItemForm(f => ({ ...f, unidade: v }))}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>{["un", "m²", "m³", "m", "kg", "t", "vb", "mês", "h", "l"].map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div className="col-span-2"><Label>Descrição *</Label><Input value={itemForm.descricao} onChange={e => setItemForm(f => ({ ...f, descricao: e.target.value }))} /></div>
+            <div><Label>Descrição *</Label><Input value={itemForm.descricao} onChange={e => setItemForm(f => ({ ...f, descricao: e.target.value }))} /></div>
             <div><Label>Quantidade</Label><Input type="number" value={itemForm.quantidade || ""} onChange={e => setItemForm(f => ({ ...f, quantidade: Number(e.target.value) }))} /></div>
             <div><Label>Valor Unitário</Label><Input type="number" step="0.01" value={itemForm.valor_unitario || ""} onChange={e => setItemForm(f => ({ ...f, valor_unitario: Number(e.target.value) }))} /></div>
+            {itemForm.quantidade > 0 && itemForm.valor_unitario > 0 && (
+              <div className="col-span-2 rounded-lg bg-muted/50 p-2 text-sm">
+                <span className="text-muted-foreground">Preço Total: </span>
+                <span className="font-bold">{fmtBRL(itemForm.quantidade * itemForm.valor_unitario)}</span>
+              </div>
+            )}
             {itemForm.is_aditivo && <div><Label>Nº Aditivo</Label><Input type="number" value={itemForm.aditivo_numero || ""} onChange={e => setItemForm(f => ({ ...f, aditivo_numero: Number(e.target.value) }))} /></div>}
             <div className={itemForm.is_aditivo ? "" : "col-span-2"}><Label>Observações</Label><Textarea value={itemForm.observacoes} onChange={e => setItemForm(f => ({ ...f, observacoes: e.target.value }))} rows={2} /></div>
           </div>
