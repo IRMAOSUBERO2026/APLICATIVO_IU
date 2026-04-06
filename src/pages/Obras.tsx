@@ -1,5 +1,5 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { HardHat, Plus, Search, MapPin, Calendar, FolderOpen, Eye, Edit, Trash2, Building2 } from "lucide-react";
+import { HardHat, Plus, Search, MapPin, Calendar, Eye, Building2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { DocumentManagerGeneric } from "@/components/shared/DocumentManagerGeneric";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,8 +10,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import ObraDetalhe from "@/components/obras/ObraDetalhe";
-import { ObraPipeline, PIPELINE_STAGES, getStage } from "@/components/obras/ObraPipeline";
+import { ObraPipeline, PIPELINE_STAGES, getStage, getStageIndex } from "@/components/obras/ObraPipeline";
 
 const SUBPASTAS_OBRA = [
   "Projetos", "Orçamentos", "Contratos", "Emails", "Anexos",
@@ -41,8 +43,6 @@ export default function Obras() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("todos");
   const [loading, setLoading] = useState(true);
-  const [docOpen, setDocOpen] = useState(false);
-  const [selectedObraDoc, setSelectedObraDoc] = useState<{ id: string; nome: string } | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editingObra, setEditingObra] = useState<Obra | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -109,17 +109,16 @@ export default function Obras() {
     setSaving(false); setFormOpen(false); loadData();
   };
 
-  const handleDelete = async (obra: Obra) => {
-    if (!confirm(`Excluir obra "${obra.nome}"?`)) return;
-    const { error } = await supabase.from("obras").delete().eq("id", obra.id);
-    if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
-    else { toast({ title: "Obra excluída" }); loadData(); }
-  };
-
   const getEmpresaNome = (empresaId: string) => {
     const emp = empresas.find(e => e.id === empresaId);
     return emp ? (emp.nome_fantasia || emp.razao_social) : "-";
   };
+
+  // Group by status for pipeline view
+  const statusCounts = PIPELINE_STAGES.reduce((acc, s) => {
+    acc[s.value] = obras.filter(o => o.status === s.value).length;
+    return acc;
+  }, {} as Record<string, number>);
 
   if (detalheObra) {
     return (
@@ -134,42 +133,67 @@ export default function Obras() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="space-y-5">
+        {/* Header */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Gestão de Obras</h1>
             <p className="text-sm text-muted-foreground">{obras.length} obras cadastradas</p>
           </div>
-          <Button onClick={openNew}><Plus className="h-4 w-4" /> Nova Obra</Button>
+          <Button onClick={openNew} className="gap-2"><Plus className="h-4 w-4" /> Nova Obra</Button>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input placeholder="Buscar obra, código ou cliente..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
-          </div>
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-48"><SelectValue placeholder="Filtrar status" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="todos">Todos os status</SelectItem>
-              {PIPELINE_STAGES.map(s => <SelectItem key={s.value} value={s.value}>{s.emoji} {s.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
+        {/* Pipeline Summary - mini cards */}
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {PIPELINE_STAGES.filter(s => s.value !== "paralisada").map(s => (
+            <button
+              key={s.value}
+              onClick={() => setFilterStatus(filterStatus === s.value ? "todos" : s.value)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium whitespace-nowrap transition-all ${
+                filterStatus === s.value
+                  ? "ring-2 ring-primary border-primary bg-primary/5"
+                  : "hover:bg-muted/50"
+              }`}
+            >
+              <span>{s.emoji}</span>
+              <span className="hidden sm:inline">{s.label}</span>
+              <Badge variant="secondary" className="h-5 min-w-5 justify-center text-[10px]">
+                {statusCounts[s.value] || 0}
+              </Badge>
+            </button>
+          ))}
+          {filterStatus !== "todos" && (
+            <button onClick={() => setFilterStatus("todos")} className="px-3 py-2 rounded-lg text-xs text-muted-foreground hover:text-foreground">
+              Limpar
+            </button>
+          )}
         </div>
 
+        {/* Search */}
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input placeholder="Buscar obra, código ou cliente..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10" />
+        </div>
+
+        {/* Cards */}
         {loading ? (
           <div className="py-12 text-center text-sm text-muted-foreground">Carregando...</div>
         ) : filtered.length === 0 ? (
           <div className="py-12 text-center text-sm text-muted-foreground">Nenhuma obra encontrada</div>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {filtered.map(obra => {
               const stage = getStage(obra.status);
+              const stageIdx = getStageIndex(obra.status);
+              const progress = Math.min(100, ((stageIdx + 1) / 7) * 100);
               return (
-                <div key={obra.id} className="group rounded-xl border bg-card p-5 shadow-sm hover:shadow-md transition-all animate-fade-in">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-2 min-w-0">
+                <button
+                  key={obra.id}
+                  onClick={() => setDetalheObra(obra)}
+                  className="group rounded-xl border bg-card p-4 shadow-sm hover:shadow-md hover:border-primary/30 transition-all text-left animate-fade-in"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
                       <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 flex-shrink-0">
                         <HardHat className="h-4 w-4 text-primary" />
                       </div>
@@ -178,40 +202,30 @@ export default function Obras() {
                         <p className="text-xs text-muted-foreground truncate">{obra.cliente || obra.construtora || getEmpresaNome(obra.empresa_id)}</p>
                       </div>
                     </div>
-                    <ObraPipeline currentStatus={obra.status} compact />
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap ${stage.color}`}>
+                      {stage.emoji} {stage.label}
+                    </span>
                   </div>
 
-                  <div className="space-y-2 mb-3">
+                  {/* Progress bar */}
+                  <Progress value={progress} className="h-1 mb-2" />
+
+                  <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
                     {(obra.cidade || obra.uf) && (
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
                         <MapPin className="h-3 w-3" /> {obra.cidade}{obra.uf ? `/${obra.uf}` : ""}
-                      </div>
+                      </span>
                     )}
                     {obra.data_previsao_fim && (
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <Calendar className="h-3 w-3" /> Previsão: {new Date(obra.data_previsao_fim + "T12:00:00").toLocaleDateString("pt-BR")}
-                      </div>
+                      <span className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" /> {new Date(obra.data_previsao_fim + "T12:00:00").toLocaleDateString("pt-BR")}
+                      </span>
                     )}
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
                       <Building2 className="h-3 w-3" /> {getEmpresaNome(obra.empresa_id)}
-                    </div>
+                    </span>
                   </div>
-
-                  <div className="flex items-center gap-1 border-t pt-3">
-                    <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setDetalheObra(obra)}>
-                      <Eye className="h-3.5 w-3.5 mr-1" /> Detalhes
-                    </Button>
-                    <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => openEdit(obra)}>
-                      <Edit className="h-3.5 w-3.5 mr-1" /> Editar
-                    </Button>
-                    <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => { setSelectedObraDoc({ id: obra.id, nome: obra.nome }); setDocOpen(true); }}>
-                      <FolderOpen className="h-3.5 w-3.5 mr-1" /> Docs
-                    </Button>
-                    <Button variant="ghost" size="sm" className="h-8 text-xs text-destructive hover:text-destructive" onClick={() => handleDelete(obra)}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -259,10 +273,6 @@ export default function Obras() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {selectedObraDoc && (
-        <DocumentManagerGeneric open={docOpen} onOpenChange={setDocOpen} entityId={selectedObraDoc.id} entityNome={selectedObraDoc.nome} basePath="obras" subpastas={SUBPASTAS_OBRA} />
-      )}
     </AppLayout>
   );
 }
