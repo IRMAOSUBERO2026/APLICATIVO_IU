@@ -23,6 +23,7 @@ import {
   FileSpreadsheet,
   Ruler,
   CalendarDays,
+  PenLine,
 } from "lucide-react";
 import logoPreto from "@/assets/logo-preto.png";
 
@@ -66,6 +67,7 @@ const menuSections = [
       { icon: Calculator, label: "Orçamentos", path: "/orcamento" },
       { icon: MessageCircle, label: "Comunicações", path: "/comunicacoes" },
       { icon: FileSpreadsheet, label: "Relatórios", path: "/relatorios" },
+      { icon: PenLine, label: "Assinaturas Digitais", path: "/assinaturas" },
       { icon: Shield, label: "Controle de Acesso", path: "/acesso" },
       { icon: FileText, label: "Config. Documentos", path: "/config-documentos" },
     ],

@@ -27,6 +27,8 @@ import Relatorios from "./pages/Relatorios";
 import Medicoes from "./pages/Medicoes";
 import AreaFuncionario from "./pages/AreaFuncionario";
 import ConfigDocumentos from "./pages/ConfigDocumentos";
+import Assinaturas from "./pages/Assinaturas";
+import AssinaturaPublica from "./pages/AssinaturaPublica";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -62,6 +64,8 @@ const App = () => (
           <Route path="/medicoes" element={<Medicoes />} />
           <Route path="/area-funcionario" element={<AreaFuncionario />} />
           <Route path="/config-documentos" element={<ConfigDocumentos />} />
+          <Route path="/assinaturas" element={<Assinaturas />} />
+          <Route path="/assinar" element={<AssinaturaPublica />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
