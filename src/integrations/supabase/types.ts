@@ -14,6 +14,87 @@ export type Database = {
   }
   public: {
     Tables: {
+      assinaturas_digitais: {
+        Row: {
+          cpf_confirmado: boolean | null
+          created_at: string
+          data_assinatura: string | null
+          data_visualizacao: string | null
+          documento_dados: Json | null
+          documento_descricao: string | null
+          documento_tipo: string
+          documento_titulo: string
+          documento_url: string | null
+          email_confirmado: boolean | null
+          empresa_id: string
+          funcionario_id: string
+          id: string
+          ip_assinatura: string | null
+          motivo_recusa: string | null
+          observacoes: string | null
+          selfie_url: string | null
+          solicitado_por: string | null
+          status: string
+          telefone_confirmado: boolean | null
+          token_acesso: string
+          token_expiracao: string
+          updated_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          cpf_confirmado?: boolean | null
+          created_at?: string
+          data_assinatura?: string | null
+          data_visualizacao?: string | null
+          documento_dados?: Json | null
+          documento_descricao?: string | null
+          documento_tipo: string
+          documento_titulo: string
+          documento_url?: string | null
+          email_confirmado?: boolean | null
+          empresa_id: string
+          funcionario_id: string
+          id?: string
+          ip_assinatura?: string | null
+          motivo_recusa?: string | null
+          observacoes?: string | null
+          selfie_url?: string | null
+          solicitado_por?: string | null
+          status?: string
+          telefone_confirmado?: boolean | null
+          token_acesso: string
+          token_expiracao: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          cpf_confirmado?: boolean | null
+          created_at?: string
+          data_assinatura?: string | null
+          data_visualizacao?: string | null
+          documento_dados?: Json | null
+          documento_descricao?: string | null
+          documento_tipo?: string
+          documento_titulo?: string
+          documento_url?: string | null
+          email_confirmado?: boolean | null
+          empresa_id?: string
+          funcionario_id?: string
+          id?: string
+          ip_assinatura?: string | null
+          motivo_recusa?: string | null
+          observacoes?: string | null
+          selfie_url?: string | null
+          solicitado_por?: string | null
+          status?: string
+          telefone_confirmado?: boolean | null
+          token_acesso?: string
+          token_expiracao?: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       avisos: {
         Row: {
           categoria: string
