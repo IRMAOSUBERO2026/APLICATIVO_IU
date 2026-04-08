@@ -23,6 +23,7 @@ const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", curren
 
 export function FolhaResumoObra({ funcionarios, obra, mes, ano }: Props) {
   const totalGeral = funcionarios.reduce((s, f) => s + f.result.salario_final, 0);
+  const totalCusto = funcionarios.reduce((s, f) => s + f.result.custo_total_empresa, 0);
 
   const exportPDF = () => {
     const doc = new jsPDF({ orientation: "landscape" });
@@ -35,7 +36,7 @@ export function FolhaResumoObra({ funcionarios, obra, mes, ano }: Props) {
       startY: 28,
       head: [[
         "Funcionário", "Cargo", "Sal. Combinado", "Total HE",
-        "Bonificações", "Descontos", "Salário Final",
+        "Bonificações", "Descontos", "Salário Final", "FGTS", "Custo Emp.",
       ]],
       body: funcionarios.map((f) => [
         f.nome,
