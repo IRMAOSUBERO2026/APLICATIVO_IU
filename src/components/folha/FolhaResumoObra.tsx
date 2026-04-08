@@ -100,8 +100,10 @@ export function FolhaResumoObra({ funcionarios, obra, mes, ano }: Props) {
             </TableBody>
           </Table>
         </div>
-        <div className="flex justify-end mt-4 pt-3 border-t">
-          <p className="text-lg font-bold">Total Geral: {fmt(totalGeral)}</p>
+        <div className="flex justify-end mt-4 pt-3 border-t gap-6">
+          <p className="text-sm text-muted-foreground">Total Líquido: <span className="font-bold text-foreground">{fmt(totalGeral)}</span></p>
+          <p className="text-sm text-muted-foreground">Custo Total Empresa: <span className="font-bold text-lg text-foreground">{fmt(totalCusto)}</span></p>
+        </div>
         </div>
       </CardContent>
     </Card>
