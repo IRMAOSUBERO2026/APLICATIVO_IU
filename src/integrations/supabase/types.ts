@@ -956,12 +956,16 @@ export type Database = {
           base_dia: number
           base_hora: number
           bonificacao_assiduidade: number
+          bonificacao_justificativa: string | null
           bonificacao_meta: number
           created_at: string
+          custo_total_empresa: number
+          desconto_adiantamento: number
           desconto_emprestimo: number
           desconto_faltas: number
           desconto_horas_negativas: number
           desconto_marmita: number
+          desconto_sindicato: number
           desconto_vale: number
           dias_do_mes: number
           domingos_feriados_no_mes: number
@@ -969,6 +973,7 @@ export type Database = {
           dsr_perdido: number
           empresa_id: string
           faltas: number
+          fgts: number
           funcionario_id: string
           he_100: number
           he_sabado: number
@@ -978,19 +983,26 @@ export type Database = {
           horas_extras_semanais: number
           horas_negativas: number
           id: string
+          inss_empresa: number
+          is_simulacao: boolean
           mes: number
           obra_id: string
           outros_descontos: number
+          qtd_marmitas: number
           salario_combinado: number
           salario_final: number
           salario_registro: number
           semanas_com_falta: number
+          status_folha: string
+          tipo_remuneracao: string
           total_bonificacoes: number
           total_descontos: number
           total_he: number
           updated_at: string
           usar_salario_sindicato_para_he: boolean
           valor_atestados: number
+          valor_marmita_unitario: number
+          valor_producao: number
         }
         Insert: {
           ano: number
@@ -998,12 +1010,16 @@ export type Database = {
           base_dia?: number
           base_hora?: number
           bonificacao_assiduidade?: number
+          bonificacao_justificativa?: string | null
           bonificacao_meta?: number
           created_at?: string
+          custo_total_empresa?: number
+          desconto_adiantamento?: number
           desconto_emprestimo?: number
           desconto_faltas?: number
           desconto_horas_negativas?: number
           desconto_marmita?: number
+          desconto_sindicato?: number
           desconto_vale?: number
           dias_do_mes?: number
           domingos_feriados_no_mes?: number
@@ -1011,6 +1027,7 @@ export type Database = {
           dsr_perdido?: number
           empresa_id: string
           faltas?: number
+          fgts?: number
           funcionario_id: string
           he_100?: number
           he_sabado?: number
@@ -1020,19 +1037,26 @@ export type Database = {
           horas_extras_semanais?: number
           horas_negativas?: number
           id?: string
+          inss_empresa?: number
+          is_simulacao?: boolean
           mes: number
           obra_id: string
           outros_descontos?: number
+          qtd_marmitas?: number
           salario_combinado?: number
           salario_final?: number
           salario_registro?: number
           semanas_com_falta?: number
+          status_folha?: string
+          tipo_remuneracao?: string
           total_bonificacoes?: number
           total_descontos?: number
           total_he?: number
           updated_at?: string
           usar_salario_sindicato_para_he?: boolean
           valor_atestados?: number
+          valor_marmita_unitario?: number
+          valor_producao?: number
         }
         Update: {
           ano?: number
@@ -1040,12 +1064,16 @@ export type Database = {
           base_dia?: number
           base_hora?: number
           bonificacao_assiduidade?: number
+          bonificacao_justificativa?: string | null
           bonificacao_meta?: number
           created_at?: string
+          custo_total_empresa?: number
+          desconto_adiantamento?: number
           desconto_emprestimo?: number
           desconto_faltas?: number
           desconto_horas_negativas?: number
           desconto_marmita?: number
+          desconto_sindicato?: number
           desconto_vale?: number
           dias_do_mes?: number
           domingos_feriados_no_mes?: number
@@ -1053,6 +1081,7 @@ export type Database = {
           dsr_perdido?: number
           empresa_id?: string
           faltas?: number
+          fgts?: number
           funcionario_id?: string
           he_100?: number
           he_sabado?: number
@@ -1062,19 +1091,26 @@ export type Database = {
           horas_extras_semanais?: number
           horas_negativas?: number
           id?: string
+          inss_empresa?: number
+          is_simulacao?: boolean
           mes?: number
           obra_id?: string
           outros_descontos?: number
+          qtd_marmitas?: number
           salario_combinado?: number
           salario_final?: number
           salario_registro?: number
           semanas_com_falta?: number
+          status_folha?: string
+          tipo_remuneracao?: string
           total_bonificacoes?: number
           total_descontos?: number
           total_he?: number
           updated_at?: string
           usar_salario_sindicato_para_he?: boolean
           valor_atestados?: number
+          valor_marmita_unitario?: number
+          valor_producao?: number
         }
         Relationships: [
           {
@@ -1190,6 +1226,7 @@ export type Database = {
           email: string | null
           empresa_id: string
           endereco: string | null
+          escala: string
           escolaridade: string | null
           estado_civil: string | null
           foto_url: string | null
@@ -1211,6 +1248,7 @@ export type Database = {
           status: string
           telefone: string | null
           tipo_conta: string | null
+          tipo_remuneracao: string
           titulo_eleitor: string | null
           uf: string | null
           updated_at: string
@@ -1246,6 +1284,7 @@ export type Database = {
           email?: string | null
           empresa_id: string
           endereco?: string | null
+          escala?: string
           escolaridade?: string | null
           estado_civil?: string | null
           foto_url?: string | null
@@ -1267,6 +1306,7 @@ export type Database = {
           status?: string
           telefone?: string | null
           tipo_conta?: string | null
+          tipo_remuneracao?: string
           titulo_eleitor?: string | null
           uf?: string | null
           updated_at?: string
@@ -1302,6 +1342,7 @@ export type Database = {
           email?: string | null
           empresa_id?: string
           endereco?: string | null
+          escala?: string
           escolaridade?: string | null
           estado_civil?: string | null
           foto_url?: string | null
@@ -1323,6 +1364,7 @@ export type Database = {
           status?: string
           telefone?: string | null
           tipo_conta?: string | null
+          tipo_remuneracao?: string
           titulo_eleitor?: string | null
           uf?: string | null
           updated_at?: string

@@ -1,8 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { FolhaDashboard } from "@/components/folha/FolhaDashboard";
-import { FolhaInputForm } from "@/components/folha/FolhaInputForm";
-import { FolhaResultado } from "@/components/folha/FolhaResultado";
 import { FolhaResumoObra } from "@/components/folha/FolhaResumoObra";
 import { FolhaCalculoIndividual } from "@/components/folha/FolhaCalculoIndividual";
 import { ImportarPontoPDF } from "@/components/folha/ImportarPontoPDF";
@@ -13,10 +11,9 @@ import { calcularFolha, type FolhaInput, type FolhaOutput } from "@/lib/motorFol
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Calculator, Save, FileText, ArrowLeft, CheckCircle, Clock, FileDown } from "lucide-react";
-import jsPDF from "jspdf";
+import { ArrowLeft, Clock, FileDown } from "lucide-react";
 import autoTable from "jspdf-autotable";
 import { createBrandedPDF, addPDFFooter, getAutoTableStyles, type EmpresaBranding } from "@/lib/pdfTemplate";
 import { getDaysInMonth } from "date-fns";
@@ -29,6 +26,8 @@ interface FuncionarioFolha {
   cargo: string;
   salario_base: number;
   salario_combinado: number | null;
+  tipo_remuneracao: string;
+  escala: string;
   input: FolhaInput;
   result: FolhaOutput | null;
   saved: boolean;
@@ -56,11 +55,13 @@ function countSundaysAndHolidays(year: number, month: number): number {
   return count;
 }
 
-function makeDefaultInput(salarioBase: number, salarioCombinado: number, diasMes: number, domingos: number): FolhaInput {
+function makeDefaultInput(salarioBase: number, salarioCombinado: number, diasMes: number, domingos: number, tipoRem: string): FolhaInput {
   return {
     salario_registro: salarioBase,
     salario_combinado: salarioCombinado,
     dias_do_mes: diasMes,
+    tipo_remuneracao: (tipoRem as "mensal" | "producao") || "mensal",
+    valor_producao: 0,
     horas_extras_semanais: 0,
     horas_extras_sabado: 0,
     horas_extras_100: 0,
@@ -72,8 +73,12 @@ function makeDefaultInput(salarioBase: number, salarioCombinado: number, diasMes
     bonificacao_meta: 0,
     bonificacao_assiduidade: 0,
     desconto_marmita: 0,
+    qtd_marmitas: 0,
+    valor_marmita_unitario: 0,
     desconto_vale: 0,
     desconto_emprestimo: 0,
+    desconto_adiantamento: 0,
+    desconto_sindicato: 0,
     outros_descontos: 0,
     usar_salario_sindicato_para_HE: true,
   };
@@ -97,13 +102,13 @@ export default function Folha() {
   const [docManagerOpen, setDocManagerOpen] = useState(false);
   const [selectedFuncDoc, setSelectedFuncDoc] = useState<{ id: string; nome: string } | null>(null);
   const [showHorarioEditor, setShowHorarioEditor] = useState(false);
+  const [isSimulacao, setIsSimulacao] = useState(false);
 
   const openDocManager = (id: string, nome: string) => {
     setSelectedFuncDoc({ id, nome });
     setDocManagerOpen(true);
   };
 
-  // Dashboard data
   const [dashboardData, setDashboardData] = useState<{
     obrasResumo: Array<{
       id: string; nome: string; codigo: string;
@@ -113,7 +118,6 @@ export default function Folha() {
     loading: boolean;
   }>({ obrasResumo: [], loading: true });
 
-  // Load obras
   useEffect(() => {
     supabase
       .from("obras")
@@ -123,28 +127,16 @@ export default function Folha() {
       .then(({ data }) => { if (data) setObras(data as any); });
   }, []);
 
-  // Load dashboard data
   useEffect(() => {
     if (view !== "dashboard" || obras.length === 0) return;
     setDashboardData(prev => ({ ...prev, loading: true }));
 
     const loadDashboard = async () => {
       const obraIds = obras.map(o => o.id);
-
       const [funcRes, folhaRes] = await Promise.all([
-        supabase
-          .from("funcionarios")
-          .select("id, obra_id, salario_base, salario_combinado")
-          .eq("status", "ativo")
-          .in("obra_id", obraIds),
-        supabase
-          .from("folhas_pagamento")
-          .select("funcionario_id, obra_id, salario_final")
-          .eq("mes", mes + 1)
-          .eq("ano", ano)
-          .in("obra_id", obraIds),
+        supabase.from("funcionarios").select("id, obra_id, salario_base, salario_combinado").eq("status", "ativo").in("obra_id", obraIds),
+        supabase.from("folhas_pagamento").select("funcionario_id, obra_id, salario_final").eq("mes", mes + 1).eq("ano", ano).in("obra_id", obraIds),
       ]);
-
       const funcs = funcRes.data ?? [];
       const folhas = folhaRes.data ?? [];
       const folhaSet = new Set(folhas.map((f: any) => f.funcionario_id));
@@ -153,66 +145,51 @@ export default function Folha() {
         const obraFuncs = funcs.filter((f: any) => f.obra_id === obra.id);
         const obraFolhas = folhas.filter((f: any) => f.obra_id === obra.id);
         const fechados = obraFuncs.filter((f: any) => folhaSet.has(f.id)).length;
-        const pendentes = obraFuncs.length - fechados;
-
-        // Estimated payroll: for closed use actual, for pending use salario_combinado or salario_base
         const folhaFechadaTotal = obraFolhas.reduce((s: number, f: any) => s + Number(f.salario_final), 0);
         const folhaPendenteEstimada = obraFuncs
           .filter((f: any) => !folhaSet.has(f.id))
           .reduce((s: number, f: any) => s + Number(f.salario_combinado ?? f.salario_base), 0);
-
         return {
-          id: obra.id,
-          nome: obra.nome,
-          codigo: obra.codigo,
+          id: obra.id, nome: obra.nome, codigo: obra.codigo,
           totalFuncionarios: obraFuncs.length,
-          fechados,
-          pendentes,
+          fechados, pendentes: obraFuncs.length - fechados,
           folhaEstimada: folhaFechadaTotal + folhaPendenteEstimada,
         };
       }).filter(o => o.totalFuncionarios > 0);
 
       setDashboardData({ obrasResumo, loading: false });
     };
-
     loadDashboard();
   }, [view, obras, mes, ano]);
 
-  // Load funcionários when entering obra view
   useEffect(() => {
     if (!selectedObraId || (view !== "obra" && view !== "funcionario")) { setFuncionarios([]); return; }
-    if (view === "funcionario") return; // don't reload when viewing individual
+    if (view === "funcionario") return;
     setLoading(true);
     setSelectedFuncId(null);
-
     const diasMes = getDaysInMonth(new Date(ano, mes));
     const domingos = countSundaysAndHolidays(ano, mes);
 
     Promise.all([
-      supabase
-        .from("funcionarios")
-        .select("id, nome, cpf, cargo, salario_base, salario_combinado")
-        .eq("obra_id", selectedObraId)
-        .eq("status", "ativo")
-        .order("nome"),
-      supabase
-        .from("folhas_pagamento")
-        .select("*")
-        .eq("obra_id", selectedObraId)
-        .eq("mes", mes + 1)
-        .eq("ano", ano),
+      supabase.from("funcionarios")
+        .select("id, nome, cpf, cargo, salario_base, salario_combinado, tipo_remuneracao, escala")
+        .eq("obra_id", selectedObraId).eq("status", "ativo").order("nome"),
+      supabase.from("folhas_pagamento").select("*")
+        .eq("obra_id", selectedObraId).eq("mes", mes + 1).eq("ano", ano),
     ]).then(([funcRes, folhaRes]) => {
       const funcs = funcRes.data ?? [];
       const folhas = folhaRes.data ?? [];
       const folhaMap = new Map(folhas.map((f: any) => [f.funcionario_id, f]));
 
-      const list: FuncionarioFolha[] = funcs.map((f) => {
+      const list: FuncionarioFolha[] = funcs.map((f: any) => {
         const existing = folhaMap.get(f.id) as any;
         if (existing) {
           const input: FolhaInput = {
             salario_registro: Number(existing.salario_registro),
             salario_combinado: Number(existing.salario_combinado),
             dias_do_mes: existing.dias_do_mes,
+            tipo_remuneracao: existing.tipo_remuneracao || "mensal",
+            valor_producao: Number(existing.valor_producao || 0),
             horas_extras_semanais: Number(existing.horas_extras_semanais),
             horas_extras_sabado: Number(existing.horas_extras_sabado),
             horas_extras_100: Number(existing.horas_extras_100),
@@ -224,14 +201,20 @@ export default function Folha() {
             bonificacao_meta: Number(existing.bonificacao_meta),
             bonificacao_assiduidade: Number(existing.bonificacao_assiduidade),
             desconto_marmita: Number(existing.desconto_marmita),
+            qtd_marmitas: Number(existing.qtd_marmitas || 0),
+            valor_marmita_unitario: Number(existing.valor_marmita_unitario || 0),
             desconto_vale: Number(existing.desconto_vale),
             desconto_emprestimo: Number(existing.desconto_emprestimo),
+            desconto_adiantamento: Number(existing.desconto_adiantamento || 0),
+            desconto_sindicato: Number(existing.desconto_sindicato || 0),
             outros_descontos: Number(existing.outros_descontos),
             usar_salario_sindicato_para_HE: existing.usar_salario_sindicato_para_he,
           };
           return {
             id: f.id, nome: f.nome, cpf: f.cpf, cargo: f.cargo,
             salario_base: f.salario_base, salario_combinado: f.salario_combinado,
+            tipo_remuneracao: f.tipo_remuneracao || "mensal",
+            escala: f.escala || "5x2",
             input, result: calcularFolha(input), saved: true,
           };
         }
@@ -239,7 +222,9 @@ export default function Folha() {
         return {
           id: f.id, nome: f.nome, cpf: f.cpf, cargo: f.cargo,
           salario_base: f.salario_base, salario_combinado: f.salario_combinado,
-          input: makeDefaultInput(f.salario_base, sc, diasMes, domingos),
+          tipo_remuneracao: f.tipo_remuneracao || "mensal",
+          escala: f.escala || "5x2",
+          input: makeDefaultInput(f.salario_base, sc, diasMes, domingos, f.tipo_remuneracao || "mensal"),
           result: null, saved: false,
         };
       });
@@ -256,19 +241,9 @@ export default function Folha() {
 
   const handleInputChange = useCallback((data: FolhaInput) => {
     setFuncionarios((prev) =>
-      prev.map((f) =>
-        f.id === selectedFuncId ? { ...f, input: data, result: null, saved: false } : f
-      )
+      prev.map((f) => f.id === selectedFuncId ? { ...f, input: data, result: null, saved: false } : f)
     );
   }, [selectedFuncId]);
-
-  const handleCalc = () => {
-    if (!current) return;
-    const result = calcularFolha(current.input);
-    setFuncionarios((prev) =>
-      prev.map((f) => f.id === selectedFuncId ? { ...f, result, saved: false } : f)
-    );
-  };
 
   const buildRow = (func: FuncionarioFolha, result: FolhaOutput, empresaId: string) => ({
     funcionario_id: func.id,
@@ -281,6 +256,8 @@ export default function Folha() {
     dias_do_mes: func.input.dias_do_mes,
     domingos_feriados_no_mes: func.input.domingos_feriados_no_mes,
     usar_salario_sindicato_para_he: func.input.usar_salario_sindicato_para_HE,
+    tipo_remuneracao: func.input.tipo_remuneracao,
+    valor_producao: func.input.valor_producao,
     horas_extras_semanais: func.input.horas_extras_semanais,
     horas_extras_sabado: func.input.horas_extras_sabado,
     horas_extras_100: func.input.horas_extras_100,
@@ -291,8 +268,12 @@ export default function Folha() {
     bonificacao_meta: func.input.bonificacao_meta,
     bonificacao_assiduidade: func.input.bonificacao_assiduidade,
     desconto_marmita: func.input.desconto_marmita,
+    qtd_marmitas: func.input.qtd_marmitas,
+    valor_marmita_unitario: func.input.valor_marmita_unitario,
     desconto_vale: func.input.desconto_vale,
     desconto_emprestimo: func.input.desconto_emprestimo,
+    desconto_adiantamento: func.input.desconto_adiantamento,
+    desconto_sindicato: func.input.desconto_sindicato,
     outros_descontos: func.input.outros_descontos,
     base_dia: result.base_dia,
     base_hora: result.base_hora,
@@ -308,6 +289,11 @@ export default function Folha() {
     total_bonificacoes: result.total_bonificacoes,
     total_descontos: result.total_descontos,
     salario_final: result.salario_final,
+    fgts: result.fgts,
+    inss_empresa: result.inss_empresa,
+    custo_total_empresa: result.custo_total_empresa,
+    status_folha: "fechado",
+    is_simulacao: false,
   });
 
   const getEmpresaId = async () => {
@@ -332,7 +318,7 @@ export default function Folha() {
     if (error) {
       toast({ title: "Erro ao fechar mês", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: `Mês fechado para ${current.nome} com sucesso!` });
+      toast({ title: `Mês fechado para ${current.nome}!` });
       setFuncionarios((prev) =>
         prev.map((f) => f.id === selectedFuncId ? { ...f, result, saved: true } : f)
       );
@@ -342,7 +328,7 @@ export default function Folha() {
 
   const handleSaveIndividual = async () => {
     if (!current) return;
-    const result = current.result ?? calcularFolha(current.input);
+    const result = calcularFolha(current.input);
     setSaving(true);
     const empresaId = await getEmpresaId();
     if (!empresaId) {
@@ -350,14 +336,15 @@ export default function Folha() {
       setSaving(false);
       return;
     }
+    const row = { ...buildRow(current, result, empresaId), status_folha: "em_calculo" };
     const { error } = await supabase.from("folhas_pagamento").upsert(
-      [buildRow(current, result, empresaId)],
+      [row],
       { onConflict: "funcionario_id,mes,ano" }
     );
     if (error) {
       toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: `Folha de ${current.nome} salva com sucesso` });
+      toast({ title: `Rascunho de ${current.nome} salvo` });
       setFuncionarios((prev) =>
         prev.map((f) => f.id === selectedFuncId ? { ...f, result, saved: true } : f)
       );
@@ -373,62 +360,35 @@ export default function Folha() {
         if (!ponto) return f;
         return {
           ...f,
-          input: {
-            ...f.input,
-            faltas: ponto.faltas,
-            horas_extras_semanais: Math.round(ponto.heSemanais * 10) / 10,
-          },
-          result: null,
-          saved: false,
+          input: { ...f.input, faltas: ponto.faltas, horas_extras_semanais: Math.round(ponto.heSemanais * 10) / 10 },
+          result: null, saved: false,
         };
       })
     );
   }, []);
 
-  const handleSelectObra = (obraId: string) => {
-    setSelectedObraId(obraId);
-    setSelectedFuncId(null);
-    setView("obra");
-  };
-
-  const handleSelectFunc = (funcId: string) => {
-    setSelectedFuncId(funcId);
-    setView("funcionario");
-  };
-
-  const handleBackToObra = () => {
-    setSelectedFuncId(null);
-    setView("obra");
-  };
-
-  const handleBackToDashboard = () => {
-    setSelectedObraId("");
-    setSelectedFuncId(null);
-    setView("dashboard");
-  };
+  const handleSelectObra = (obraId: string) => { setSelectedObraId(obraId); setSelectedFuncId(null); setView("obra"); };
+  const handleSelectFunc = (funcId: string) => { setSelectedFuncId(funcId); setIsSimulacao(false); setView("funcionario"); };
+  const handleBackToObra = () => { setSelectedFuncId(null); setIsSimulacao(false); setView("obra"); };
+  const handleBackToDashboard = () => { setSelectedObraId(""); setSelectedFuncId(null); setView("dashboard"); };
 
   const anos = [ano - 1, ano, ano + 1];
-  const calculatedCount = funcionarios.filter((f) => f.result !== null).length;
   const obraNome = obras.find((o) => o.id === selectedObraId);
-  const showResumo = calculatedCount === funcionarios.length && calculatedCount > 0;
 
   const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   const exportRelatorioObra = async () => {
     const funcsComResultado = funcionarios.filter(f => f.result);
     if (funcsComResultado.length === 0) {
-      toast({ title: "Nenhum cálculo realizado", description: "Calcule ao menos um funcionário antes de exportar.", variant: "destructive" });
+      toast({ title: "Nenhum cálculo realizado", variant: "destructive" });
       return;
     }
-
-    // Load empresa branding
     const empresaId = obraNome?.empresa_id;
     let branding: EmpresaBranding = { razao_social: "Empresa", cnpj: "" };
     if (empresaId) {
       const { data: empData } = await supabase.from("empresas").select("*").eq("id", empresaId).single();
       if (empData) branding = empData as any;
     }
-
     const { doc, startY, colors } = await createBrandedPDF({
       titulo: "Relatório de Folha Salarial",
       subtitulo: `Referência: ${MESES[mes]}/${ano}`,
@@ -436,41 +396,42 @@ export default function Folha() {
       obraNome: `${obraNome?.codigo} — ${obraNome?.nome}`,
       orientation: "landscape",
     });
-
     const totalGeral = funcsComResultado.reduce((s, f) => s + (f.result?.salario_final ?? 0), 0);
+    const totalFGTS = funcsComResultado.reduce((s, f) => s + (f.result?.fgts ?? 0), 0);
+    const totalINSS = funcsComResultado.reduce((s, f) => s + (f.result?.inss_empresa ?? 0), 0);
+    const totalCusto = funcsComResultado.reduce((s, f) => s + (f.result?.custo_total_empresa ?? 0), 0);
 
     autoTable(doc, {
       startY,
-      head: [["Nome", "CPF", "Função", "Salário Base", "Receitas", "Descontos", "Saldo de Pagamento"]],
+      head: [["Nome", "CPF", "Função", "Sal. Base", "Receitas", "Descontos", "Líquido", "FGTS", "INSS", "Custo Emp."]],
       body: funcsComResultado.map(f => {
         const r = f.result!;
         const receitas = r.total_HE + r.valor_atestados + r.total_bonificacoes;
         return [
           f.nome, f.cpf, f.cargo,
           fmt(f.input.salario_combinado),
-          fmt(receitas),
-          fmt(r.total_descontos),
-          fmt(r.salario_final),
+          fmt(receitas), fmt(r.total_descontos), fmt(r.salario_final),
+          fmt(r.fgts), fmt(r.inss_empresa), fmt(r.custo_total_empresa),
         ];
       }),
-      foot: [["", "", "", "", "", "TOTAL", fmt(totalGeral)]],
+      foot: [["", "", "", "", "", "TOTAIS", fmt(totalGeral), fmt(totalFGTS), fmt(totalINSS), fmt(totalCusto)]],
       ...getAutoTableStyles(colors.primary),
     });
-
     addPDFFooter(doc, branding);
     doc.save(`folha-${(obraNome?.codigo || "obra").replace(/\s/g, "-")}-${MESES[mes]}-${ano}.pdf`);
     toast({ title: "PDF exportado com sucesso!" });
   };
 
-  // Dashboard totals
   const totalFuncionarios = dashboardData.obrasResumo.reduce((s, o) => s + o.totalFuncionarios, 0);
   const totalFechados = dashboardData.obrasResumo.reduce((s, o) => s + o.fechados, 0);
   const totalPendentes = dashboardData.obrasResumo.reduce((s, o) => s + o.pendentes, 0);
   const totalFolhaEstimada = dashboardData.obrasResumo.reduce((s, o) => s + o.folhaEstimada, 0);
+  const calculatedCount = funcionarios.filter((f) => f.result !== null).length;
+  const showResumo = calculatedCount === funcionarios.length && calculatedCount > 0;
 
   return (
     <AppLayout>
-      <div className="space-y-6 max-w-6xl mx-auto">
+      <div className="space-y-4 max-w-7xl mx-auto">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Folha Salarial</h1>
@@ -481,27 +442,20 @@ export default function Folha() {
             </p>
           </div>
           {view !== "dashboard" && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={view === "funcionario" ? handleBackToObra : handleBackToDashboard}
-            >
+            <Button variant="ghost" size="sm" onClick={view === "funcionario" ? handleBackToObra : handleBackToDashboard}>
               <ArrowLeft className="h-4 w-4 mr-1" />
               {view === "funcionario" ? "Voltar à Obra" : "Voltar ao Painel"}
             </Button>
           )}
         </div>
 
-        {/* Seleção de Período e Obra */}
         <div className="flex flex-wrap gap-3 items-end">
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">Mês</Label>
             <Select value={String(mes)} onValueChange={(v) => setMes(Number(v))}>
               <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {MESES.map((m, i) => (
-                  <SelectItem key={i} value={String(i)}>{m}</SelectItem>
-                ))}
+                {MESES.map((m, i) => (<SelectItem key={i} value={String(i)}>{m}</SelectItem>))}
               </SelectContent>
             </Select>
           </div>
@@ -510,9 +464,7 @@ export default function Folha() {
             <Select value={String(ano)} onValueChange={(v) => setAno(Number(v))}>
               <SelectTrigger className="w-[100px]"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {anos.map((a) => (
-                  <SelectItem key={a} value={String(a)}>{a}</SelectItem>
-                ))}
+                {anos.map((a) => (<SelectItem key={a} value={String(a)}>{a}</SelectItem>))}
               </SelectContent>
             </Select>
           </div>
@@ -522,24 +474,21 @@ export default function Folha() {
               <Select value={selectedObraId} onValueChange={handleSelectObra}>
                 <SelectTrigger className="w-[250px]"><SelectValue placeholder="Selecione uma obra..." /></SelectTrigger>
                 <SelectContent>
-                  {obras.map((o) => (
-                    <SelectItem key={o.id} value={o.id}>{o.codigo} — {o.nome}</SelectItem>
-                  ))}
+                  {obras.map((o) => (<SelectItem key={o.id} value={o.id}>{o.codigo} — {o.nome}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
           )}
         </div>
 
-        {/* === DASHBOARD === */}
+        {/* DASHBOARD */}
         {view === "dashboard" && (
           dashboardData.loading ? (
             <p className="text-sm text-muted-foreground text-center py-8">Carregando dados...</p>
           ) : (
             <FolhaDashboard
               obras={dashboardData.obrasResumo}
-              mes={MESES[mes]}
-              ano={ano}
+              mes={MESES[mes]} ano={ano}
               totalObras={dashboardData.obrasResumo.length}
               totalFuncionarios={totalFuncionarios}
               totalFechados={totalFechados}
@@ -550,15 +499,13 @@ export default function Folha() {
           )
         )}
 
-        {/* === OBRA VIEW === */}
+        {/* OBRA VIEW */}
         {view === "obra" && (
           <>
             {loading && <p className="text-sm text-muted-foreground text-center py-8">Carregando funcionários...</p>}
-
             {!loading && funcionarios.length === 0 && (
               <Card><CardContent className="py-8 text-center text-muted-foreground text-sm">Nenhum funcionário ativo nesta obra.</CardContent></Card>
             )}
-
             {!loading && funcionarios.length > 0 && (
               <>
                 <div className="flex gap-2">
@@ -566,30 +513,17 @@ export default function Folha() {
                     funcionariosCpfs={funcionarios.map((f, i) => ({ cpf: f.cpf, idx: i }))}
                     onImport={handleImportPonto}
                   />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowHorarioEditor(!showHorarioEditor)}
-                    className="gap-2"
-                  >
-                    <Clock className="h-4 w-4" />
-                    {showHorarioEditor ? "Ocultar Horário" : "Horário Padrão"}
+                  <Button variant="outline" size="sm" onClick={() => setShowHorarioEditor(!showHorarioEditor)} className="gap-2">
+                    <Clock className="h-4 w-4" /> {showHorarioEditor ? "Ocultar Horário" : "Horário Padrão"}
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={exportRelatorioObra}
-                    className="gap-2"
-                  >
-                    <FileDown className="h-4 w-4" />
-                    Exportar Relatório PDF
+                  <Button variant="outline" size="sm" onClick={exportRelatorioObra} className="gap-2">
+                    <FileDown className="h-4 w-4" /> Relatório PDF
                   </Button>
                 </div>
 
                 {showHorarioEditor && obraNome && (
                   <HorarioPadraoEditor
-                    obraId={selectedObraId}
-                    obraNome={obraNome.nome}
+                    obraId={selectedObraId} obraNome={obraNome.nome}
                     initial={obraNome.horario_padrao}
                     onSaved={(h) => {
                       setObras(prev => prev.map(o => o.id === selectedObraId ? { ...o, horario_padrao: h } : o));
@@ -601,13 +535,9 @@ export default function Folha() {
 
                 <FuncionariosList
                   funcionarios={funcionarios.map((f) => ({
-                    id: f.id,
-                    nome: f.nome,
-                    cpf: f.cpf,
-                    cargo: f.cargo,
+                    id: f.id, nome: f.nome, cpf: f.cpf, cargo: f.cargo,
                     salario_base: f.salario_base,
-                    hasSaved: f.saved,
-                    hasCalculated: f.result !== null,
+                    hasSaved: f.saved, hasCalculated: f.result !== null,
                   }))}
                   onSelect={handleSelectFunc}
                   selectedId={selectedFuncId}
@@ -617,13 +547,10 @@ export default function Folha() {
                 {showResumo && (
                   <FolhaResumoObra
                     funcionarios={funcionarios.map((f) => ({
-                      nome: f.nome,
-                      cargo: f.cargo,
+                      nome: f.nome, cargo: f.cargo,
                       result: f.result ?? calcularFolha(f.input),
                     }))}
-                    obra={obraNome?.nome ?? ""}
-                    mes={MESES[mes]}
-                    ano={ano}
+                    obra={obraNome?.nome ?? ""} mes={MESES[mes]} ano={ano}
                   />
                 )}
               </>
@@ -631,39 +558,36 @@ export default function Folha() {
           </>
         )}
 
-        {/* === FUNCIONÁRIO VIEW === */}
+        {/* FUNCIONÁRIO VIEW */}
         {view === "funcionario" && current && (
           <FolhaCalculoIndividual
             funcionario={{
-              id: current.id,
-              nome: current.nome,
-              cpf: current.cpf,
-              cargo: current.cargo,
-              salario_base: current.salario_base,
+              id: current.id, nome: current.nome, cpf: current.cpf,
+              cargo: current.cargo, salario_base: current.salario_base,
               salario_combinado: current.salario_combinado,
+              tipo_remuneracao: current.tipo_remuneracao,
+              escala: current.escala,
             }}
             initialInput={current.input}
             initialResult={current.result}
             isSaved={current.saved}
-            mes={MESES[mes]}
-            mesIdx={mes}
-            ano={ano}
+            mes={MESES[mes]} mesIdx={mes} ano={ano}
             saving={saving}
             horarioPadrao={obraNome?.horario_padrao ?? null}
             onInputChange={handleInputChange}
             onFechamento={handleFechamentoMensal}
             onSalvarRascunho={handleSaveIndividual}
             onVoltar={handleBackToObra}
+            isSimulacao={isSimulacao}
+            onToggleSimulacao={() => setIsSimulacao(!isSimulacao)}
           />
         )}
       </div>
 
       {selectedFuncDoc && (
         <DocumentManager
-          open={docManagerOpen}
-          onOpenChange={setDocManagerOpen}
-          funcionarioId={selectedFuncDoc.id}
-          funcionarioNome={selectedFuncDoc.nome}
+          open={docManagerOpen} onOpenChange={setDocManagerOpen}
+          funcionarioId={selectedFuncDoc.id} funcionarioNome={selectedFuncDoc.nome}
         />
       )}
     </AppLayout>

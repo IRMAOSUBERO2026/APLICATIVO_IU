@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { EspelhoPonto, type HorarioPadrao, type PontoResult } from "./EspelhoPonto";
 import { FolhaInputForm } from "./FolhaInputForm";
 import { FolhaResultado } from "./FolhaResultado";
-import { EspelhoPonto, type HorarioPadrao, type PontoResult } from "./EspelhoPonto";
 import { calcularFolha, type FolhaInput, type FolhaOutput } from "@/lib/motorFolha";
-import { Calculator, CheckCircle, Save, User, ArrowLeft, RotateCcw, Clock } from "lucide-react";
+import {
+  Calculator, CheckCircle, Save, User, ArrowLeft, RotateCcw, Clock, Eye, EyeOff,
+} from "lucide-react";
 
 interface FuncionarioData {
   id: string;
@@ -16,6 +17,8 @@ interface FuncionarioData {
   cargo: string;
   salario_base: number;
   salario_combinado: number | null;
+  tipo_remuneracao?: string;
+  escala?: string;
 }
 
 interface Props {
@@ -32,6 +35,8 @@ interface Props {
   onFechamento: () => void;
   onSalvarRascunho: () => void;
   onVoltar: () => void;
+  isSimulacao?: boolean;
+  onToggleSimulacao?: () => void;
 }
 
 const fmt = (v: number) =>
@@ -51,23 +56,18 @@ export function FolhaCalculoIndividual({
   onFechamento,
   onSalvarRascunho,
   onVoltar,
+  isSimulacao = false,
+  onToggleSimulacao,
 }: Props) {
   const [input, setInput] = useState<FolhaInput>(initialInput);
-  const [result, setResult] = useState<FolhaOutput | null>(initialResult);
-  const [calculated, setCalculated] = useState(initialResult !== null);
   const [showPonto, setShowPonto] = useState(false);
+
+  // Real-time calculation
+  const result = useMemo(() => calcularFolha(input), [input]);
 
   const handleChange = (data: FolhaInput) => {
     setInput(data);
-    setResult(null);
-    setCalculated(false);
     onInputChange(data);
-  };
-
-  const handleCalc = () => {
-    const r = calcularFolha(input);
-    setResult(r);
-    setCalculated(true);
   };
 
   const handlePontoResult = (pontoResult: PontoResult) => {
@@ -80,8 +80,6 @@ export function FolhaCalculoIndividual({
       faltas: pontoResult.faltas,
     };
     setInput(updated);
-    setResult(null);
-    setCalculated(false);
     onInputChange(updated);
   };
 
@@ -89,6 +87,8 @@ export function FolhaCalculoIndividual({
     const sc = funcionario.salario_combinado ?? funcionario.salario_base;
     const reset: FolhaInput = {
       ...input,
+      tipo_remuneracao: (funcionario.tipo_remuneracao as "mensal" | "producao") ?? "mensal",
+      valor_producao: 0,
       horas_extras_semanais: 0,
       horas_extras_sabado: 0,
       horas_extras_100: 0,
@@ -99,76 +99,80 @@ export function FolhaCalculoIndividual({
       bonificacao_meta: 0,
       bonificacao_assiduidade: 0,
       desconto_marmita: 0,
+      qtd_marmitas: 0,
+      valor_marmita_unitario: 0,
       desconto_vale: 0,
       desconto_emprestimo: 0,
+      desconto_adiantamento: 0,
+      desconto_sindicato: 0,
       outros_descontos: 0,
       salario_registro: funcionario.salario_base,
       salario_combinado: sc,
     };
     setInput(reset);
-    setResult(null);
-    setCalculated(false);
     onInputChange(reset);
   };
 
   return (
-    <div className="space-y-4">
-      {/* Header do Funcionário */}
+    <div className="space-y-3">
+      {/* Header */}
       <Card className="border-primary/20 bg-primary/5">
-        <CardContent className="py-4 px-5">
+        <CardContent className="py-3 px-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <User className="h-5 w-5 text-primary" />
+              <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
+                <User className="h-4 w-4 text-primary" />
               </div>
               <div>
-                <h2 className="font-semibold text-base">{funcionario.nome}</h2>
-                <p className="text-xs text-muted-foreground">
-                  {funcionario.cargo} • CPF: {funcionario.cpf} • {mes}/{ano}
+                <h2 className="font-semibold text-sm">{funcionario.nome}</h2>
+                <p className="text-[11px] text-muted-foreground">
+                  {funcionario.cargo} • {funcionario.escala ?? "5x2"} • {mes}/{ano}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {isSimulacao && <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">Simulação</Badge>}
               {isSaved ? (
-                <Badge variant="default" className="gap-1">
-                  <CheckCircle className="h-3 w-3" /> Fechado
-                </Badge>
-              ) : calculated ? (
-                <Badge variant="secondary">Calculado</Badge>
+                <Badge variant="default" className="text-xs gap-1"><CheckCircle className="h-3 w-3" /> Fechado</Badge>
               ) : (
-                <Badge variant="outline">Pendente</Badge>
+                <Badge variant="outline" className="text-xs">Pendente</Badge>
               )}
-            </div>
-          </div>
-
-          <Separator className="my-3" />
-
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
-              <p className="text-xs text-muted-foreground">Salário Registro</p>
-              <p className="font-semibold text-sm">{fmt(funcionario.salario_base)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Salário Combinado</p>
-              <p className="font-semibold text-sm">{fmt(funcionario.salario_combinado ?? funcionario.salario_base)}</p>
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Salário Final</p>
-              <p className={`font-bold text-sm ${result ? "text-primary" : "text-muted-foreground"}`}>
-                {result ? fmt(result.salario_final) : "—"}
-              </p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Espelho Ponto */}
-      <div className="flex justify-end">
-        <Button variant="outline" size="sm" onClick={() => setShowPonto(!showPonto)} className="gap-2">
-          <Clock className="h-4 w-4" /> {showPonto ? "Ocultar Espelho Ponto" : "Espelho Ponto"}
+      {/* Action bar */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="ghost" size="sm" onClick={onVoltar} className="gap-1 text-xs">
+          <ArrowLeft className="h-3.5 w-3.5" /> Voltar
         </Button>
+        <Button variant="outline" size="sm" onClick={() => setShowPonto(!showPonto)} className="gap-1 text-xs">
+          <Clock className="h-3.5 w-3.5" /> {showPonto ? "Ocultar Ponto" : "Espelho Ponto"}
+        </Button>
+        <Button variant="outline" size="sm" onClick={handleReset} className="gap-1 text-xs">
+          <RotateCcw className="h-3.5 w-3.5" /> Limpar
+        </Button>
+        {onToggleSimulacao && (
+          <Button variant="outline" size="sm" onClick={onToggleSimulacao} className="gap-1 text-xs">
+            {isSimulacao ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            {isSimulacao ? "Sair Simulação" : "Simular"}
+          </Button>
+        )}
+        <div className="flex-1" />
+        {!isSimulacao && (
+          <>
+            <Button variant="secondary" size="sm" onClick={onSalvarRascunho} disabled={saving} className="gap-1 text-xs">
+              <Save className="h-3.5 w-3.5" /> {saving ? "Salvando..." : "Rascunho"}
+            </Button>
+            <Button size="sm" onClick={onFechamento} disabled={saving} className="gap-1 text-xs">
+              <CheckCircle className="h-3.5 w-3.5" /> {saving ? "Fechando..." : "Fechar Mês"}
+            </Button>
+          </>
+        )}
       </div>
 
+      {/* Espelho Ponto (full width above 3 panels) */}
       {showPonto && (
         <EspelhoPonto
           mes={mesIdx}
@@ -178,43 +182,110 @@ export function FolhaCalculoIndividual({
         />
       )}
 
-      {/* Formulário de Inputs */}
-      <FolhaInputForm data={input} onChange={handleChange} />
-
-      {/* Barra de Ações */}
-      <Card>
-        <CardContent className="py-3 px-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex gap-2">
-              <Button variant="ghost" size="sm" onClick={onVoltar} className="gap-1">
-                <ArrowLeft className="h-4 w-4" /> Voltar
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleReset} className="gap-1">
-                <RotateCcw className="h-4 w-4" /> Limpar
-              </Button>
+      {/* 3-panel layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px_280px] gap-3">
+        {/* LEFT: Calendar summary / HE details */}
+        <Card>
+          <CardHeader className="pb-2 pt-3 px-4">
+            <CardTitle className="text-xs font-semibold">📅 Ponto & Horas</CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-3 space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">HE Semanais</label>
+                <input
+                  type="number" min={0} step={0.5}
+                  value={input.horas_extras_semanais}
+                  onChange={e => handleChange({ ...input, horas_extras_semanais: Number(e.target.value) || 0 })}
+                  className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">HE Sábado</label>
+                <input
+                  type="number" min={0} step={0.5}
+                  value={input.horas_extras_sabado}
+                  onChange={e => handleChange({ ...input, horas_extras_sabado: Number(e.target.value) || 0 })}
+                  className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">HE 100%</label>
+                <input
+                  type="number" min={0} step={0.5}
+                  value={input.horas_extras_100}
+                  onChange={e => handleChange({ ...input, horas_extras_100: Number(e.target.value) || 0 })}
+                  className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground">Horas Negativas</label>
+                <input
+                  type="number" min={0} step={0.5}
+                  value={input.horas_negativas}
+                  onChange={e => handleChange({ ...input, horas_negativas: Number(e.target.value) || 0 })}
+                  className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+                />
+              </div>
             </div>
 
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={handleCalc} className="gap-2">
-                <Calculator className="h-4 w-4" /> Calcular
-              </Button>
-              {calculated && result && (
-                <Button variant="secondary" onClick={onSalvarRascunho} disabled={saving} className="gap-2">
-                  <Save className="h-4 w-4" />
-                  {saving ? "Salvando..." : "Salvar Rascunho"}
-                </Button>
-              )}
-              <Button onClick={() => { handleCalc(); onFechamento(); }} disabled={saving} className="gap-2">
-                <CheckCircle className="h-4 w-4" />
-                {saving ? "Fechando..." : "Fechamento Mensal"}
-              </Button>
+            <div className="border-t pt-3">
+              <p className="text-xs font-semibold text-muted-foreground mb-2">FALTAS & ATESTADOS</p>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">Faltas</label>
+                  <input
+                    type="number" min={0}
+                    value={input.faltas}
+                    onChange={e => handleChange({ ...input, faltas: Number(e.target.value) || 0 })}
+                    className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">Atestados</label>
+                  <input
+                    type="number" min={0}
+                    value={input.atestados}
+                    onChange={e => handleChange({ ...input, atestados: Number(e.target.value) || 0 })}
+                    className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-muted-foreground">Sem. c/ Falta</label>
+                  <input
+                    type="number" min={0}
+                    value={input.semanas_com_falta}
+                    onChange={e => handleChange({ ...input, semanas_com_falta: Number(e.target.value) || 0 })}
+                    className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
+                  />
+                </div>
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Resultado */}
-      {result && <FolhaResultado result={result} />}
+            {/* Quick info */}
+            <div className="border-t pt-3 grid grid-cols-2 gap-2 text-xs">
+              <div className="rounded-md bg-muted/50 p-2 text-center">
+                <p className="text-muted-foreground">Base/Dia</p>
+                <p className="font-semibold">{fmt(result.base_dia)}</p>
+              </div>
+              <div className="rounded-md bg-muted/50 p-2 text-center">
+                <p className="text-muted-foreground">Base/Hora</p>
+                <p className="font-semibold">{fmt(result.base_hora)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* CENTER: Config & Discounts */}
+        <div className="space-y-3">
+          <FolhaInputForm data={input} onChange={handleChange} />
+        </div>
+
+        {/* RIGHT: Live summary */}
+        <div className="space-y-3">
+          <FolhaResultado result={result} />
+        </div>
+      </div>
     </div>
   );
 }

@@ -23,6 +23,7 @@ const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", curren
 
 export function FolhaResumoObra({ funcionarios, obra, mes, ano }: Props) {
   const totalGeral = funcionarios.reduce((s, f) => s + f.result.salario_final, 0);
+  const totalCusto = funcionarios.reduce((s, f) => s + f.result.custo_total_empresa, 0);
 
   const exportPDF = () => {
     const doc = new jsPDF({ orientation: "landscape" });
@@ -35,7 +36,7 @@ export function FolhaResumoObra({ funcionarios, obra, mes, ano }: Props) {
       startY: 28,
       head: [[
         "Funcionário", "Cargo", "Sal. Combinado", "Total HE",
-        "Bonificações", "Descontos", "Salário Final",
+        "Bonificações", "Descontos", "Salário Final", "FGTS", "Custo Emp.",
       ]],
       body: funcionarios.map((f) => [
         f.nome,
@@ -45,8 +46,10 @@ export function FolhaResumoObra({ funcionarios, obra, mes, ano }: Props) {
         fmt(f.result.total_bonificacoes),
         fmt(f.result.total_descontos),
         fmt(f.result.salario_final),
+        fmt(f.result.fgts),
+        fmt(f.result.custo_total_empresa),
       ]),
-      foot: [["", "", "", "", "", "TOTAL", fmt(totalGeral)]],
+      foot: [["", "", "", "", "", "", "TOTAL", fmt(totalGeral), "", fmt(totalCusto)]],
       styles: { fontSize: 8 },
       headStyles: { fillColor: [41, 50, 65] },
       footStyles: { fillColor: [41, 50, 65], textColor: 255, fontStyle: "bold" },
@@ -76,7 +79,9 @@ export function FolhaResumoObra({ funcionarios, obra, mes, ano }: Props) {
                 <TableHead className="text-right">Total HE</TableHead>
                 <TableHead className="text-right">Bonificações</TableHead>
                 <TableHead className="text-right">Descontos</TableHead>
-                <TableHead className="text-right font-bold">Salário Final</TableHead>
+                <TableHead className="text-right font-bold">Líquido</TableHead>
+                <TableHead className="text-right">FGTS</TableHead>
+                <TableHead className="text-right font-bold">Custo Emp.</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -88,13 +93,16 @@ export function FolhaResumoObra({ funcionarios, obra, mes, ano }: Props) {
                   <TableCell className="text-right">{fmt(f.result.total_bonificacoes)}</TableCell>
                   <TableCell className="text-right text-destructive">{fmt(f.result.total_descontos)}</TableCell>
                   <TableCell className="text-right font-bold">{fmt(f.result.salario_final)}</TableCell>
+                  <TableCell className="text-right text-muted-foreground">{fmt(f.result.fgts)}</TableCell>
+                  <TableCell className="text-right font-bold">{fmt(f.result.custo_total_empresa)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </div>
-        <div className="flex justify-end mt-4 pt-3 border-t">
-          <p className="text-lg font-bold">Total Geral: {fmt(totalGeral)}</p>
+        <div className="flex justify-end mt-4 pt-3 border-t gap-6">
+          <p className="text-sm text-muted-foreground">Total Líquido: <span className="font-bold text-foreground">{fmt(totalGeral)}</span></p>
+          <p className="text-sm text-muted-foreground">Custo Total Empresa: <span className="font-bold text-lg text-foreground">{fmt(totalCusto)}</span></p>
         </div>
       </CardContent>
     </Card>
