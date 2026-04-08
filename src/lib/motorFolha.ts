@@ -1,12 +1,16 @@
 /**
  * Motor de Cálculo de Fechamento de Funcionários
  * Módulo puro de cálculo — sem dependência de interface.
+ * Suporta: mensal, produção, encargos (FGTS/INSS).
  */
 
 export interface FolhaInput {
   salario_registro: number;
   salario_combinado: number;
   dias_do_mes: number;
+
+  tipo_remuneracao: "mensal" | "producao";
+  valor_producao: number;
 
   horas_extras_semanais: number;
   horas_extras_sabado: number;
@@ -23,8 +27,12 @@ export interface FolhaInput {
   bonificacao_assiduidade: number;
 
   desconto_marmita: number;
+  qtd_marmitas: number;
+  valor_marmita_unitario: number;
   desconto_vale: number;
   desconto_emprestimo: number;
+  desconto_adiantamento: number;
+  desconto_sindicato: number;
   outros_descontos: number;
 
   usar_salario_sindicato_para_HE: boolean;
@@ -37,7 +45,6 @@ export interface FolhaOutput {
   HE_semanal: number;
   HE_sabado: number;
   HE_100: number;
-
   total_HE: number;
 
   valor_atestados: number;
@@ -49,6 +56,12 @@ export interface FolhaOutput {
   total_bonificacoes: number;
   total_descontos: number;
 
+  valor_producao: number;
+
+  fgts: number;
+  inss_empresa: number;
+  custo_total_empresa: number;
+
   salario_final: number;
 }
 
@@ -59,6 +72,8 @@ export function calcularFolha(input: FolhaInput): FolhaOutput {
     salario_registro,
     salario_combinado,
     dias_do_mes,
+    tipo_remuneracao,
+    valor_producao,
     horas_extras_semanais,
     horas_extras_sabado,
     horas_extras_100,
@@ -66,68 +81,87 @@ export function calcularFolha(input: FolhaInput): FolhaOutput {
     faltas,
     atestados,
     semanas_com_falta,
-    domingos_feriados_no_mes,
     bonificacao_meta,
     bonificacao_assiduidade,
     desconto_marmita,
+    qtd_marmitas,
+    valor_marmita_unitario,
     desconto_vale,
     desconto_emprestimo,
+    desconto_adiantamento,
+    desconto_sindicato,
     outros_descontos,
     usar_salario_sindicato_para_HE,
   } = input;
 
-  // 2. Salário para cálculo de HE
+  const isProducao = tipo_remuneracao === "producao";
+
+  // Para produção, o valor_producao substitui o salário combinado
+  const salarioEfetivo = isProducao ? valor_producao : salario_combinado;
+
+  // Salário para cálculo de HE
   const salario_calculo = usar_salario_sindicato_para_HE
     ? salario_registro
     : salario_combinado;
 
-  // 3. Bases
-  const base_dia = r2(salario_combinado / dias_do_mes);
+  // Bases
+  const base_dia = r2(salarioEfetivo / dias_do_mes);
   const base_hora = r2(salario_calculo / 220);
 
-  // 4. Horas extras
+  // Horas extras
   const HE_semanal = r2(base_hora * 1.5 * horas_extras_semanais);
   const HE_sabado = r2(base_hora * 1.5 * horas_extras_sabado);
   const HE_100 = r2(base_hora * 2 * horas_extras_100);
-
-  // 5. Total HE
   const total_HE = r2(HE_semanal + HE_sabado + HE_100);
 
-  // 7. Horas negativas
+  // Horas negativas
   const desconto_horas_negativas = r2(base_hora * horas_negativas);
 
-  // 8. Atestados (pago pelo salário de registro)
+  // Atestados (pago pelo salário de registro)
   const valor_atestados = r2((salario_registro / dias_do_mes) * atestados);
 
-  // 9. Faltas
-  const desconto_faltas = r2(base_dia * faltas);
+  // Faltas e DSR
+  let desconto_faltas = 0;
+  let dsr_perdido = 0;
 
-  // 10. DSR perdido por falta
-  const valor_dsr_dia = r2(salario_combinado / dias_do_mes);
-  const dsr_perdido = r2(valor_dsr_dia * semanas_com_falta);
+  if (!isProducao) {
+    desconto_faltas = r2(base_dia * faltas);
+    const valor_dsr_dia = r2(salarioEfetivo / dias_do_mes);
+    dsr_perdido = r2(valor_dsr_dia * semanas_com_falta);
+  }
 
-  // 11. Bonificações
+  // Marmita: pode ser valor direto ou qtd × unitário
+  const totalMarmita = r2(desconto_marmita > 0 ? desconto_marmita : qtd_marmitas * valor_marmita_unitario);
+
+  // Bonificações
   const total_bonificacoes = r2(bonificacao_meta + bonificacao_assiduidade);
 
-  // 12. Descontos
+  // Descontos
   const total_descontos = r2(
-    desconto_marmita +
+    totalMarmita +
     desconto_vale +
     desconto_emprestimo +
+    desconto_adiantamento +
+    desconto_sindicato +
     outros_descontos +
     desconto_horas_negativas +
     desconto_faltas +
     dsr_perdido
   );
 
-  // 13. Salário final
+  // Salário final
   const salario_final = r2(
-    salario_combinado +
+    salarioEfetivo +
     total_HE +
     valor_atestados +
     total_bonificacoes -
     total_descontos
   );
+
+  // Encargos sobre salário de registro
+  const fgts = r2(salario_registro * 0.08);
+  const inss_empresa = r2(salario_registro * 0.20);
+  const custo_total_empresa = r2(salario_final + fgts + inss_empresa);
 
   return {
     base_dia,
@@ -142,6 +176,10 @@ export function calcularFolha(input: FolhaInput): FolhaOutput {
     dsr_perdido,
     total_bonificacoes,
     total_descontos,
+    valor_producao: isProducao ? valor_producao : 0,
+    fgts,
+    inss_empresa,
+    custo_total_empresa,
     salario_final,
   };
 }
