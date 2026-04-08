@@ -79,7 +79,9 @@ export function FolhaResumoObra({ funcionarios, obra, mes, ano }: Props) {
                 <TableHead className="text-right">Total HE</TableHead>
                 <TableHead className="text-right">Bonificações</TableHead>
                 <TableHead className="text-right">Descontos</TableHead>
-                <TableHead className="text-right font-bold">Salário Final</TableHead>
+                <TableHead className="text-right font-bold">Líquido</TableHead>
+                <TableHead className="text-right">FGTS</TableHead>
+                <TableHead className="text-right font-bold">Custo Emp.</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -91,6 +93,8 @@ export function FolhaResumoObra({ funcionarios, obra, mes, ano }: Props) {
                   <TableCell className="text-right">{fmt(f.result.total_bonificacoes)}</TableCell>
                   <TableCell className="text-right text-destructive">{fmt(f.result.total_descontos)}</TableCell>
                   <TableCell className="text-right font-bold">{fmt(f.result.salario_final)}</TableCell>
+                  <TableCell className="text-right text-muted-foreground">{fmt(f.result.fgts)}</TableCell>
+                  <TableCell className="text-right font-bold">{fmt(f.result.custo_total_empresa)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
