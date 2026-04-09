@@ -262,27 +262,38 @@ export function FolhaCalculoIndividual({
             </div>
 
             {/* Quick info */}
-            <div className="border-t pt-3 grid grid-cols-2 gap-2 text-xs">
-              <div className="rounded-md bg-muted/50 p-2 text-center">
-                <p className="text-muted-foreground">Base/Dia</p>
-                <p className="font-semibold">{fmt(result.base_dia)}</p>
+            {result && (
+              <div className="border-t pt-3 grid grid-cols-2 gap-2 text-xs">
+                <div className="rounded-md bg-muted/50 p-2 text-center">
+                  <p className="text-muted-foreground">Base/Dia</p>
+                  <p className="font-semibold">{fmt(result.base_dia)}</p>
+                </div>
+                <div className="rounded-md bg-muted/50 p-2 text-center">
+                  <p className="text-muted-foreground">Base/Hora</p>
+                  <p className="font-semibold">{fmt(result.base_hora)}</p>
+                </div>
               </div>
-              <div className="rounded-md bg-muted/50 p-2 text-center">
-                <p className="text-muted-foreground">Base/Hora</p>
-                <p className="font-semibold">{fmt(result.base_hora)}</p>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
         {/* CENTER: Config & Discounts */}
         <div className="space-y-3">
-          <FolhaInputForm data={input} onChange={handleChange} />
+          <FolhaInputForm data={input} onChange={handleChange} salarioReadOnly />
         </div>
 
         {/* RIGHT: Live summary */}
         <div className="space-y-3">
-          <FolhaResultado result={result} />
+          {result ? (
+            <FolhaResultado result={result} />
+          ) : (
+            <Card className="border-dashed">
+              <CardContent className="py-8 text-center">
+                <Play className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">Clique em <strong>"Simular Cálculo"</strong> para gerar o resultado</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
