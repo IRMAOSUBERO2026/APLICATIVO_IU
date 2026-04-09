@@ -368,7 +368,7 @@ export function EspelhoPonto({ mes, ano, horarioPadrao, onResult }: Props) {
         </div>
 
         {/* Summary bar */}
-        <div className="border-t pt-2 grid grid-cols-3 md:grid-cols-7 gap-1.5 text-center">
+        <div className="border-t pt-2 grid grid-cols-4 md:grid-cols-8 gap-1.5 text-center">
           {[
             { label: "HE Sem", value: `${summary.horasExtrasSemanais}h`, cls: "text-green-600" },
             { label: "HE Sáb", value: `${summary.horasExtrasSabado}h`, cls: "text-green-600" },
@@ -376,6 +376,7 @@ export function EspelhoPonto({ mes, ano, horarioPadrao, onResult }: Props) {
             { label: "H.Neg", value: `${summary.horasNegativas}h`, cls: "text-destructive" },
             { label: "Faltas", value: String(summary.faltas), cls: "text-destructive" },
             { label: "Atest.", value: String(summary.atestados), cls: "text-amber-600" },
+            { label: "DSR Perd.", value: String(summary.semanasComFalta), cls: "text-destructive" },
             { label: "Total", value: `${summary.totalHorasTrabalhadas}h`, cls: "font-bold" },
           ].map(item => (
             <div key={item.label} className="rounded bg-muted/50 py-1">
