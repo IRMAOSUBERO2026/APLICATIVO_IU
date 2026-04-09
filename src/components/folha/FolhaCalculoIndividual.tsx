@@ -7,7 +7,7 @@ import { FolhaInputForm } from "./FolhaInputForm";
 import { FolhaResultado } from "./FolhaResultado";
 import { calcularFolha, type FolhaInput, type FolhaOutput } from "@/lib/motorFolha";
 import {
-  Calculator, CheckCircle, Save, User, ArrowLeft, RotateCcw, Clock, Eye, EyeOff,
+  Calculator, CheckCircle, Save, User, ArrowLeft, RotateCcw, Clock, Eye, EyeOff, Play,
 } from "lucide-react";
 
 interface FuncionarioData {
@@ -158,10 +158,13 @@ export function FolhaCalculoIndividual({
         <Button variant="outline" size="sm" onClick={handleReset} className="gap-1 text-xs">
           <RotateCcw className="h-3.5 w-3.5" /> Limpar
         </Button>
+        <Button variant="default" size="sm" onClick={handleSimular} className="gap-1 text-xs bg-amber-600 hover:bg-amber-700">
+          <Play className="h-3.5 w-3.5" /> Simular Cálculo
+        </Button>
         {onToggleSimulacao && (
           <Button variant="outline" size="sm" onClick={onToggleSimulacao} className="gap-1 text-xs">
             {isSimulacao ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-            {isSimulacao ? "Sair Simulação" : "Simular"}
+            {isSimulacao ? "Sair Simulação" : "Modo Simulação"}
           </Button>
         )}
         <div className="flex-1" />
