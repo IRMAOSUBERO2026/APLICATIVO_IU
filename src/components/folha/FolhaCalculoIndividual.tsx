@@ -78,6 +78,7 @@ export function FolhaCalculoIndividual({
       horas_extras_100: pontoResult.horasExtras100,
       horas_negativas: pontoResult.horasNegativas,
       faltas: pontoResult.faltas,
+      atestados: pontoResult.atestados ?? 0,
     };
     setInput(updated);
     onInputChange(updated);
