@@ -61,9 +61,7 @@ export function FolhaCalculoIndividual({
 }: Props) {
   const [input, setInput] = useState<FolhaInput>(initialInput);
   const [showPonto, setShowPonto] = useState(false);
-
-  // Real-time calculation
-  const result = useMemo(() => calcularFolha(input), [input]);
+  const [result, setResult] = useState<FolhaOutput | null>(initialResult);
 
   const handleChange = (data: FolhaInput) => {
     setInput(data);
@@ -79,9 +77,15 @@ export function FolhaCalculoIndividual({
       horas_negativas: pontoResult.horasNegativas,
       faltas: pontoResult.faltas,
       atestados: pontoResult.atestados ?? 0,
+      semanas_com_falta: pontoResult.semanasComFalta ?? 0,
     };
     setInput(updated);
     onInputChange(updated);
+  };
+
+  const handleSimular = () => {
+    const res = calcularFolha(input);
+    setResult(res);
   };
 
   const handleReset = () => {
