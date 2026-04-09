@@ -238,34 +238,25 @@ export function FolhaCalculoIndividual({
             </div>
 
             <div className="border-t pt-3">
-              <p className="text-xs font-semibold text-muted-foreground mb-2">FALTAS & ATESTADOS</p>
+              <p className="text-xs font-semibold text-muted-foreground mb-2">FALTAS & ATESTADOS (automático do ponto)</p>
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1">
                   <label className="text-xs text-muted-foreground">Faltas</label>
-                  <input
-                    type="number" min={0}
-                    value={input.faltas}
-                    onChange={e => handleChange({ ...input, faltas: Number(e.target.value) || 0 })}
-                    className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
-                  />
+                  <div className="flex h-8 w-full items-center rounded-md border border-input bg-muted/50 px-2 py-1 text-sm font-medium">
+                    {input.faltas}
+                  </div>
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs text-muted-foreground">Atestados</label>
-                  <input
-                    type="number" min={0}
-                    value={input.atestados}
-                    onChange={e => handleChange({ ...input, atestados: Number(e.target.value) || 0 })}
-                    className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
-                  />
+                  <div className="flex h-8 w-full items-center rounded-md border border-input bg-muted/50 px-2 py-1 text-sm font-medium">
+                    {input.atestados}
+                  </div>
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs text-muted-foreground">Sem. c/ Falta</label>
-                  <input
-                    type="number" min={0}
-                    value={input.semanas_com_falta}
-                    onChange={e => handleChange({ ...input, semanas_com_falta: Number(e.target.value) || 0 })}
-                    className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
-                  />
+                  <div className="flex h-8 w-full items-center rounded-md border border-input bg-muted/50 px-2 py-1 text-sm font-medium">
+                    {input.semanas_com_falta}
+                  </div>
                 </div>
               </div>
             </div>
