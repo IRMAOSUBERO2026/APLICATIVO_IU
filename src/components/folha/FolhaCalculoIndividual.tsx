@@ -7,7 +7,7 @@ import { FolhaInputForm } from "./FolhaInputForm";
 import { FolhaResultado } from "./FolhaResultado";
 import { calcularFolha, type FolhaInput, type FolhaOutput } from "@/lib/motorFolha";
 import {
-  Calculator, CheckCircle, Save, User, ArrowLeft, RotateCcw, Clock, Eye, EyeOff,
+  Calculator, CheckCircle, Save, User, ArrowLeft, RotateCcw, Clock, Eye, EyeOff, Play,
 } from "lucide-react";
 
 interface FuncionarioData {
@@ -61,9 +61,7 @@ export function FolhaCalculoIndividual({
 }: Props) {
   const [input, setInput] = useState<FolhaInput>(initialInput);
   const [showPonto, setShowPonto] = useState(false);
-
-  // Real-time calculation
-  const result = useMemo(() => calcularFolha(input), [input]);
+  const [result, setResult] = useState<FolhaOutput | null>(initialResult);
 
   const handleChange = (data: FolhaInput) => {
     setInput(data);
@@ -79,9 +77,15 @@ export function FolhaCalculoIndividual({
       horas_negativas: pontoResult.horasNegativas,
       faltas: pontoResult.faltas,
       atestados: pontoResult.atestados ?? 0,
+      semanas_com_falta: pontoResult.semanasComFalta ?? 0,
     };
     setInput(updated);
     onInputChange(updated);
+  };
+
+  const handleSimular = () => {
+    const res = calcularFolha(input);
+    setResult(res);
   };
 
   const handleReset = () => {
@@ -154,10 +158,13 @@ export function FolhaCalculoIndividual({
         <Button variant="outline" size="sm" onClick={handleReset} className="gap-1 text-xs">
           <RotateCcw className="h-3.5 w-3.5" /> Limpar
         </Button>
+        <Button variant="default" size="sm" onClick={handleSimular} className="gap-1 text-xs bg-amber-600 hover:bg-amber-700">
+          <Play className="h-3.5 w-3.5" /> Simular Cálculo
+        </Button>
         {onToggleSimulacao && (
           <Button variant="outline" size="sm" onClick={onToggleSimulacao} className="gap-1 text-xs">
             {isSimulacao ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-            {isSimulacao ? "Sair Simulação" : "Simular"}
+            {isSimulacao ? "Sair Simulação" : "Modo Simulação"}
           </Button>
         )}
         <div className="flex-1" />
@@ -231,60 +238,62 @@ export function FolhaCalculoIndividual({
             </div>
 
             <div className="border-t pt-3">
-              <p className="text-xs font-semibold text-muted-foreground mb-2">FALTAS & ATESTADOS</p>
+              <p className="text-xs font-semibold text-muted-foreground mb-2">FALTAS & ATESTADOS (automático do ponto)</p>
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1">
                   <label className="text-xs text-muted-foreground">Faltas</label>
-                  <input
-                    type="number" min={0}
-                    value={input.faltas}
-                    onChange={e => handleChange({ ...input, faltas: Number(e.target.value) || 0 })}
-                    className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
-                  />
+                  <div className="flex h-8 w-full items-center rounded-md border border-input bg-muted/50 px-2 py-1 text-sm font-medium">
+                    {input.faltas}
+                  </div>
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs text-muted-foreground">Atestados</label>
-                  <input
-                    type="number" min={0}
-                    value={input.atestados}
-                    onChange={e => handleChange({ ...input, atestados: Number(e.target.value) || 0 })}
-                    className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
-                  />
+                  <div className="flex h-8 w-full items-center rounded-md border border-input bg-muted/50 px-2 py-1 text-sm font-medium">
+                    {input.atestados}
+                  </div>
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs text-muted-foreground">Sem. c/ Falta</label>
-                  <input
-                    type="number" min={0}
-                    value={input.semanas_com_falta}
-                    onChange={e => handleChange({ ...input, semanas_com_falta: Number(e.target.value) || 0 })}
-                    className="flex h-8 w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
-                  />
+                  <div className="flex h-8 w-full items-center rounded-md border border-input bg-muted/50 px-2 py-1 text-sm font-medium">
+                    {input.semanas_com_falta}
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Quick info */}
-            <div className="border-t pt-3 grid grid-cols-2 gap-2 text-xs">
-              <div className="rounded-md bg-muted/50 p-2 text-center">
-                <p className="text-muted-foreground">Base/Dia</p>
-                <p className="font-semibold">{fmt(result.base_dia)}</p>
+            {result && (
+              <div className="border-t pt-3 grid grid-cols-2 gap-2 text-xs">
+                <div className="rounded-md bg-muted/50 p-2 text-center">
+                  <p className="text-muted-foreground">Base/Dia</p>
+                  <p className="font-semibold">{fmt(result.base_dia)}</p>
+                </div>
+                <div className="rounded-md bg-muted/50 p-2 text-center">
+                  <p className="text-muted-foreground">Base/Hora</p>
+                  <p className="font-semibold">{fmt(result.base_hora)}</p>
+                </div>
               </div>
-              <div className="rounded-md bg-muted/50 p-2 text-center">
-                <p className="text-muted-foreground">Base/Hora</p>
-                <p className="font-semibold">{fmt(result.base_hora)}</p>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
         {/* CENTER: Config & Discounts */}
         <div className="space-y-3">
-          <FolhaInputForm data={input} onChange={handleChange} />
+          <FolhaInputForm data={input} onChange={handleChange} salarioReadOnly />
         </div>
 
         {/* RIGHT: Live summary */}
         <div className="space-y-3">
-          <FolhaResultado result={result} />
+          {result ? (
+            <FolhaResultado result={result} />
+          ) : (
+            <Card className="border-dashed">
+              <CardContent className="py-8 text-center">
+                <Play className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">Clique em <strong>"Simular Cálculo"</strong> para gerar o resultado</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

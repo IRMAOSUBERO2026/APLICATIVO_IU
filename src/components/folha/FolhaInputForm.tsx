@@ -9,6 +9,7 @@ import { Settings, Minus, Gift } from "lucide-react";
 interface Props {
   data: FolhaInput;
   onChange: (data: FolhaInput) => void;
+  salarioReadOnly?: boolean;
 }
 
 function NumField({ label, value, onChange, min = 0, step = "1", disabled = false }: {
@@ -30,7 +31,7 @@ function NumField({ label, value, onChange, min = 0, step = "1", disabled = fals
   );
 }
 
-export function FolhaInputForm({ data, onChange }: Props) {
+export function FolhaInputForm({ data, onChange, salarioReadOnly = false }: Props) {
   const set = (field: keyof FolhaInput, value: number | boolean | string) =>
     onChange({ ...data, [field]: value });
 
@@ -60,8 +61,8 @@ export function FolhaInputForm({ data, onChange }: Props) {
             <NumField label="Dias do Mês" value={data.dias_do_mes} onChange={(v) => set("dias_do_mes", v)} disabled />
           </div>
 
-          <NumField label="Salário Registro (CLT)" value={data.salario_registro} onChange={(v) => set("salario_registro", v)} step="0.01" />
-          <NumField label="Salário Combinado" value={data.salario_combinado} onChange={(v) => set("salario_combinado", v)} step="0.01" />
+          <NumField label="Salário Registro (CLT)" value={data.salario_registro} onChange={(v) => set("salario_registro", v)} step="0.01" disabled={salarioReadOnly} />
+          <NumField label="Salário Combinado" value={data.salario_combinado} onChange={(v) => set("salario_combinado", v)} step="0.01" disabled={salarioReadOnly} />
 
           {isProducao && (
             <NumField label="Valor Produção" value={data.valor_producao} onChange={(v) => set("valor_producao", v)} step="0.01" />

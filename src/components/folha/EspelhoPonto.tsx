@@ -36,6 +36,7 @@ export interface PontoResult {
   horasNegativas: number;
   faltas: number;
   atestados: number;
+  semanasComFalta: number;
   totalHorasTrabalhadas: number;
 }
 
@@ -194,6 +195,9 @@ export function EspelhoPonto({ mes, ano, horarioPadrao, onResult }: Props) {
     let atestados = 0;
     let totalTrabalhadas = 0;
 
+    // Track which ISO weeks have a fault (to calculate DSR loss)
+    const weeksWithFault = new Set<number>();
+
     punches.forEach(p => {
       if (p.status === "atestado") { atestados++; return; }
       if (p.status === "feriado") return;
@@ -203,7 +207,16 @@ export function EspelhoPonto({ mes, ano, horarioPadrao, onResult }: Props) {
 
       totalTrabalhadas += worked;
 
-      if (isFalta || p.status === "falta") { faltas++; return; }
+      if (isFalta || p.status === "falta") {
+        faltas++;
+        // Determine which week this day belongs to (week number in the month)
+        const date = new Date(ano, mes, p.dia);
+        // Use ISO week calculation: get the Monday of this week
+        const dayOfWeek = date.getDay();
+        const mondayDate = p.dia - ((dayOfWeek + 6) % 7);
+        weeksWithFault.add(mondayDate);
+        return;
+      }
       if (worked === 0 && expected === 0) return;
 
       const { extra, negative } = calcDiff(worked, expected);
@@ -225,9 +238,10 @@ export function EspelhoPonto({ mes, ano, horarioPadrao, onResult }: Props) {
       horasNegativas: Math.round((totalNegativas / 60) * 10) / 10,
       faltas,
       atestados,
+      semanasComFalta: weeksWithFault.size,
       totalHorasTrabalhadas: Math.round((totalTrabalhadas / 60) * 10) / 10,
     };
-  }, [punches, horarioPadrao]);
+  }, [punches, horarioPadrao, ano, mes]);
 
   const applyToFolha = () => {
     onResult(summary);
@@ -354,7 +368,7 @@ export function EspelhoPonto({ mes, ano, horarioPadrao, onResult }: Props) {
         </div>
 
         {/* Summary bar */}
-        <div className="border-t pt-2 grid grid-cols-3 md:grid-cols-7 gap-1.5 text-center">
+        <div className="border-t pt-2 grid grid-cols-4 md:grid-cols-8 gap-1.5 text-center">
           {[
             { label: "HE Sem", value: `${summary.horasExtrasSemanais}h`, cls: "text-green-600" },
             { label: "HE Sáb", value: `${summary.horasExtrasSabado}h`, cls: "text-green-600" },
@@ -362,6 +376,7 @@ export function EspelhoPonto({ mes, ano, horarioPadrao, onResult }: Props) {
             { label: "H.Neg", value: `${summary.horasNegativas}h`, cls: "text-destructive" },
             { label: "Faltas", value: String(summary.faltas), cls: "text-destructive" },
             { label: "Atest.", value: String(summary.atestados), cls: "text-amber-600" },
+            { label: "DSR Perd.", value: String(summary.semanasComFalta), cls: "text-destructive" },
             { label: "Total", value: `${summary.totalHorasTrabalhadas}h`, cls: "font-bold" },
           ].map(item => (
             <div key={item.label} className="rounded bg-muted/50 py-1">
