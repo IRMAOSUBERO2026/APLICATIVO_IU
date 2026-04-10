@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Package, Plus, ArrowDown, ArrowUp, Search, HardHat, FileDown, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
+import { useEmpresasObras } from "@/hooks/useEmpresasObras";
 
 type TabKey = "produtos" | "movimentacoes" | "epi" | "estoque_minimo";
 
@@ -23,7 +24,8 @@ export default function Estoque() {
   // New movimentação form
   const [nm, setNm] = useState({ produto_id: "", tipo: "entrada", quantidade: 0, valor_unitario: 0, obra_id: "", documento: "", observacoes: "" });
   // New EPI delivery form
-  const [ne, setNe] = useState({ funcionario_id: "", produto_id: "", obra_id: "", quantidade: 1, ca_numero: "", observacoes: "" });
+  const [ne, setNe] = useState({ funcionario_id: "", produto_id: "", obra_id: "", quantidade: 1, ca_numero: "", observacoes: "", empresa_id: "" });
+  const { empresas: empresasList } = useEmpresasObras();
 
   const loadData = useCallback(async () => {
     const [{ data: p }, { data: m }, { data: o }, { data: f }] = await Promise.all([
@@ -77,10 +79,8 @@ export default function Estoque() {
   };
 
   const saveEpi = async () => {
-    if (!ne.funcionario_id || !ne.produto_id) { toast({ title: "Funcionário e EPI obrigatórios", variant: "destructive" }); return; }
-    const { data: empresas } = await supabase.from("empresas").select("id").limit(1);
-    const empresaId = empresas?.[0]?.id;
-    if (!empresaId) { toast({ title: "Cadastre uma empresa primeiro", variant: "destructive" }); return; }
+    if (!ne.funcionario_id || !ne.produto_id || !ne.empresa_id) { toast({ title: "Funcionário, EPI e Empresa são obrigatórios", variant: "destructive" }); return; }
+    const empresaId = ne.empresa_id;
 
     // Register EPI delivery
     const { error: epiError } = await supabase.from("entregas_epi").insert({
@@ -98,7 +98,7 @@ export default function Estoque() {
     });
 
     toast({ title: "EPI entregue e baixa no estoque realizada" });
-    setNe({ funcionario_id: "", produto_id: "", obra_id: "", quantidade: 1, ca_numero: "", observacoes: "" });
+    setNe({ funcionario_id: "", produto_id: "", obra_id: "", quantidade: 1, ca_numero: "", observacoes: "", empresa_id: "" });
     setShowNewEpi(false);
     loadData();
   };
@@ -379,6 +379,12 @@ export default function Estoque() {
           <div className="bg-card rounded-xl p-6 w-full max-w-lg shadow-xl space-y-4" onClick={e => e.stopPropagation()}>
             <h3 className="text-lg font-semibold flex items-center gap-2"><HardHat className="h-5 w-5 text-warning" /> Entrega de EPI</h3>
             <div className="grid grid-cols-2 gap-3">
+              <div><label className="text-xs text-muted-foreground">Empresa *</label>
+                <select value={ne.empresa_id} onChange={e => setNe(p => ({ ...p, empresa_id: e.target.value }))} className={inputClass}>
+                  <option value="">Selecione a empresa...</option>
+                  {empresasList.map(emp => <option key={emp.id} value={emp.id}>{emp.nome_fantasia || emp.razao_social} — {emp.cnpj}</option>)}
+                </select>
+              </div>
               <div><label className="text-xs text-muted-foreground">Funcionário *</label>
                 <select value={ne.funcionario_id} onChange={e => setNe(p => ({ ...p, funcionario_id: e.target.value }))} className={inputClass}>
                   <option value="">Selecione...</option>

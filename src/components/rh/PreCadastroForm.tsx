@@ -1,8 +1,11 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { Camera, Save, UserPlus, Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useEmpresasObras } from "@/hooks/useEmpresasObras";
+import { EmpresaSelect, ObraSelect } from "@/components/shared/EmpresaObraSelects";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface PreCadastroFormProps {
   open: boolean;
@@ -18,7 +21,7 @@ interface Dependente {
 }
 
 const emptyForm = {
-  nome: "", foto: "", cnpj: "", empresa: "", obra: "", construtora: "", cidadeTrabalho: "",
+  nome: "", foto: "", empresa_id: "", obra_id: "",
   admissao: "", cargo: "", nascimento: "", telefone: "", rg: "", cpf: "", pis: "",
   codigoPix: "", salarioBase: 0, salarioCombinado: 0, clinica: "", aso: "", nr6: "",
   nr12: "", nr18: "", nr35: "", dataRescisao: "", status: "Pré-Cadastro", abandono: "", atestado: "",
@@ -26,7 +29,7 @@ const emptyForm = {
   cep: "", ctps: "", serieCtps: "", tituloEleitor: "", zonaEleitoral: "", secaoEleitoral: "",
   cnh: "", categoriaCnh: "", validadeCnh: "", nomeMae: "", nomePai: "", escolaridade: "",
   banco: "", agencia: "", conta: "", tipoConta: "", dependentes: 0,
-  rne: "", dataEntradaPais: "",
+  rne: "", dataEntradaPais: "", tipo_remuneracao: "mensal", escala: "5x2",
 };
 
 type FormStep = "pessoal" | "documentos" | "endereco" | "trabalho" | "bancario" | "dependentes";
@@ -76,11 +79,14 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
   const [step, setStep] = useState<FormStep>("pessoal");
   const [dependentesList, setDependentesList] = useState<Dependente[]>([]);
   const photoRef = useRef<HTMLInputElement>(null);
+  const { empresas, obras, obrasPorEmpresa } = useEmpresasObras();
 
   const update = (field: string, value: string | number) => setForm(prev => ({ ...prev, [field]: value }));
 
   const isEstrangeiro = form.nacionalidade !== "Brasileiro(a)" && form.nacionalidade !== "Brasileiro" && form.nacionalidade !== "" && form.nacionalidade !== "Brasileira";
   const needsDependentes = form.estadoCivil === "Casado(a)" || form.estadoCivil === "União Estável" || Number(form.dependentes) > 0;
+
+  const obrasDisponiveis = obrasPorEmpresa(form.empresa_id);
 
   const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -102,17 +108,14 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
       toast({ title: "Campos obrigatórios", description: "Nome, CPF e Cargo são obrigatórios.", variant: "destructive" });
       return;
     }
+    if (!form.empresa_id) {
+      toast({ title: "Campos obrigatórios", description: "Selecione a empresa (CNPJ).", variant: "destructive" });
+      setStep("trabalho");
+      return;
+    }
     if (isEstrangeiro && !form.rne) {
       toast({ title: "Campo obrigatório", description: "RNE é obrigatório para estrangeiros.", variant: "destructive" });
       setStep("documentos");
-      return;
-    }
-
-    // Save to Supabase
-    const { data: empresas } = await supabase.from("empresas").select("id").limit(1);
-    const empresaId = empresas?.[0]?.id;
-    if (!empresaId) {
-      toast({ title: "Erro", description: "Cadastre uma empresa primeiro.", variant: "destructive" });
       return;
     }
 
@@ -120,11 +123,14 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
       nome: form.nome,
       cpf: form.cpf,
       cargo: form.cargo,
-      empresa_id: empresaId,
+      empresa_id: form.empresa_id,
+      obra_id: form.obra_id && form.obra_id !== "__none__" ? form.obra_id : null,
       status: "pré-cadastro",
       data_admissao: form.admissao || new Date().toISOString().slice(0, 10),
       salario_base: Number(form.salarioBase) || 0,
       salario_combinado: Number(form.salarioCombinado) || 0,
+      tipo_remuneracao: form.tipo_remuneracao,
+      escala: form.escala,
       telefone: form.telefone,
       rg: form.rg,
       pis: form.pis,
@@ -270,16 +276,48 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
           )}
           {step === "trabalho" && (
             <>
+              <EmpresaSelect
+                value={form.empresa_id}
+                onChange={v => {
+                  update("empresa_id", v);
+                  update("obra_id", "");
+                }}
+                empresas={empresas}
+                required
+              />
+              <ObraSelect
+                value={form.obra_id}
+                onChange={v => update("obra_id", v)}
+                obras={obrasDisponiveis}
+                label="Obra (vinculada à empresa)"
+              />
               <FieldInput label="Cargo" value={form.cargo} onChange={v => update("cargo", v)} required />
               <FieldInput label="Data de Admissão" value={form.admissao} onChange={v => update("admissao", v)} type="date" />
-              <FieldInput label="CNPJ da Empresa" value={form.cnpj} onChange={v => update("cnpj", v)} placeholder="00.000.000/0000-00" />
-              <FieldInput label="Empresa" value={form.empresa} onChange={v => update("empresa", v)} />
-              <FieldInput label="Obra" value={form.obra} onChange={v => update("obra", v)} />
-              <FieldInput label="Construtora" value={form.construtora} onChange={v => update("construtora", v)} />
-              <FieldInput label="Cidade de Trabalho" value={form.cidadeTrabalho} onChange={v => update("cidadeTrabalho", v)} />
-              <FieldInput label="Salário Base" value={form.salarioBase} onChange={v => update("salarioBase", v)} type="number" />
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Tipo de Remuneração</label>
+                <Select value={form.tipo_remuneracao} onValueChange={v => update("tipo_remuneracao", v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mensal">Mensal</SelectItem>
+                    <SelectItem value="quinzenal">Quinzenal</SelectItem>
+                    <SelectItem value="semanal">Semanal</SelectItem>
+                    <SelectItem value="producao">Produção</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Escala</label>
+                <Select value={form.escala} onValueChange={v => update("escala", v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5x2">5x2 (Seg-Sex)</SelectItem>
+                    <SelectItem value="6x1">6x1 (Seg-Sáb)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <FieldInput label="Salário Base (Registro)" value={form.salarioBase} onChange={v => update("salarioBase", v)} type="number" />
               <FieldInput label="Salário Combinado" value={form.salarioCombinado} onChange={v => update("salarioCombinado", v)} type="number" />
-              <FieldInput label="Clínica" value={form.clinica} onChange={v => update("clinica", v)} />
+              <FieldInput label="Clínica ASO" value={form.clinica} onChange={v => update("clinica", v)} />
             </>
           )}
           {step === "bancario" && (

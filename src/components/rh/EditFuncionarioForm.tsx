@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Pencil, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useEmpresasObras } from "@/hooks/useEmpresasObras";
+import { EmpresaSelect, ObraSelect } from "@/components/shared/EmpresaObraSelects";
 
 interface Props {
   open: boolean;
@@ -21,6 +23,8 @@ const FIELDS: { key: string; label: string; type?: string; options?: string[] }[
   { key: "cargo", label: "Cargo" },
   { key: "salario_base", label: "Salário Base", type: "number" },
   { key: "salario_combinado", label: "Salário Combinado", type: "number" },
+  { key: "tipo_remuneracao", label: "Tipo de Remuneração", options: ["mensal", "quinzenal", "semanal", "producao"] },
+  { key: "escala", label: "Escala", options: ["5x2", "6x1"] },
   { key: "data_admissao", label: "Data de Admissão", type: "date" },
   { key: "telefone", label: "Telefone" },
   { key: "email", label: "E-mail" },
@@ -59,6 +63,7 @@ export function EditFuncionarioForm({ open, onOpenChange, funcionarioId, onSaved
   const [form, setForm] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const { empresas, obras, obrasPorEmpresa } = useEmpresasObras();
 
   useEffect(() => {
     if (!open || !funcionarioId) return;
@@ -69,6 +74,8 @@ export function EditFuncionarioForm({ open, onOpenChange, funcionarioId, onSaved
         setLoading(false);
       });
   }, [open, funcionarioId]);
+
+  const obrasDisponiveis = obrasPorEmpresa(form.empresa_id || "");
 
   const handleSave = async () => {
     setSaving(true);
@@ -83,6 +90,8 @@ export function EditFuncionarioForm({ open, onOpenChange, funcionarioId, onSaved
         updateData[f.key] = val || null;
       }
     });
+    updateData.empresa_id = form.empresa_id;
+    updateData.obra_id = form.obra_id && form.obra_id !== "__none__" ? form.obra_id : null;
 
     const { error } = await supabase.from("funcionarios").update(updateData).eq("id", funcionarioId);
     if (error) {
@@ -109,6 +118,21 @@ export function EditFuncionarioForm({ open, onOpenChange, funcionarioId, onSaved
           <p className="text-sm text-muted-foreground text-center py-8">Carregando...</p>
         ) : (
           <>
+            {/* Empresa e Obra - sempre no topo */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-4 border-b mb-4">
+              <EmpresaSelect
+                value={form.empresa_id || ""}
+                onChange={v => setForm(prev => ({ ...prev, empresa_id: v, obra_id: "" }))}
+                empresas={empresas}
+                required
+              />
+              <ObraSelect
+                value={form.obra_id || ""}
+                onChange={v => setForm(prev => ({ ...prev, obra_id: v }))}
+                obras={obrasDisponiveis}
+              />
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {FIELDS.map(f => (
                 <div key={f.key} className="space-y-1">
