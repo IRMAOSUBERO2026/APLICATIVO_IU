@@ -141,10 +141,22 @@ export default function RH() {
     }
   });
 
-  const examesVencendo = funcionarios.filter(f =>
-    getExamStatus(f.aso, 1) !== "ok" || getExamStatus(f.nr6, 1) !== "ok" ||
-    getExamStatus(f.nr12, 2) !== "ok" || getExamStatus(f.nr18, 2) !== "ok" || getExamStatus(f.nr35, 2) !== "ok"
+  const examesVencendo = dbFuncionarios.filter(f =>
+    f.status === "ativo" && (
+      getExamStatus(f.data_aso || "", 1) !== "ok" || getExamStatus(f.data_nr6 || "", 1) !== "ok" ||
+      getExamStatus(f.data_nr12 || "", 2) !== "ok" || getExamStatus(f.data_nr18 || "", 2) !== "ok" || getExamStatus(f.data_nr35 || "", 2) !== "ok"
+    )
   );
+
+  const saveExamDate = async (funcId: string, field: string, value: string) => {
+    const { error } = await supabase.from("funcionarios").update({ [field]: value || null }).eq("id", funcId);
+    if (error) {
+      toast({ title: "Erro ao salvar data", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Data atualizada" });
+      loadDbFuncionarios();
+    }
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -262,34 +274,91 @@ export default function RH() {
         {tab === "exames_modulo" ? (
           <ExamesModule />
         ) : tab === "exames_tab" ? (
-          <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b bg-muted/50">
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Nome</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Empresa</th>
-                    <th className="px-4 py-3 text-center font-medium text-muted-foreground">ASO</th>
-                    <th className="px-4 py-3 text-center font-medium text-muted-foreground">NR6</th>
-                    <th className="px-4 py-3 text-center font-medium text-muted-foreground">NR12</th>
-                    <th className="px-4 py-3 text-center font-medium text-muted-foreground">NR18</th>
-                    <th className="px-4 py-3 text-center font-medium text-muted-foreground">NR35</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {funcionarios.map((f) => (
-                    <tr key={f.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3.5"><div className="flex items-center gap-3"><FuncionarioAvatar nome={f.nome} foto={f.foto} size="sm" /><span className="font-medium">{f.nome}</span></div></td>
-                      <td className="px-4 py-3.5 text-xs text-muted-foreground">{f.empresa}</td>
-                      <td className="px-4 py-3.5 text-center"><ExamBadge date={f.aso} validityYears={1} label="ASO" /></td>
-                      <td className="px-4 py-3.5 text-center"><ExamBadge date={f.nr6} validityYears={1} label="NR6" /></td>
-                      <td className="px-4 py-3.5 text-center"><ExamBadge date={f.nr12} validityYears={2} label="NR12" /></td>
-                      <td className="px-4 py-3.5 text-center"><ExamBadge date={f.nr18} validityYears={2} label="NR18" /></td>
-                      <td className="px-4 py-3.5 text-center"><ExamBadge date={f.nr35} validityYears={2} label="NR35" /></td>
+          <div className="space-y-6">
+            {/* Alertas de Vencimento */}
+            {examesVencendo.length > 0 && (
+              <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 space-y-2">
+                <h3 className="text-sm font-bold text-destructive flex items-center gap-2">
+                  <Calendar className="h-4 w-4" /> Alertas de Vencimento ({examesVencendo.length} funcionários)
+                </h3>
+                <div className="grid gap-2 max-h-[200px] overflow-y-auto">
+                  {examesVencendo.map(f => {
+                    const alerts: string[] = [];
+                    if (getExamStatus(f.data_aso || "", 1) !== "ok") alerts.push("ASO");
+                    if (getExamStatus(f.data_nr6 || "", 1) !== "ok") alerts.push("NR6");
+                    if (getExamStatus(f.data_nr12 || "", 2) !== "ok") alerts.push("NR12");
+                    if (getExamStatus(f.data_nr18 || "", 2) !== "ok") alerts.push("NR18");
+                    if (getExamStatus(f.data_nr35 || "", 2) !== "ok") alerts.push("NR35");
+                    return (
+                      <div key={f.id} className="flex items-center justify-between text-xs bg-card rounded-lg px-3 py-2 border">
+                        <span className="font-medium">{f.nome}</span>
+                        <div className="flex gap-1">
+                          {alerts.map(a => (
+                            <span key={a} className="rounded-full bg-destructive/10 text-destructive px-2 py-0.5 text-[10px] font-medium">{a}</span>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Tabela de Exames - dados do banco */}
+            <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+              <div className="px-4 py-3 border-b bg-muted/30">
+                <p className="text-xs text-muted-foreground">Clique na data para editar. ASO e NR6 = validade 1 ano | NR12, NR18 e NR35 = validade 2 anos</p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Nome</th>
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Obra</th>
+                      <th className="px-4 py-3 text-center font-medium text-muted-foreground">ASO (1a)</th>
+                      <th className="px-4 py-3 text-center font-medium text-muted-foreground">NR6 (1a)</th>
+                      <th className="px-4 py-3 text-center font-medium text-muted-foreground">NR12 (2a)</th>
+                      <th className="px-4 py-3 text-center font-medium text-muted-foreground">NR18 (2a)</th>
+                      <th className="px-4 py-3 text-center font-medium text-muted-foreground">NR35 (2a)</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {dbFuncionarios.filter(f => f.status === "ativo").map((f) => (
+                      <tr key={f.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-3.5">
+                          <div>
+                            <span className="font-medium">{f.nome}</span>
+                            <p className="text-[10px] text-muted-foreground">{f.cargo}</p>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5 text-xs text-muted-foreground">{(f as any).obras?.nome || "—"}</td>
+                        {[
+                          { field: "data_aso", val: f.data_aso, years: 1, label: "ASO" },
+                          { field: "data_nr6", val: f.data_nr6, years: 1, label: "NR6" },
+                          { field: "data_nr12", val: f.data_nr12, years: 2, label: "NR12" },
+                          { field: "data_nr18", val: f.data_nr18, years: 2, label: "NR18" },
+                          { field: "data_nr35", val: f.data_nr35, years: 2, label: "NR35" },
+                        ].map(exam => (
+                          <td key={exam.field} className="px-4 py-3.5 text-center">
+                            <div className="flex flex-col items-center gap-1">
+                              <ExamBadge date={exam.val || ""} validityYears={exam.years} label={exam.label} />
+                              <input
+                                type="date"
+                                value={exam.val || ""}
+                                onChange={e => saveExamDate(f.id, exam.field, e.target.value)}
+                                className="w-[110px] rounded border bg-background px-1 py-0.5 text-[10px] text-center focus:outline-none focus:ring-1 focus:ring-ring"
+                              />
+                            </div>
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                    {dbFuncionarios.filter(f => f.status === "ativo").length === 0 && (
+                      <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">Nenhum funcionário ativo</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         ) : (
