@@ -393,8 +393,29 @@ function SolicitacoesView() {
 
   const handleStatusChange = async (id: string, newStatus: string) => {
     const updates: Record<string, unknown> = { status: newStatus };
-    if (newStatus === "realizado") updates.data_realizado = new Date().toISOString().split("T")[0];
+    const today = new Date().toISOString().split("T")[0];
+    if (newStatus === "realizado") updates.data_realizado = today;
     await supabase.from("solicitacoes_exame").update(updates).eq("id", id);
+
+    // When confirmed as realizado, update funcionario exam dates
+    if (newStatus === "realizado") {
+      const sol = solicitacoes.find(s => s.id === id);
+      if (sol) {
+        const tipoLower = sol.tipo_exame.toLowerCase();
+        const examFieldMap: Record<string, string> = {
+          "aso": "data_aso", "aso admissional": "data_aso", "aso periódico": "data_aso", "aso periodico": "data_aso",
+          "aso demissional": "data_aso", "nr6": "data_nr6", "nr-6": "data_nr6",
+          "nr12": "data_nr12", "nr-12": "data_nr12", "nr18": "data_nr18", "nr-18": "data_nr18",
+          "nr35": "data_nr35", "nr-35": "data_nr35",
+        };
+        const field = Object.entries(examFieldMap).find(([key]) => tipoLower.includes(key))?.[1];
+        if (field && sol.funcionario_id) {
+          await supabase.from("funcionarios").update({ [field]: today }).eq("id", sol.funcionario_id);
+          toast({ title: `Data de ${sol.tipo_exame} atualizada no cadastro do funcionário` });
+        }
+      }
+    }
+
     toast({ title: `Status: ${newStatus}` });
     loadData();
   };
