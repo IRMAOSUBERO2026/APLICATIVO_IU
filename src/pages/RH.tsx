@@ -141,10 +141,22 @@ export default function RH() {
     }
   });
 
-  const examesVencendo = funcionarios.filter(f =>
-    getExamStatus(f.aso, 1) !== "ok" || getExamStatus(f.nr6, 1) !== "ok" ||
-    getExamStatus(f.nr12, 2) !== "ok" || getExamStatus(f.nr18, 2) !== "ok" || getExamStatus(f.nr35, 2) !== "ok"
+  const examesVencendo = dbFuncionarios.filter(f =>
+    f.status === "ativo" && (
+      getExamStatus(f.data_aso || "", 1) !== "ok" || getExamStatus(f.data_nr6 || "", 1) !== "ok" ||
+      getExamStatus(f.data_nr12 || "", 2) !== "ok" || getExamStatus(f.data_nr18 || "", 2) !== "ok" || getExamStatus(f.data_nr35 || "", 2) !== "ok"
+    )
   );
+
+  const saveExamDate = async (funcId: string, field: string, value: string) => {
+    const { error } = await supabase.from("funcionarios").update({ [field]: value || null }).eq("id", funcId);
+    if (error) {
+      toast({ title: "Erro ao salvar data", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Data atualizada" });
+      loadDbFuncionarios();
+    }
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
