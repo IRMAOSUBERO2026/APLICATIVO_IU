@@ -595,7 +595,18 @@ export default function DiarioObra() {
               <Textarea value={observacoes} onChange={e => setObservacoes(e.target.value)} rows={3} placeholder="Ocorrências, condições climáticas, atrasos..." />
             </div>
 
-            {/* Resumo IA */}
+            {/* Salvar */}
+            <div className="flex justify-end">
+              <button onClick={handleSave} disabled={saving}
+                className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors disabled:opacity-50">
+                <Save className="h-4 w-4" />
+                {saving ? "Salvando..." : "Salvar Diário de Obra"}
+              </button>
+            </div>
+            </>
+            )}
+
+            {/* Resumo IA - disponível para obras ativas e concluídas */}
             <div className="rounded-xl border bg-card p-5 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold flex items-center gap-2">
@@ -615,15 +626,6 @@ export default function DiarioObra() {
                   <div className="whitespace-pre-wrap text-sm">{resumoIA}</div>
                 </div>
               )}
-            </div>
-
-            {/* Salvar */}
-            <div className="flex justify-end">
-              <button onClick={handleSave} disabled={saving}
-                className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors disabled:opacity-50">
-                <Save className="h-4 w-4" />
-                {saving ? "Salvando..." : "Salvar Diário de Obra"}
-              </button>
             </div>
           </>
         )}
