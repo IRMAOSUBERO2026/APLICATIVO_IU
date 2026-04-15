@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-interface ObraOption { id: string; nome: string; codigo: string; }
+interface ObraOption { id: string; nome: string; codigo: string; status?: string; }
 interface FuncOption { id: string; nome: string; cargo: string; obra_id: string | null; }
 
 interface FuncPresenca {
