@@ -69,6 +69,7 @@ const App = () => (
           <Route path="/assinaturas" element={<Assinaturas />} />
           <Route path="/assinar" element={<AssinaturaPublica />} />
           <Route path="/custos-obra" element={<CustosObra />} />
+          <Route path="/clientes" element={<Clientes />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
