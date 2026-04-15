@@ -24,6 +24,7 @@ import {
   Ruler,
   CalendarDays,
   PenLine,
+  BarChart3,
 } from "lucide-react";
 import logoPreto from "@/assets/logo-preto.png";
 
@@ -41,6 +42,7 @@ const menuSections = [
       { icon: HardHat, label: "Obras", path: "/obras" },
       { icon: ClipboardList, label: "Diário de Obra", path: "/diario-obra" },
       { icon: Ruler, label: "Medições", path: "/medicoes" },
+      { icon: BarChart3, label: "Custos por Obra", path: "/custos-obra" },
       { icon: Users, label: "RH / DP", path: "/rh" },
       { icon: CreditCard, label: "Folha Salarial", path: "/folha" },
       { icon: Palmtree, label: "Férias", path: "/ferias" },

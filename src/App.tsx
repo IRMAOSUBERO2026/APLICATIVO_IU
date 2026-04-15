@@ -29,6 +29,7 @@ import AreaFuncionario from "./pages/AreaFuncionario";
 import ConfigDocumentos from "./pages/ConfigDocumentos";
 import Assinaturas from "./pages/Assinaturas";
 import AssinaturaPublica from "./pages/AssinaturaPublica";
+import CustosObra from "./pages/CustosObra";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -66,6 +67,7 @@ const App = () => (
           <Route path="/config-documentos" element={<ConfigDocumentos />} />
           <Route path="/assinaturas" element={<Assinaturas />} />
           <Route path="/assinar" element={<AssinaturaPublica />} />
+          <Route path="/custos-obra" element={<CustosObra />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
