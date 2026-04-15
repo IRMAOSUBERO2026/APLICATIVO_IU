@@ -25,6 +25,7 @@ import {
   CalendarDays,
   PenLine,
   BarChart3,
+  UserCheck,
 } from "lucide-react";
 import logoPreto from "@/assets/logo-preto.png";
 
@@ -37,23 +38,33 @@ const menuSections = [
     ],
   },
   {
-    label: "Operacional",
+    label: "Obras",
     items: [
       { icon: HardHat, label: "Obras", path: "/obras" },
       { icon: ClipboardList, label: "Diário de Obra", path: "/diario-obra" },
+      { icon: Calculator, label: "Orçamentos", path: "/orcamento" },
+    ],
+  },
+  {
+    label: "Financeiro",
+    items: [
       { icon: Ruler, label: "Medições", path: "/medicoes" },
-      { icon: BarChart3, label: "Custos por Obra", path: "/custos-obra" },
-      { icon: Users, label: "RH / DP", path: "/rh" },
       { icon: CreditCard, label: "Folha Salarial", path: "/folha" },
+      { icon: Warehouse, label: "Financeiro", path: "/financeiro" },
+    ],
+  },
+  {
+    label: "RH & Pessoal",
+    items: [
+      { icon: Users, label: "RH / DP", path: "/rh" },
       { icon: Palmtree, label: "Férias", path: "/ferias" },
       { icon: FileText, label: "Doc. Mensal", path: "/documentacao-mensal" },
     ],
   },
   {
-    label: "Logística",
+    label: "Operacional",
     items: [
       { icon: ShoppingCart, label: "Compras", path: "/compras" },
-      { icon: HandshakeIcon, label: "Fornecedores", path: "/fornecedores" },
       { icon: Package, label: "Estoque", path: "/estoque" },
       { icon: HardDrive, label: "Entrega de EPI", path: "/entrega-epi" },
       { icon: Wrench, label: "Equip. Próprios", path: "/equipamentos-proprios" },
@@ -64,9 +75,9 @@ const menuSections = [
     label: "Administrativo",
     items: [
       { icon: Building2, label: "Empresas", path: "/empresas" },
-      { icon: Warehouse, label: "Financeiro", path: "/financeiro" },
+      { icon: UserCheck, label: "Clientes", path: "/clientes" },
+      { icon: HandshakeIcon, label: "Fornecedores", path: "/fornecedores" },
       { icon: Home, label: "Contratos Locação", path: "/contratos-locacao" },
-      { icon: Calculator, label: "Orçamentos", path: "/orcamento" },
       { icon: MessageCircle, label: "Comunicações", path: "/comunicacoes" },
       { icon: FileSpreadsheet, label: "Relatórios", path: "/relatorios" },
       { icon: PenLine, label: "Assinaturas Digitais", path: "/assinaturas" },
@@ -85,7 +96,6 @@ export function AppSidebar({ onClose }: AppSidebarProps) {
 
   return (
     <div className="flex h-full flex-col overflow-y-auto scrollbar-thin">
-      {/* Logo */}
       <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border">
         <div className="flex items-center gap-2.5">
           <img src={logoPreto} alt="Irmãos Ubero" className="h-10 w-auto" />
@@ -94,15 +104,11 @@ export function AppSidebar({ onClose }: AppSidebarProps) {
             <p className="text-[9px] text-sidebar-muted leading-none">Engenharia</p>
           </div>
         </div>
-        <button
-          onClick={onClose}
-          className="rounded-md p-1 text-sidebar-muted hover:text-sidebar-foreground lg:hidden"
-        >
+        <button onClick={onClose} className="rounded-md p-1 text-sidebar-muted hover:text-sidebar-foreground lg:hidden">
           <X className="h-4 w-4" />
         </button>
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-6">
         {menuSections.map((section) => (
           <div key={section.label}>
@@ -134,7 +140,6 @@ export function AppSidebar({ onClose }: AppSidebarProps) {
         ))}
       </nav>
 
-      {/* Footer */}
       <div className="border-t border-sidebar-border p-4">
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sidebar-accent text-xs font-bold text-sidebar-primary">
