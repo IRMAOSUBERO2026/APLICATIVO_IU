@@ -30,6 +30,7 @@ import ConfigDocumentos from "./pages/ConfigDocumentos";
 import Assinaturas from "./pages/Assinaturas";
 import AssinaturaPublica from "./pages/AssinaturaPublica";
 import CustosObra from "./pages/CustosObra";
+import Clientes from "./pages/Clientes";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
