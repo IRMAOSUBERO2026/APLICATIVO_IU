@@ -16,6 +16,7 @@ import Empresas from "./pages/Empresas";
 import Fornecedores from "./pages/Fornecedores";
 import DiarioObra from "./pages/DiarioObra";
 import EntregaEPI from "./pages/EntregaEPI";
+import EntregaEPIMobile from "./pages/EntregaEPIMobile";
 import Ferias from "./pages/Ferias";
 import Orcamento from "./pages/Orcamento";
 import Compras from "./pages/Compras";
