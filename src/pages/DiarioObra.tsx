@@ -158,7 +158,7 @@ export default function DiarioObra() {
 
   useEffect(() => {
     Promise.all([
-      supabase.from("obras").select("id, nome, codigo").eq("status", "em_andamento"),
+      supabase.from("obras").select("id, nome, codigo, status").order("codigo"),
       supabase.from("funcionarios").select("id, nome, cargo, obra_id").eq("status", "ativo"),
     ]).then(([obrasRes, funcRes]) => {
       if (obrasRes.data) setObras(obrasRes.data);
