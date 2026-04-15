@@ -292,7 +292,14 @@ export default function DiarioObra() {
               <select value={selectedObra} onChange={e => setSelectedObra(e.target.value)}
                 className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm focus:ring-2 focus:ring-ring">
                 <option value="">Selecione a obra...</option>
-                {obras.map(o => <option key={o.id} value={o.id}>{o.codigo} - {o.nome}</option>)}
+                <optgroup label="Obras ativas">
+                  {obras.filter(o => o.status === "em_andamento").map(o => <option key={o.id} value={o.id}>{o.codigo} - {o.nome}</option>)}
+                </optgroup>
+                {obras.filter(o => o.status !== "em_andamento").length > 0 && (
+                  <optgroup label="Obras concluídas (somente consulta)">
+                    {obras.filter(o => o.status !== "em_andamento").map(o => <option key={o.id} value={o.id}>🔒 {o.codigo} - {o.nome}</option>)}
+                  </optgroup>
+                )}
               </select>
             </div>
             <div>
