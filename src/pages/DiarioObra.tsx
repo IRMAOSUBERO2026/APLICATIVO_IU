@@ -317,6 +317,19 @@ export default function DiarioObra() {
 
         {selectedObra && (
           <>
+            {/* Banner obra concluída */}
+            {isObraConcluida && (
+              <div className="flex items-center gap-3 rounded-xl border border-muted bg-muted/30 px-5 py-4">
+                <Lock className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium">Obra Concluída</p>
+                  <p className="text-xs text-muted-foreground">Os dados são somente para consulta. Novos lançamentos não estão disponíveis.</p>
+                </div>
+              </div>
+            )}
+
+            {!isObraConcluida && (
+            <>
             {/* KPIs automáticos */}
             <div className="grid gap-4 sm:grid-cols-4">
               <div className="rounded-xl border bg-card p-4 shadow-sm text-center">
