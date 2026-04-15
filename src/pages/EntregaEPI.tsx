@@ -1,11 +1,11 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Plus, Search, HardHat, Package, AlertTriangle, Smartphone, ChevronDown, ChevronUp } from "lucide-react";
+import { Search, Package, AlertTriangle, Smartphone, Lock } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
+import { Badge } from "@/components/ui/badge";
 
 interface Entrega {
   id: string;
@@ -15,7 +15,7 @@ interface Entrega {
   observacoes: string | null;
   funcionario: { nome: string } | null;
   produto: { descricao: string } | null;
-  obra: { nome: string; codigo: string } | null;
+  obra: { nome: string; codigo: string; status: string } | null;
 }
 
 interface Produto {
@@ -32,17 +32,19 @@ export default function EntregaEPI() {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
-  const isMobile = useIsMobile();
+  const [filterObra, setFilterObra] = useState<string>("todas");
+  const [obras, setObras] = useState<{ id: string; nome: string; codigo: string; status: string }[]>([]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [{ data: entregasData }, { data: produtosData }, { data: movsData }] = await Promise.all([
+    const [{ data: entregasData }, { data: produtosData }, { data: movsData }, { data: obrasData }] = await Promise.all([
       supabase.from("entregas_epi")
-        .select("id, data_entrega, quantidade, ca_numero, observacoes, funcionarios(nome), produtos(descricao), obras(nome, codigo)")
+        .select("id, data_entrega, quantidade, ca_numero, observacoes, funcionarios(nome), produtos(descricao), obras(nome, codigo, status)")
         .order("data_entrega", { ascending: false })
-        .limit(100),
+        .limit(200),
       supabase.from("produtos").select("id, descricao, categoria, unidade, estoque_minimo").eq("ativo", true).order("descricao"),
       supabase.from("movimentacoes_estoque").select("produto_id, tipo, quantidade"),
+      supabase.from("obras").select("id, nome, codigo, status").order("codigo"),
     ]);
 
     if (entregasData) {
@@ -54,13 +56,14 @@ export default function EntregaEPI() {
       })));
     }
 
+    if (obrasData) setObras(obrasData);
+
     if (produtosData && movsData) {
       const prods = produtosData.map((p: any) => {
         const entradas = (movsData as any[]).filter(m => m.produto_id === p.id && m.tipo === "entrada").reduce((s, m) => s + Number(m.quantidade), 0);
         const saidas = (movsData as any[]).filter(m => m.produto_id === p.id && m.tipo !== "entrada").reduce((s, m) => s + Number(m.quantidade), 0);
         return { ...p, saldo: entradas - saidas };
       });
-      // Show only EPI-related products or all if no category filter
       setProdutos(prods);
     }
 
@@ -71,7 +74,20 @@ export default function EntregaEPI() {
 
   const epiCriticos = produtos.filter(p => p.estoque_minimo > 0 && p.saldo < p.estoque_minimo);
 
+  const obrasAtivas = obras.filter(o => o.status === "em_andamento");
+  const obrasConcluidas = obras.filter(o => o.status !== "em_andamento");
+
   const filtered = entregas.filter(e => {
+    if (filterObra !== "todas") {
+      const obraMatch = entregas.find(en => en.id === e.id);
+      // We need to match by obra name/codigo since we don't have obra_id in the select
+      if (filterObra === "concluidas") {
+        if (!e.obra || e.obra.status === "em_andamento") return false;
+      } else {
+        // filterObra is a specific obra codigo
+        if (!e.obra || e.obra.codigo !== filterObra) return false;
+      }
+    }
     if (!search) return true;
     const s = search.toLowerCase();
     return e.funcionario?.nome?.toLowerCase().includes(s) ||
@@ -128,17 +144,49 @@ export default function EntregaEPI() {
           </div>
         )}
 
-        {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Buscar funcionário, EPI ou obra..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-lg border bg-card py-2.5 pl-10 pr-4 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-          />
+        {/* Search + Filters */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Buscar funcionário, EPI ou obra..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full rounded-lg border bg-card py-2.5 pl-10 pr-4 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          <select
+            value={filterObra}
+            onChange={(e) => setFilterObra(e.target.value)}
+            className="rounded-lg border bg-card px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="todas">Todas as obras</option>
+            <optgroup label="Obras ativas">
+              {obrasAtivas.map(o => (
+                <option key={o.id} value={o.codigo}>{o.codigo} - {o.nome}</option>
+              ))}
+            </optgroup>
+            {obrasConcluidas.length > 0 && (
+              <optgroup label="Obras concluídas">
+                <option value="concluidas">📁 Ver todas concluídas</option>
+                {obrasConcluidas.map(o => (
+                  <option key={o.id} value={o.codigo}>🔒 {o.codigo} - {o.nome}</option>
+                ))}
+              </optgroup>
+            )}
+          </select>
         </div>
+
+        {/* Indicador de obra concluída */}
+        {filterObra !== "todas" && filterObra !== "concluidas" && obrasConcluidas.some(o => o.codigo === filterObra) && (
+          <div className="flex items-center gap-2 rounded-lg border border-muted bg-muted/30 px-4 py-3">
+            <Lock className="h-4 w-4 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium">Obra concluída</span> — os dados são somente para consulta. Novos lançamentos não são permitidos.
+            </p>
+          </div>
+        )}
 
         {/* Entregas table */}
         <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
@@ -168,7 +216,14 @@ export default function EntregaEPI() {
                       <td className="px-4 py-3.5 font-medium">{e.funcionario?.nome || "—"}</td>
                       <td className="px-4 py-3.5">{e.produto?.descricao || "—"}</td>
                       <td className="px-4 py-3.5 text-center font-medium">{e.quantidade}</td>
-                      <td className="px-4 py-3.5 text-muted-foreground">{e.obra ? `${e.obra.codigo} - ${e.obra.nome}` : "—"}</td>
+                      <td className="px-4 py-3.5">
+                        <span className="text-muted-foreground">{e.obra ? `${e.obra.codigo} - ${e.obra.nome}` : "—"}</span>
+                        {e.obra && e.obra.status !== "em_andamento" && (
+                          <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1.5 border-muted-foreground/30 text-muted-foreground">
+                            Concluída
+                          </Badge>
+                        )}
+                      </td>
                       <td className="px-4 py-3.5 text-xs text-muted-foreground">{e.ca_numero || "—"}</td>
                     </tr>
                   ))

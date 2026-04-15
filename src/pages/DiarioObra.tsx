@@ -1,5 +1,5 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Plus, Users, Calendar, Save, Trash2, Smartphone, Clock, Calculator, Wrench, UserPlus, Truck, Sparkles, Loader2 } from "lucide-react";
+import { Plus, Users, Calendar, Save, Trash2, Smartphone, Clock, Calculator, Wrench, UserPlus, Truck, Sparkles, Loader2, Lock } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-interface ObraOption { id: string; nome: string; codigo: string; }
+interface ObraOption { id: string; nome: string; codigo: string; status?: string; }
 interface FuncOption { id: string; nome: string; cargo: string; obra_id: string | null; }
 
 interface FuncPresenca {
@@ -74,6 +74,8 @@ export default function DiarioObra() {
   const [equipsLocados, setEquipsLocados] = useState<EquipLocado[]>([]);
 
   const [saving, setSaving] = useState(false);
+  const obraSelecionada = obras.find(o => o.id === selectedObra);
+  const isObraConcluida = obraSelecionada?.status !== "em_andamento" && !!selectedObra;
 
   // AI Summary
   const [resumoIA, setResumoIA] = useState("");
@@ -158,7 +160,7 @@ export default function DiarioObra() {
 
   useEffect(() => {
     Promise.all([
-      supabase.from("obras").select("id, nome, codigo").eq("status", "em_andamento"),
+      supabase.from("obras").select("id, nome, codigo, status").order("codigo"),
       supabase.from("funcionarios").select("id, nome, cargo, obra_id").eq("status", "ativo"),
     ]).then(([obrasRes, funcRes]) => {
       if (obrasRes.data) setObras(obrasRes.data);
@@ -292,7 +294,14 @@ export default function DiarioObra() {
               <select value={selectedObra} onChange={e => setSelectedObra(e.target.value)}
                 className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm focus:ring-2 focus:ring-ring">
                 <option value="">Selecione a obra...</option>
-                {obras.map(o => <option key={o.id} value={o.id}>{o.codigo} - {o.nome}</option>)}
+                <optgroup label="Obras ativas">
+                  {obras.filter(o => o.status === "em_andamento").map(o => <option key={o.id} value={o.id}>{o.codigo} - {o.nome}</option>)}
+                </optgroup>
+                {obras.filter(o => o.status !== "em_andamento").length > 0 && (
+                  <optgroup label="Obras concluídas (somente consulta)">
+                    {obras.filter(o => o.status !== "em_andamento").map(o => <option key={o.id} value={o.id}>🔒 {o.codigo} - {o.nome}</option>)}
+                  </optgroup>
+                )}
               </select>
             </div>
             <div>
@@ -308,6 +317,19 @@ export default function DiarioObra() {
 
         {selectedObra && (
           <>
+            {/* Banner obra concluída */}
+            {isObraConcluida && (
+              <div className="flex items-center gap-3 rounded-xl border border-muted bg-muted/30 px-5 py-4">
+                <Lock className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-medium">Obra Concluída</p>
+                  <p className="text-xs text-muted-foreground">Os dados são somente para consulta. Novos lançamentos não estão disponíveis.</p>
+                </div>
+              </div>
+            )}
+
+            {!isObraConcluida && (
+            <>
             {/* KPIs automáticos */}
             <div className="grid gap-4 sm:grid-cols-4">
               <div className="rounded-xl border bg-card p-4 shadow-sm text-center">
@@ -573,7 +595,18 @@ export default function DiarioObra() {
               <Textarea value={observacoes} onChange={e => setObservacoes(e.target.value)} rows={3} placeholder="Ocorrências, condições climáticas, atrasos..." />
             </div>
 
-            {/* Resumo IA */}
+            {/* Salvar */}
+            <div className="flex justify-end">
+              <button onClick={handleSave} disabled={saving}
+                className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors disabled:opacity-50">
+                <Save className="h-4 w-4" />
+                {saving ? "Salvando..." : "Salvar Diário de Obra"}
+              </button>
+            </div>
+            </>
+            )}
+
+            {/* Resumo IA - disponível para obras ativas e concluídas */}
             <div className="rounded-xl border bg-card p-5 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold flex items-center gap-2">
@@ -593,15 +626,6 @@ export default function DiarioObra() {
                   <div className="whitespace-pre-wrap text-sm">{resumoIA}</div>
                 </div>
               )}
-            </div>
-
-            {/* Salvar */}
-            <div className="flex justify-end">
-              <button onClick={handleSave} disabled={saving}
-                className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors disabled:opacity-50">
-                <Save className="h-4 w-4" />
-                {saving ? "Salvando..." : "Salvar Diário de Obra"}
-              </button>
             </div>
           </>
         )}
