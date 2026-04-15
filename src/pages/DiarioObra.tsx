@@ -74,6 +74,8 @@ export default function DiarioObra() {
   const [equipsLocados, setEquipsLocados] = useState<EquipLocado[]>([]);
 
   const [saving, setSaving] = useState(false);
+  const obraSelecionada = obras.find(o => o.id === selectedObra);
+  const isObraConcluida = obraSelecionada?.status !== "em_andamento" && !!selectedObra;
 
   // AI Summary
   const [resumoIA, setResumoIA] = useState("");
