@@ -9,10 +9,11 @@ interface Obra { id: string; nome: string; codigo: string; }
 interface Produto { id: string; descricao: string; categoria: string | null; ca_numero: string | null; }
 
 interface ItemEntrega {
-  produto_id: string;
+  produto_id: string | null; // null quando "Outro"
   produto_nome: string;
   quantidade: number;
   ca_numero: string;
+  is_novo?: boolean;
 }
 
 export default function EntregaEPIMobile() {
