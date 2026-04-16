@@ -2137,6 +2137,7 @@ export type Database = {
       produtos: {
         Row: {
           ativo: boolean
+          ca_numero: string | null
           categoria: string | null
           codigo: string | null
           created_at: string
@@ -2149,6 +2150,7 @@ export type Database = {
         }
         Insert: {
           ativo?: boolean
+          ca_numero?: string | null
           categoria?: string | null
           codigo?: string | null
           created_at?: string
@@ -2161,6 +2163,7 @@ export type Database = {
         }
         Update: {
           ativo?: boolean
+          ca_numero?: string | null
           categoria?: string | null
           codigo?: string | null
           created_at?: string

@@ -6,7 +6,7 @@ import { Link } from "react-router-dom";
 
 interface Funcionario { id: string; nome: string; cargo: string; obra_id: string | null; empresa_id: string; }
 interface Obra { id: string; nome: string; codigo: string; }
-interface Produto { id: string; descricao: string; categoria: string | null; }
+interface Produto { id: string; descricao: string; categoria: string | null; ca_numero: string | null; }
 
 interface ItemEntrega {
   produto_id: string;
@@ -33,7 +33,7 @@ export default function EntregaEPIMobile() {
     Promise.all([
       supabase.from("obras").select("id, nome, codigo").eq("status", "em_andamento").order("codigo"),
       supabase.from("funcionarios").select("id, nome, cargo, obra_id, empresa_id").eq("status", "ativo").order("nome"),
-      supabase.from("produtos").select("id, descricao, categoria").eq("ativo", true).order("descricao"),
+      supabase.from("produtos").select("id, descricao, categoria, ca_numero").eq("ativo", true).order("descricao"),
     ]).then(([o, f, p]) => {
       if (o.data) setObras(o.data);
       if (f.data) setAllFuncionarios(f.data);
@@ -57,7 +57,7 @@ export default function EntregaEPIMobile() {
 
   const addItem = (prod: Produto) => {
     if (itens.find(i => i.produto_id === prod.id)) return;
-    setItens(prev => [...prev, { produto_id: prod.id, produto_nome: prod.descricao, quantidade: 1, ca_numero: "" }]);
+    setItens(prev => [...prev, { produto_id: prod.id, produto_nome: prod.descricao, quantidade: 1, ca_numero: prod.ca_numero || "" }]);
     setSearchProd("");
   };
 
@@ -69,8 +69,14 @@ export default function EntregaEPIMobile() {
     setItens(prev => prev.map(i => i.produto_id === prodId ? { ...i, [field]: value } : i));
   };
 
+  const allCaFilled = itens.every(i => i.ca_numero.trim() !== "");
+
   const handleSave = async () => {
     if (!funcionarioId || itens.length === 0) return;
+    if (!allCaFilled) {
+      toast({ title: "Preencha o Nº CA de todos os itens", variant: "destructive" });
+      return;
+    }
     setSaving(true);
 
     const func = allFuncionarios.find(f => f.id === funcionarioId);
@@ -304,13 +310,13 @@ export default function EntregaEPIMobile() {
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] font-medium text-muted-foreground">Nº CA</label>
+                        <label className="text-[10px] font-medium text-muted-foreground">Nº CA <span className="text-destructive">*</span></label>
                         <input
                           type="text"
                           value={item.ca_numero}
                           onChange={e => updateItem(item.produto_id, "ca_numero", e.target.value)}
-                          placeholder="Opcional"
-                          className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm"
+                          placeholder="Obrigatório"
+                          className={`w-full rounded-lg border bg-background px-3 py-2.5 text-sm ${!item.ca_numero.trim() ? "border-destructive" : ""}`}
                         />
                       </div>
                     </div>
@@ -333,8 +339,9 @@ export default function EntregaEPIMobile() {
 
             {itens.length > 0 && (
               <button onClick={() => setStep("confirma")}
-                className="w-full rounded-xl bg-primary px-6 py-4 text-sm font-semibold text-primary-foreground shadow-md">
-                Revisar Entrega →
+                disabled={!allCaFilled}
+                className="w-full rounded-xl bg-primary px-6 py-4 text-sm font-semibold text-primary-foreground shadow-md disabled:opacity-50">
+                {!allCaFilled ? "Preencha o CA de todos os itens" : "Revisar Entrega →"}
               </button>
             )}
           </div>
