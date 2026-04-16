@@ -339,8 +339,9 @@ export default function EntregaEPIMobile() {
 
             {itens.length > 0 && (
               <button onClick={() => setStep("confirma")}
-                className="w-full rounded-xl bg-primary px-6 py-4 text-sm font-semibold text-primary-foreground shadow-md">
-                Revisar Entrega →
+                disabled={!allCaFilled}
+                className="w-full rounded-xl bg-primary px-6 py-4 text-sm font-semibold text-primary-foreground shadow-md disabled:opacity-50">
+                {!allCaFilled ? "Preencha o CA de todos os itens" : "Revisar Entrega →"}
               </button>
             )}
           </div>
