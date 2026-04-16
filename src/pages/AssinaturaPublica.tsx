@@ -385,17 +385,9 @@ export default function AssinaturaPublica() {
                   </div>
                 </div>
 
-                {/* EPI items if applicable */}
-                {data?.documento_tipo === "ficha_epi" && data?.documento_dados?.itens && (
-                  <div className="mt-3 border rounded-lg overflow-hidden">
-                    <div className="bg-muted/50 px-3 py-2 text-xs font-semibold">Itens Recebidos</div>
-                    {(data.documento_dados.itens as any[]).map((item: any, i: number) => (
-                      <div key={i} className="px-3 py-2 border-t text-sm flex justify-between">
-                        <span>{item.nome}</span>
-                        <span className="text-muted-foreground">Qtd: {item.qtd}</span>
-                      </div>
-                    ))}
-                  </div>
+                {/* Ficha de EPI completa (NR-6) */}
+                {data?.documento_tipo === "ficha_epi" && data?.documento_dados && (
+                  <FichaEPICompleta dados={data.documento_dados} />
                 )}
 
                 <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground">
@@ -443,6 +435,76 @@ function PageWrapper({ children, logo }: { children: React.ReactNode; logo?: str
         {logo && <img src={logo} alt="Logo" className="h-12 mx-auto mb-6 object-contain" />}
         {children}
       </div>
+    </div>
+  );
+}
+
+function FichaEPICompleta({ dados }: { dados: any }) {
+  const empresa = dados?.empresa || {};
+  const func = dados?.funcionario || {};
+  const itens: any[] = dados?.itens || [];
+  const termo: string[] = dados?.termo || [];
+
+  return (
+    <div className="mt-4 border rounded-lg overflow-hidden bg-background">
+      <div className="bg-primary text-primary-foreground px-4 py-3">
+        <div className="flex items-center gap-3">
+          {empresa.logo_url && <img src={empresa.logo_url} alt="Logo" className="h-10 w-10 rounded bg-white object-contain p-1" />}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold truncate">{empresa.nome_fantasia || empresa.razao_social}</p>
+            <p className="text-[10px] opacity-90 truncate">CNPJ: {empresa.cnpj}</p>
+          </div>
+        </div>
+        <p className="text-center text-xs font-bold mt-2 uppercase tracking-wide">Ficha de Controle de EPI — NR-6</p>
+      </div>
+
+      <div className="px-4 py-3 border-b text-[11px] space-y-0.5">
+        <p><strong>Razão Social:</strong> {empresa.razao_social}</p>
+        {empresa.endereco && <p><strong>Endereço:</strong> {empresa.endereco}{empresa.cidade ? `, ${empresa.cidade}` : ""}{empresa.uf ? `/${empresa.uf}` : ""}</p>}
+        {empresa.telefone && <p><strong>Telefone:</strong> {empresa.telefone}</p>}
+      </div>
+
+      <div className="px-4 py-3 border-b bg-muted/30 text-[11px] space-y-0.5">
+        <p className="text-xs font-bold uppercase mb-1">Funcionário</p>
+        <p><strong>Nome:</strong> {func.nome}</p>
+        <p><strong>CPF:</strong> {func.cpf} {func.rg && <span className="ml-2"><strong>RG:</strong> {func.rg}</span>}</p>
+        <p><strong>Cargo:</strong> {func.cargo}</p>
+        {func.data_admissao && <p><strong>Admissão:</strong> {format(new Date(func.data_admissao), "dd/MM/yyyy")}</p>}
+      </div>
+
+      <div className="px-4 py-3 border-b">
+        <p className="text-xs font-bold uppercase mb-2">Histórico de Entregas ({itens.length})</p>
+        <div className="space-y-2">
+          {itens.length === 0 && <p className="text-xs text-muted-foreground">Nenhuma entrega registrada.</p>}
+          {itens.map((item, i) => (
+            <div key={i} className="border rounded-lg p-2 text-[11px] bg-card">
+              <div className="flex justify-between items-start gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold">{item.nome}</p>
+                  <p className="text-muted-foreground">CA: {item.ca_numero || "—"} • Qtd: {item.qtd}</p>
+                </div>
+                <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded whitespace-nowrap">
+                  {item.data && format(new Date(item.data), "dd/MM/yyyy")}
+                </span>
+              </div>
+              <p className="text-[10px] mt-1"><strong>Motivo:</strong> {item.motivo}</p>
+              {item.obra && <p className="text-[10px] text-muted-foreground"><strong>Obra:</strong> {item.obra}</p>}
+              <div className="mt-2 pt-2 border-t border-dashed">
+                <div className="h-8 border-b border-foreground/40 flex items-end justify-center pb-0.5">
+                  <span className="text-[9px] text-muted-foreground italic">Assinatura digital — item {i + 1}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {termo.length > 0 && (
+        <div className="px-4 py-3 text-[10px] leading-relaxed space-y-1 bg-muted/20">
+          <p className="text-xs font-bold uppercase mb-1">Termo de Responsabilidade</p>
+          {termo.map((p, i) => <p key={i}>{p}</p>)}
+        </div>
+      )}
     </div>
   );
 }

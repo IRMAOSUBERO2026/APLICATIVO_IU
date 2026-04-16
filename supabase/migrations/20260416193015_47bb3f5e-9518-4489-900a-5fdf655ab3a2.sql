@@ -1,0 +1,1 @@
+ALTER TABLE public.entregas_epi ADD COLUMN IF NOT EXISTS motivo TEXT;

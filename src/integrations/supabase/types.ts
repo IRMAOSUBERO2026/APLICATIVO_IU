@@ -729,6 +729,7 @@ export type Database = {
           empresa_id: string
           funcionario_id: string
           id: string
+          motivo: string | null
           obra_id: string | null
           observacoes: string | null
           produto_id: string
@@ -741,6 +742,7 @@ export type Database = {
           empresa_id: string
           funcionario_id: string
           id?: string
+          motivo?: string | null
           obra_id?: string | null
           observacoes?: string | null
           produto_id: string
@@ -753,6 +755,7 @@ export type Database = {
           empresa_id?: string
           funcionario_id?: string
           id?: string
+          motivo?: string | null
           obra_id?: string | null
           observacoes?: string | null
           produto_id?: string
