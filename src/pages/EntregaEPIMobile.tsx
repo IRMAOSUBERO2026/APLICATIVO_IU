@@ -69,8 +69,14 @@ export default function EntregaEPIMobile() {
     setItens(prev => prev.map(i => i.produto_id === prodId ? { ...i, [field]: value } : i));
   };
 
+  const allCaFilled = itens.every(i => i.ca_numero.trim() !== "");
+
   const handleSave = async () => {
     if (!funcionarioId || itens.length === 0) return;
+    if (!allCaFilled) {
+      toast({ title: "Preencha o Nº CA de todos os itens", variant: "destructive" });
+      return;
+    }
     setSaving(true);
 
     const func = allFuncionarios.find(f => f.id === funcionarioId);
