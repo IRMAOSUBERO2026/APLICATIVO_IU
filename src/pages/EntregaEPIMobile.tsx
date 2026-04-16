@@ -57,7 +57,7 @@ export default function EntregaEPIMobile() {
 
   const addItem = (prod: Produto) => {
     if (itens.find(i => i.produto_id === prod.id)) return;
-    setItens(prev => [...prev, { produto_id: prod.id, produto_nome: prod.descricao, quantidade: 1, ca_numero: "" }]);
+    setItens(prev => [...prev, { produto_id: prod.id, produto_nome: prod.descricao, quantidade: 1, ca_numero: prod.ca_numero || "" }]);
     setSearchProd("");
   };
 
