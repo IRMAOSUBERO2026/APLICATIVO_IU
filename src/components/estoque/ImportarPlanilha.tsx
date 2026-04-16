@@ -15,6 +15,8 @@ interface ProdutoRow {
   unidade: string;
   estoque_minimo: number;
   ncm: string;
+  ca_numero: string;
+  quantidade_atual: number;
 }
 
 const VALID_CATEGORIES = ["EPI", "Ferramentas", "Material", "Consumível", "Outros"];
@@ -31,15 +33,15 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
   const downloadTemplate = () => {
     const wb = XLSX.utils.book_new();
     const data = [
-      ["Código", "Descrição", "Categoria", "Unidade", "Estoque Mínimo", "NCM"],
-      ["EPI-001", "Capacete de Segurança", "EPI", "un", 10, "6506.10.00"],
-      ["EPI-002", "Luva de Proteção", "EPI", "par", 20, ""],
-      ["FER-001", "Furadeira Elétrica", "Ferramentas", "un", 2, ""],
-      ["MAT-001", "Cimento CP II", "Material", "sc", 50, "2523.29.10"],
-      ["CON-001", "Disco de Corte 7\"", "Consumível", "un", 30, ""],
+      ["Código", "Descrição", "Categoria", "Unidade", "Estoque Mínimo", "NCM", "CA (EPI)", "Quantidade Atual"],
+      ["EPI-001", "Capacete de Segurança", "EPI", "un", 10, "6506.10.00", "31469", 25],
+      ["EPI-002", "Luva de Proteção", "EPI", "par", 20, "", "12345", 40],
+      ["FER-001", "Furadeira Elétrica", "Ferramentas", "un", 2, "", "", 5],
+      ["MAT-001", "Cimento CP II", "Material", "sc", 50, "2523.29.10", "", 120],
+      ["CON-001", "Disco de Corte 7\"", "Consumível", "un", 30, "", "", 60],
     ];
     const ws = XLSX.utils.aoa_to_sheet(data);
-    ws["!cols"] = [{ wch: 14 }, { wch: 30 }, { wch: 16 }, { wch: 10 }, { wch: 16 }, { wch: 14 }];
+    ws["!cols"] = [{ wch: 14 }, { wch: 30 }, { wch: 16 }, { wch: 10 }, { wch: 16 }, { wch: 14 }, { wch: 12 }, { wch: 16 }];
     XLSX.utils.book_append_sheet(wb, ws, "Produtos");
 
     const instrucoes = [
@@ -53,6 +55,8 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
       ["• Unidade: un, par, kg, m, m², m³, l, cx, sc"],
       ["• Estoque Mínimo: Número inteiro (0 se não aplicável)"],
       ["• NCM: Opcional (código fiscal)"],
+      ["• CA (EPI): Opcional — número do Certificado de Aprovação para EPIs"],
+      ["• Quantidade Atual: Opcional — saldo inicial em estoque (gera movimentação de entrada)"],
       [""],
       ["IMPORTANTE: Apague as linhas de exemplo antes de importar"],
       ["Não altere os cabeçalhos da primeira linha"],
@@ -88,8 +92,10 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
         descricao: header.findIndex(h => h.includes("descricao")),
         categoria: header.findIndex(h => h.includes("categoria")),
         unidade: header.findIndex(h => h.includes("unidade")),
-        estoque_minimo: header.findIndex(h => h.includes("estoque") || h.includes("minimo")),
+        estoque_minimo: header.findIndex(h => h.includes("minimo") || (h.includes("estoque") && !h.includes("atual"))),
         ncm: header.findIndex(h => h.includes("ncm")),
+        ca_numero: header.findIndex(h => h.includes("ca") && !h.includes("categoria")),
+        quantidade_atual: header.findIndex(h => h.includes("quantidade") || h.includes("atual") || h.includes("saldo")),
       };
 
       if (colMap.descricao === -1) {
@@ -118,6 +124,8 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
           unidade: VALID_UNITS.includes(unidade) ? unidade : "un",
           estoque_minimo: colMap.estoque_minimo >= 0 ? Number(r[colMap.estoque_minimo]) || 0 : 0,
           ncm: colMap.ncm >= 0 ? String(r[colMap.ncm] || "").trim() : "",
+          ca_numero: colMap.ca_numero >= 0 ? String(r[colMap.ca_numero] || "").trim() : "",
+          quantidade_atual: colMap.quantidade_atual >= 0 ? Number(r[colMap.quantidade_atual]) || 0 : 0,
         });
       }
 
@@ -143,16 +151,16 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
       const { data: existing } = await supabase.from("produtos").select("codigo");
       const existingCodes = new Set((existing || []).map(p => p.codigo).filter(Boolean));
 
-      const toInsert = preview
-        .filter(p => !p.codigo || !existingCodes.has(p.codigo))
-        .map(p => ({
-          descricao: p.descricao,
-          codigo: p.codigo || null,
-          categoria: p.categoria || null,
-          unidade: p.unidade,
-          estoque_minimo: p.estoque_minimo,
-          ncm: p.ncm || null,
-        }));
+      const novos = preview.filter(p => !p.codigo || !existingCodes.has(p.codigo));
+      const toInsert = novos.map(p => ({
+        descricao: p.descricao,
+        codigo: p.codigo || null,
+        categoria: p.categoria || null,
+        unidade: p.unidade,
+        estoque_minimo: p.estoque_minimo,
+        ncm: p.ncm || null,
+        ca_numero: p.ca_numero || null,
+      }));
 
       const skipped = preview.length - toInsert.length;
 
@@ -162,11 +170,27 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
         return;
       }
 
-      // Insert in batches of 50
+      // Insert in batches of 50 and capture IDs to register opening stock
+      const inseridos: { id: string; quantidade_atual: number }[] = [];
       for (let i = 0; i < toInsert.length; i += 50) {
         const batch = toInsert.slice(i, i + 50);
-        const { error } = await supabase.from("produtos").insert(batch);
+        const { data: ins, error } = await supabase.from("produtos").insert(batch).select("id");
         if (error) throw error;
+        (ins || []).forEach((row, idx) => {
+          const qtd = novos[i + idx]?.quantidade_atual || 0;
+          if (qtd > 0) inseridos.push({ id: row.id, quantidade_atual: qtd });
+        });
+      }
+
+      // Register opening stock as 'entrada' movements
+      if (inseridos.length > 0) {
+        const movs = inseridos.map(p => ({
+          produto_id: p.id,
+          tipo: "entrada",
+          quantidade: p.quantidade_atual,
+          observacoes: "Saldo inicial (importação de planilha)",
+        }));
+        await supabase.from("movimentacoes_estoque").insert(movs);
       }
 
       setImported(true);
