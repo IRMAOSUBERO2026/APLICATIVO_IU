@@ -436,7 +436,7 @@ export default function EntregaEPIMobile() {
             </div>
 
             <div className="rounded-xl border bg-card divide-y">
-              {itens.map(item => (
+              {itens.map((item, idx) => (
                 <div key={item.produto_id} className="px-4 py-3 flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium">{item.produto_nome}</p>
