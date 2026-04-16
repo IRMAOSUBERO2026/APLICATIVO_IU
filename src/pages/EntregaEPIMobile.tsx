@@ -281,51 +281,85 @@ export default function EntregaEPIMobile() {
               <button onClick={() => setStep("funcionario")} className="text-xs text-muted-foreground underline">Voltar</button>
             </div>
 
-            {/* Search products */}
+            {/* Filtro rápido */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text"
-                placeholder="Buscar EPI para adicionar..."
+                placeholder="Filtrar lista de EPIs..."
                 value={searchProd}
                 onChange={e => setSearchProd(e.target.value)}
                 className="w-full rounded-xl border bg-card py-3 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary"
               />
             </div>
 
-            {/* Product search results */}
-            {searchProd && (
-              <div className="rounded-xl border bg-card max-h-48 overflow-y-auto">
-                {prodFiltered.length === 0 ? (
-                  <p className="p-4 text-xs text-muted-foreground text-center">Nenhum produto encontrado</p>
-                ) : (
-                  prodFiltered.slice(0, 10).map(p => (
+            {/* Lista completa de EPIs (sempre visível) */}
+            <div className="rounded-xl border bg-card max-h-72 overflow-y-auto">
+              <div className="px-3 py-2 border-b bg-muted/30 sticky top-0">
+                <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wide">
+                  {prodFiltered.length} EPI(s) disponível(is) — toque para adicionar
+                </p>
+              </div>
+              {prodFiltered.length === 0 ? (
+                <p className="p-4 text-xs text-muted-foreground text-center">Nenhum EPI encontrado</p>
+              ) : (
+                prodFiltered.map(p => {
+                  const jaAdicionado = !!itens.find(i => i.produto_id === p.id);
+                  return (
                     <button
                       key={p.id}
                       onClick={() => addItem(p)}
-                      disabled={!!itens.find(i => i.produto_id === p.id)}
-                      className="w-full flex items-center justify-between px-4 py-3 border-b last:border-0 text-left hover:bg-muted/50 disabled:opacity-40 transition-colors"
+                      disabled={jaAdicionado}
+                      className="w-full flex items-center justify-between px-4 py-2.5 border-b last:border-0 text-left hover:bg-muted/50 disabled:opacity-40 disabled:bg-primary/5 transition-colors"
                     >
-                      <div>
-                        <p className="text-sm font-medium">{p.descricao}</p>
-                        <p className="text-[10px] text-muted-foreground">{p.categoria || "Geral"}</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{p.descricao}</p>
+                        {p.ca_numero && <p className="text-[10px] text-muted-foreground">CA: {p.ca_numero}</p>}
                       </div>
-                      <Plus className="h-4 w-4 text-primary shrink-0" />
+                      {jaAdicionado ? (
+                        <Check className="h-4 w-4 text-primary shrink-0" />
+                      ) : (
+                        <Plus className="h-4 w-4 text-primary shrink-0" />
+                      )}
                     </button>
-                  ))
-                )}
-              </div>
-            )}
+                  );
+                })
+              )}
+              {/* Opção "Outro" */}
+              <button
+                onClick={addItemNovo}
+                className="w-full flex items-center gap-2 px-4 py-3 border-t-2 border-dashed text-left hover:bg-accent/30 transition-colors"
+              >
+                <Plus className="h-4 w-4 text-accent-foreground" />
+                <div>
+                  <p className="text-sm font-semibold">Outro EPI (não cadastrado)</p>
+                  <p className="text-[10px] text-muted-foreground">Descrever manualmente um novo item</p>
+                </div>
+              </button>
+            </div>
 
             {/* Selected items */}
             {itens.length > 0 && (
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{itens.length} item(ns) selecionado(s)</p>
-                {itens.map(item => (
-                  <div key={item.produto_id} className="rounded-xl border bg-card p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium flex-1">{item.produto_nome}</p>
-                      <button onClick={() => removeItem(item.produto_id)} className="p-1 text-destructive"><X className="h-4 w-4" /></button>
+                {itens.map((item, idx) => (
+                  <div key={idx} className={`rounded-xl border bg-card p-4 space-y-3 ${item.is_novo ? "border-accent" : ""}`}>
+                    <div className="flex items-start justify-between gap-2">
+                      {item.is_novo ? (
+                        <div className="flex-1">
+                          <label className="text-[10px] font-medium text-muted-foreground">Descrição do novo EPI <span className="text-destructive">*</span></label>
+                          <input
+                            type="text"
+                            value={item.produto_nome}
+                            onChange={e => updateItem(idx, "produto_nome", e.target.value)}
+                            placeholder="Ex: Luva nitrílica azul"
+                            className={`w-full rounded-lg border bg-background px-3 py-2 text-sm ${!item.produto_nome.trim() ? "border-destructive" : ""}`}
+                          />
+                        </div>
+                      ) : (
+                        <p className="text-sm font-medium flex-1">{item.produto_nome}</p>
+                      )}
+                      <button onClick={() => removeItem(idx)} className="p-1 text-destructive shrink-0"><X className="h-4 w-4" /></button>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
@@ -334,7 +368,7 @@ export default function EntregaEPIMobile() {
                           type="number"
                           min={1}
                           value={item.quantidade}
-                          onChange={e => updateItem(item.produto_id, "quantidade", Number(e.target.value))}
+                          onChange={e => updateItem(idx, "quantidade", Number(e.target.value))}
                           className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm text-center"
                         />
                       </div>
@@ -343,7 +377,7 @@ export default function EntregaEPIMobile() {
                         <input
                           type="text"
                           value={item.ca_numero}
-                          onChange={e => updateItem(item.produto_id, "ca_numero", e.target.value)}
+                          onChange={e => updateItem(idx, "ca_numero", e.target.value)}
                           placeholder="Obrigatório"
                           className={`w-full rounded-lg border bg-background px-3 py-2.5 text-sm ${!item.ca_numero.trim() ? "border-destructive" : ""}`}
                         />
