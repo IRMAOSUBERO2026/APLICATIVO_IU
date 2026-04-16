@@ -74,11 +74,13 @@ export default function EntregaEPIMobile() {
   };
 
   const allCaFilled = itens.every(i => i.ca_numero.trim() !== "");
+  const allNomesFilled = itens.every(i => i.produto_nome.trim() !== "");
+  const podeRevisar = itens.length > 0 && allCaFilled && allNomesFilled;
 
   const handleSave = async () => {
     if (!funcionarioId || itens.length === 0) return;
-    if (!allCaFilled) {
-      toast({ title: "Preencha o Nº CA de todos os itens", variant: "destructive" });
+    if (!allCaFilled || !allNomesFilled) {
+      toast({ title: "Preencha nome e Nº CA de todos os itens", variant: "destructive" });
       return;
     }
     setSaving(true);
