@@ -310,13 +310,13 @@ export default function EntregaEPIMobile() {
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] font-medium text-muted-foreground">Nº CA</label>
+                        <label className="text-[10px] font-medium text-muted-foreground">Nº CA <span className="text-destructive">*</span></label>
                         <input
                           type="text"
                           value={item.ca_numero}
                           onChange={e => updateItem(item.produto_id, "ca_numero", e.target.value)}
-                          placeholder="Opcional"
-                          className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm"
+                          placeholder="Obrigatório"
+                          className={`w-full rounded-lg border bg-background px-3 py-2.5 text-sm ${!item.ca_numero.trim() ? "border-destructive" : ""}`}
                         />
                       </div>
                     </div>
