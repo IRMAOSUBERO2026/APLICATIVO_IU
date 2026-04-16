@@ -402,7 +402,6 @@ export default function EntregaEPIMobile() {
 
             {itens.length > 0 && (
               <button onClick={() => setStep("confirma")}
-              <button onClick={() => setStep("confirma")}
                 disabled={!podeRevisar}
                 className="w-full rounded-xl bg-primary px-6 py-4 text-sm font-semibold text-primary-foreground shadow-md disabled:opacity-50">
                 {!podeRevisar ? "Preencha nome e CA de todos os itens" : "Revisar Entrega →"}
