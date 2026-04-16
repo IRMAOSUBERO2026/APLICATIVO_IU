@@ -89,9 +89,33 @@ export default function EntregaEPIMobile() {
     if (!func) { setSaving(false); return; }
 
     for (const item of itens) {
+      let produtoId = item.produto_id;
+
+      // Se for "Outro" (novo EPI), cria o produto antes
+      if (!produtoId && item.is_novo) {
+        const { data: novoProd, error: prodError } = await supabase
+          .from("produtos")
+          .insert({
+            descricao: item.produto_nome,
+            categoria: "EPI",
+            unidade: "un",
+            ca_numero: item.ca_numero || null,
+            ativo: true,
+          })
+          .select("id")
+          .single();
+
+        if (prodError || !novoProd) {
+          toast({ title: "Erro ao cadastrar novo EPI", description: prodError?.message, variant: "destructive" });
+          setSaving(false);
+          return;
+        }
+        produtoId = novoProd.id;
+      }
+
       const { error: epiError } = await supabase.from("entregas_epi").insert({
         funcionario_id: funcionarioId,
-        produto_id: item.produto_id,
+        produto_id: produtoId!,
         obra_id: obraId || null,
         empresa_id: func.empresa_id,
         quantidade: item.quantidade,
@@ -105,9 +129,8 @@ export default function EntregaEPIMobile() {
         return;
       }
 
-      // Auto stock withdrawal
       await supabase.from("movimentacoes_estoque").insert({
-        produto_id: item.produto_id,
+        produto_id: produtoId!,
         tipo: "saida_epi",
         quantidade: item.quantidade,
         obra_id: obraId || null,
