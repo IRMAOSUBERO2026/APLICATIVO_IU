@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Package, Plus, ArrowDown, ArrowUp, Search, HardHat, FileDown, AlertTriangle } from "lucide-react";
+import { ImportarPlanilha } from "@/components/estoque/ImportarPlanilha";
 import { format } from "date-fns";
 import { useEmpresasObras } from "@/hooks/useEmpresasObras";
 
