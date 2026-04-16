@@ -69,11 +69,11 @@ export default function EntregaEPIMobile() {
 
   const addItem = (prod: Produto) => {
     if (itens.find(i => i.produto_id === prod.id)) return;
-    setItens(prev => [...prev, { produto_id: prod.id, produto_nome: prod.descricao, quantidade: 1, ca_numero: prod.ca_numero || "" }]);
+    setItens(prev => [...prev, { produto_id: prod.id, produto_nome: prod.descricao, quantidade: 1, ca_numero: prod.ca_numero || "", motivo: "Primeira entrega" }]);
   };
 
   const addItemNovo = () => {
-    setItens(prev => [...prev, { produto_id: null, produto_nome: "", quantidade: 1, ca_numero: "", is_novo: true }]);
+    setItens(prev => [...prev, { produto_id: null, produto_nome: "", quantidade: 1, ca_numero: "", motivo: "Primeira entrega", is_novo: true }]);
   };
 
   const removeItem = (idx: number) => {
