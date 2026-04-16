@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Package, Plus, ArrowDown, ArrowUp, Search, HardHat, FileDown, AlertTriangle } from "lucide-react";
+import { ImportarPlanilha } from "@/components/estoque/ImportarPlanilha";
 import { format } from "date-fns";
 import { useEmpresasObras } from "@/hooks/useEmpresasObras";
 
@@ -114,6 +115,7 @@ export default function Estoque() {
             <p className="text-sm text-muted-foreground">{produtos.length} produtos • {abaixoMinimo.length} abaixo do mínimo</p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <ImportarPlanilha onImportComplete={loadData} />
             <button onClick={() => setShowNewProduto(true)} className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors">
               <Plus className="h-4 w-4" /> Novo Produto
             </button>
