@@ -453,6 +453,16 @@ export default function EntregaEPIMobile() {
                         />
                       </div>
                     </div>
+                    <div>
+                      <label className="text-[10px] font-medium text-muted-foreground">Motivo da entrega (NR-6)</label>
+                      <select
+                        value={item.motivo}
+                        onChange={e => updateItem(idx, "motivo", e.target.value)}
+                        className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm"
+                      >
+                        {MOTIVOS_NR6.map(m => <option key={m} value={m}>{m}</option>)}
+                      </select>
+                    </div>
                   </div>
                 ))}
               </div>
