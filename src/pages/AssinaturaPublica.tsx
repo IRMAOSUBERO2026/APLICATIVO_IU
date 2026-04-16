@@ -385,17 +385,9 @@ export default function AssinaturaPublica() {
                   </div>
                 </div>
 
-                {/* EPI items if applicable */}
-                {data?.documento_tipo === "ficha_epi" && data?.documento_dados?.itens && (
-                  <div className="mt-3 border rounded-lg overflow-hidden">
-                    <div className="bg-muted/50 px-3 py-2 text-xs font-semibold">Itens Recebidos</div>
-                    {(data.documento_dados.itens as any[]).map((item: any, i: number) => (
-                      <div key={i} className="px-3 py-2 border-t text-sm flex justify-between">
-                        <span>{item.nome}</span>
-                        <span className="text-muted-foreground">Qtd: {item.qtd}</span>
-                      </div>
-                    ))}
-                  </div>
+                {/* Ficha de EPI completa (NR-6) */}
+                {data?.documento_tipo === "ficha_epi" && data?.documento_dados && (
+                  <FichaEPICompleta dados={data.documento_dados} />
                 )}
 
                 <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground">
