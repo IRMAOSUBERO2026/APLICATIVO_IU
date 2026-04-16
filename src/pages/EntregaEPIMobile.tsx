@@ -1,18 +1,29 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, HardHat, Plus, Save, Check, Search, X, ChevronDown, ChevronUp, Camera } from "lucide-react";
+import { ArrowLeft, HardHat, Plus, Save, Check, Search, X, ChevronDown, ChevronUp, Camera, FileSignature, Copy, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { gerarFichaEPIEEnviarAssinatura } from "@/lib/gerarFichaEPI";
 
 interface Funcionario { id: string; nome: string; cargo: string; obra_id: string | null; empresa_id: string; }
 interface Obra { id: string; nome: string; codigo: string; }
 interface Produto { id: string; descricao: string; categoria: string | null; ca_numero: string | null; }
+
+const MOTIVOS_NR6 = [
+  "Primeira entrega",
+  "Troca por desgaste",
+  "Perda / Extravio",
+  "Dano",
+  "Devolução",
+  "Substituição periódica",
+];
 
 interface ItemEntrega {
   produto_id: string | null; // null quando "Outro"
   produto_nome: string;
   quantidade: number;
   ca_numero: string;
+  motivo: string;
   is_novo?: boolean;
 }
 
