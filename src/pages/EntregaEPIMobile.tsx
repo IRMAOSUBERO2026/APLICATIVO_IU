@@ -33,7 +33,7 @@ export default function EntregaEPIMobile() {
     Promise.all([
       supabase.from("obras").select("id, nome, codigo").eq("status", "em_andamento").order("codigo"),
       supabase.from("funcionarios").select("id, nome, cargo, obra_id, empresa_id").eq("status", "ativo").order("nome"),
-      supabase.from("produtos").select("id, descricao, categoria").eq("ativo", true).order("descricao"),
+      supabase.from("produtos").select("id, descricao, categoria, ca_numero").eq("ativo", true).order("descricao"),
     ]).then(([o, f, p]) => {
       if (o.data) setObras(o.data);
       if (f.data) setAllFuncionarios(f.data);
