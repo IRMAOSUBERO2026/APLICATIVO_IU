@@ -39,6 +39,8 @@ export default function EntregaEPIMobile() {
   const [observacoes, setObservacoes] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [gerandoFicha, setGerandoFicha] = useState(false);
+  const [fichaUrl, setFichaUrl] = useState<string | null>(null);
   const [step, setStep] = useState<"obra" | "funcionario" | "itens" | "confirma">("obra");
 
   useEffect(() => {
@@ -131,8 +133,9 @@ export default function EntregaEPIMobile() {
         empresa_id: func.empresa_id,
         quantidade: item.quantidade,
         ca_numero: item.ca_numero || null,
+        motivo: item.motivo || "Primeira entrega",
         observacoes: observacoes || null,
-      });
+      } as any);
 
       if (epiError) {
         toast({ title: "Erro ao salvar", description: epiError.message, variant: "destructive" });
@@ -159,23 +162,79 @@ export default function EntregaEPIMobile() {
     setItens([]);
     setObservacoes("");
     setSaved(false);
+    setFichaUrl(null);
     setStep("obra");
     setSearchFunc("");
     setSearchProd("");
+  };
+
+  const handleGerarFicha = async () => {
+    if (!selectedFunc) return;
+    setGerandoFicha(true);
+    try {
+      const r = await gerarFichaEPIEEnviarAssinatura(selectedFunc.id, selectedFunc.empresa_id);
+      setFichaUrl(r.url);
+      toast({ title: "Ficha de EPI gerada!", description: `${r.totalItens} item(ns) — link de assinatura pronto.` });
+    } catch (e: any) {
+      toast({ title: "Erro ao gerar ficha", description: e.message, variant: "destructive" });
+    } finally {
+      setGerandoFicha(false);
+    }
+  };
+
+  const copiarLink = () => {
+    if (!fichaUrl) return;
+    navigator.clipboard.writeText(fichaUrl);
+    toast({ title: "Link copiado!" });
   };
 
   // Success screen
   if (saved) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
-        <div className="text-center space-y-4">
+        <div className="w-full max-w-sm text-center space-y-4">
           <div className="mx-auto w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center">
             <Check className="h-8 w-8 text-primary" />
           </div>
           <h2 className="text-xl font-bold">Entrega Registrada!</h2>
           <p className="text-sm text-muted-foreground">{itens.length} item(ns) entregue(s) para {selectedFunc?.nome}</p>
-          <div className="flex flex-col gap-2">
-            <button onClick={reset} className="rounded-xl bg-primary px-6 py-3 text-sm font-medium text-primary-foreground">
+
+          {!fichaUrl ? (
+            <div className="rounded-xl border bg-card p-4 space-y-3 text-left">
+              <div className="flex items-start gap-2">
+                <FileSignature className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold">Ficha de EPI (NR-6)</p>
+                  <p className="text-xs text-muted-foreground">Gere a ficha consolidada com todo o histórico de entregas e envie para assinatura digital do funcionário.</p>
+                </div>
+              </div>
+              <button
+                onClick={handleGerarFicha}
+                disabled={gerandoFicha}
+                className="w-full rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {gerandoFicha ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSignature className="h-4 w-4" />}
+                {gerandoFicha ? "Gerando..." : "Gerar Ficha e Enviar para Assinatura"}
+              </button>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-success bg-success/5 p-4 space-y-3 text-left">
+              <p className="text-sm font-semibold text-success flex items-center gap-2"><Check className="h-4 w-4" /> Ficha pronta para assinatura!</p>
+              <p className="text-xs text-muted-foreground">Compartilhe este link com o funcionário (válido por 7 dias):</p>
+              <div className="rounded-lg border bg-background p-2 text-[10px] break-all font-mono">{fichaUrl}</div>
+              <div className="flex gap-2">
+                <button onClick={copiarLink} className="flex-1 rounded-lg border bg-card px-3 py-2 text-xs font-medium flex items-center justify-center gap-1">
+                  <Copy className="h-3 w-3" /> Copiar Link
+                </button>
+                <a href={fichaUrl} target="_blank" rel="noopener noreferrer" className="flex-1 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground text-center">
+                  Abrir Ficha
+                </a>
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-2 pt-2">
+            <button onClick={reset} className="rounded-xl border bg-card px-6 py-3 text-sm font-medium">
               <Plus className="h-4 w-4 inline mr-2" /> Nova Entrega
             </button>
             <Link to="/entrega-epi" className="text-sm text-muted-foreground underline">Voltar ao painel</Link>
