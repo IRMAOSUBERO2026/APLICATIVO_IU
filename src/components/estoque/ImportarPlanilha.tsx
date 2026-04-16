@@ -148,41 +148,80 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
     setLoading(true);
 
     try {
-      const { data: existing } = await supabase.from("produtos").select("codigo");
-      const existingCodes = new Set((existing || []).map(p => p.codigo).filter(Boolean));
+      // Carrega TODOS os produtos para fazer match por código OU descrição (case-insensitive)
+      const { data: existing } = await supabase.from("produtos").select("id, codigo, descricao, ca_numero");
+      const byCode = new Map<string, { id: string; ca_numero: string | null }>();
+      const byDesc = new Map<string, { id: string; ca_numero: string | null }>();
+      (existing || []).forEach(p => {
+        if (p.codigo) byCode.set(p.codigo.trim().toLowerCase(), { id: p.id, ca_numero: p.ca_numero });
+        if (p.descricao) byDesc.set(p.descricao.trim().toLowerCase(), { id: p.id, ca_numero: p.ca_numero });
+      });
 
-      const novos = preview.filter(p => !p.codigo || !existingCodes.has(p.codigo));
-      const toInsert = novos.map(p => ({
-        descricao: p.descricao,
-        codigo: p.codigo || null,
-        categoria: p.categoria || null,
-        unidade: p.unidade,
-        estoque_minimo: p.estoque_minimo,
-        ncm: p.ncm || null,
-        ca_numero: p.ca_numero || null,
-      }));
+      const toInsert: any[] = [];
+      const toInsertOriginalIdx: number[] = [];
+      const toUpdate: { id: string; ca_numero: string; estoque_minimo: number; ncm: string | null; categoria: string | null; unidade: string }[] = [];
 
-      const skipped = preview.length - toInsert.length;
+      preview.forEach((p, idx) => {
+        const matchCode = p.codigo ? byCode.get(p.codigo.trim().toLowerCase()) : undefined;
+        const matchDesc = byDesc.get(p.descricao.trim().toLowerCase());
+        const match = matchCode || matchDesc;
 
-      if (toInsert.length === 0) {
-        toast({ title: "Nenhum produto novo para importar", description: `${skipped} já existem no sistema.`, variant: "destructive" });
-        setLoading(false);
-        return;
+        if (match) {
+          // Atualiza apenas se houver CA novo na planilha (ou demais campos relevantes)
+          if (p.ca_numero || p.estoque_minimo > 0 || p.ncm) {
+            toUpdate.push({
+              id: match.id,
+              ca_numero: p.ca_numero,
+              estoque_minimo: p.estoque_minimo,
+              ncm: p.ncm || null,
+              categoria: p.categoria || null,
+              unidade: p.unidade,
+            });
+          }
+        } else {
+          toInsert.push({
+            descricao: p.descricao,
+            codigo: p.codigo || null,
+            categoria: p.categoria || null,
+            unidade: p.unidade,
+            estoque_minimo: p.estoque_minimo,
+            ncm: p.ncm || null,
+            ca_numero: p.ca_numero || null,
+          });
+          toInsertOriginalIdx.push(idx);
+        }
+      });
+
+      // Atualiza produtos existentes (apenas campos com valor — não sobrescreve com vazio)
+      let atualizados = 0;
+      for (const u of toUpdate) {
+        const updatePayload: any = {};
+        if (u.ca_numero) updatePayload.ca_numero = u.ca_numero;
+        if (u.estoque_minimo > 0) updatePayload.estoque_minimo = u.estoque_minimo;
+        if (u.ncm) updatePayload.ncm = u.ncm;
+        if (u.categoria) updatePayload.categoria = u.categoria;
+        if (u.unidade && u.unidade !== "un") updatePayload.unidade = u.unidade;
+
+        if (Object.keys(updatePayload).length === 0) continue;
+
+        const { error } = await supabase.from("produtos").update(updatePayload).eq("id", u.id);
+        if (!error) atualizados++;
       }
 
-      // Insert in batches of 50 and capture IDs to register opening stock
+      // Insere novos em lotes
       const inseridos: { id: string; quantidade_atual: number }[] = [];
       for (let i = 0; i < toInsert.length; i += 50) {
         const batch = toInsert.slice(i, i + 50);
         const { data: ins, error } = await supabase.from("produtos").insert(batch).select("id");
         if (error) throw error;
         (ins || []).forEach((row, idx) => {
-          const qtd = novos[i + idx]?.quantidade_atual || 0;
+          const origIdx = toInsertOriginalIdx[i + idx];
+          const qtd = preview[origIdx]?.quantidade_atual || 0;
           if (qtd > 0) inseridos.push({ id: row.id, quantidade_atual: qtd });
         });
       }
 
-      // Register opening stock as 'entrada' movements
+      // Saldo inicial
       if (inseridos.length > 0) {
         const movs = inseridos.map(p => ({
           produto_id: p.id,
@@ -194,7 +233,14 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
       }
 
       setImported(true);
-      toast({ title: `${toInsert.length} produtos importados!`, description: skipped > 0 ? `${skipped} ignorados (código duplicado)` : undefined });
+      const partes: string[] = [];
+      if (toInsert.length > 0) partes.push(`${toInsert.length} novo(s)`);
+      if (atualizados > 0) partes.push(`${atualizados} atualizado(s)`);
+
+      toast({
+        title: partes.length > 0 ? `Importação concluída — ${partes.join(", ")}` : "Nada para atualizar",
+        description: atualizados > 0 ? "CAs e demais campos foram sincronizados nos produtos existentes." : undefined,
+      });
       onImportComplete();
     } catch (err: any) {
       toast({ title: "Erro na importação", description: err.message, variant: "destructive" });
