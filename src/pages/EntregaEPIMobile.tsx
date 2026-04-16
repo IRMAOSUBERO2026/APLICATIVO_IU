@@ -9,10 +9,11 @@ interface Obra { id: string; nome: string; codigo: string; }
 interface Produto { id: string; descricao: string; categoria: string | null; ca_numero: string | null; }
 
 interface ItemEntrega {
-  produto_id: string;
+  produto_id: string | null; // null quando "Outro"
   produto_nome: string;
   quantidade: number;
   ca_numero: string;
+  is_novo?: boolean;
 }
 
 export default function EntregaEPIMobile() {
@@ -33,7 +34,7 @@ export default function EntregaEPIMobile() {
     Promise.all([
       supabase.from("obras").select("id, nome, codigo").eq("status", "em_andamento").order("codigo"),
       supabase.from("funcionarios").select("id, nome, cargo, obra_id, empresa_id").eq("status", "ativo").order("nome"),
-      supabase.from("produtos").select("id, descricao, categoria, ca_numero").eq("ativo", true).order("descricao"),
+      supabase.from("produtos").select("id, descricao, categoria, ca_numero").eq("ativo", true).eq("categoria", "EPI").order("descricao"),
     ]).then(([o, f, p]) => {
       if (o.data) setObras(o.data);
       if (f.data) setAllFuncionarios(f.data);
@@ -58,23 +59,28 @@ export default function EntregaEPIMobile() {
   const addItem = (prod: Produto) => {
     if (itens.find(i => i.produto_id === prod.id)) return;
     setItens(prev => [...prev, { produto_id: prod.id, produto_nome: prod.descricao, quantidade: 1, ca_numero: prod.ca_numero || "" }]);
-    setSearchProd("");
   };
 
-  const removeItem = (prodId: string) => {
-    setItens(prev => prev.filter(i => i.produto_id !== prodId));
+  const addItemNovo = () => {
+    setItens(prev => [...prev, { produto_id: null, produto_nome: "", quantidade: 1, ca_numero: "", is_novo: true }]);
   };
 
-  const updateItem = (prodId: string, field: keyof ItemEntrega, value: any) => {
-    setItens(prev => prev.map(i => i.produto_id === prodId ? { ...i, [field]: value } : i));
+  const removeItem = (idx: number) => {
+    setItens(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const updateItem = (idx: number, field: keyof ItemEntrega, value: any) => {
+    setItens(prev => prev.map((i, ix) => ix === idx ? { ...i, [field]: value } : i));
   };
 
   const allCaFilled = itens.every(i => i.ca_numero.trim() !== "");
+  const allNomesFilled = itens.every(i => i.produto_nome.trim() !== "");
+  const podeRevisar = itens.length > 0 && allCaFilled && allNomesFilled;
 
   const handleSave = async () => {
     if (!funcionarioId || itens.length === 0) return;
-    if (!allCaFilled) {
-      toast({ title: "Preencha o Nº CA de todos os itens", variant: "destructive" });
+    if (!allCaFilled || !allNomesFilled) {
+      toast({ title: "Preencha nome e Nº CA de todos os itens", variant: "destructive" });
       return;
     }
     setSaving(true);
@@ -83,9 +89,33 @@ export default function EntregaEPIMobile() {
     if (!func) { setSaving(false); return; }
 
     for (const item of itens) {
+      let produtoId = item.produto_id;
+
+      // Se for "Outro" (novo EPI), cria o produto antes
+      if (!produtoId && item.is_novo) {
+        const { data: novoProd, error: prodError } = await supabase
+          .from("produtos")
+          .insert({
+            descricao: item.produto_nome,
+            categoria: "EPI",
+            unidade: "un",
+            ca_numero: item.ca_numero || null,
+            ativo: true,
+          })
+          .select("id")
+          .single();
+
+        if (prodError || !novoProd) {
+          toast({ title: "Erro ao cadastrar novo EPI", description: prodError?.message, variant: "destructive" });
+          setSaving(false);
+          return;
+        }
+        produtoId = novoProd.id;
+      }
+
       const { error: epiError } = await supabase.from("entregas_epi").insert({
         funcionario_id: funcionarioId,
-        produto_id: item.produto_id,
+        produto_id: produtoId!,
         obra_id: obraId || null,
         empresa_id: func.empresa_id,
         quantidade: item.quantidade,
@@ -99,9 +129,8 @@ export default function EntregaEPIMobile() {
         return;
       }
 
-      // Auto stock withdrawal
       await supabase.from("movimentacoes_estoque").insert({
-        produto_id: item.produto_id,
+        produto_id: produtoId!,
         tipo: "saida_epi",
         quantidade: item.quantidade,
         obra_id: obraId || null,
@@ -252,51 +281,85 @@ export default function EntregaEPIMobile() {
               <button onClick={() => setStep("funcionario")} className="text-xs text-muted-foreground underline">Voltar</button>
             </div>
 
-            {/* Search products */}
+            {/* Filtro rápido */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text"
-                placeholder="Buscar EPI para adicionar..."
+                placeholder="Filtrar lista de EPIs..."
                 value={searchProd}
                 onChange={e => setSearchProd(e.target.value)}
                 className="w-full rounded-xl border bg-card py-3 pl-10 pr-4 text-sm focus:ring-2 focus:ring-primary"
               />
             </div>
 
-            {/* Product search results */}
-            {searchProd && (
-              <div className="rounded-xl border bg-card max-h-48 overflow-y-auto">
-                {prodFiltered.length === 0 ? (
-                  <p className="p-4 text-xs text-muted-foreground text-center">Nenhum produto encontrado</p>
-                ) : (
-                  prodFiltered.slice(0, 10).map(p => (
+            {/* Lista completa de EPIs (sempre visível) */}
+            <div className="rounded-xl border bg-card max-h-72 overflow-y-auto">
+              <div className="px-3 py-2 border-b bg-muted/30 sticky top-0">
+                <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wide">
+                  {prodFiltered.length} EPI(s) disponível(is) — toque para adicionar
+                </p>
+              </div>
+              {prodFiltered.length === 0 ? (
+                <p className="p-4 text-xs text-muted-foreground text-center">Nenhum EPI encontrado</p>
+              ) : (
+                prodFiltered.map(p => {
+                  const jaAdicionado = !!itens.find(i => i.produto_id === p.id);
+                  return (
                     <button
                       key={p.id}
                       onClick={() => addItem(p)}
-                      disabled={!!itens.find(i => i.produto_id === p.id)}
-                      className="w-full flex items-center justify-between px-4 py-3 border-b last:border-0 text-left hover:bg-muted/50 disabled:opacity-40 transition-colors"
+                      disabled={jaAdicionado}
+                      className="w-full flex items-center justify-between px-4 py-2.5 border-b last:border-0 text-left hover:bg-muted/50 disabled:opacity-40 disabled:bg-primary/5 transition-colors"
                     >
-                      <div>
-                        <p className="text-sm font-medium">{p.descricao}</p>
-                        <p className="text-[10px] text-muted-foreground">{p.categoria || "Geral"}</p>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{p.descricao}</p>
+                        {p.ca_numero && <p className="text-[10px] text-muted-foreground">CA: {p.ca_numero}</p>}
                       </div>
-                      <Plus className="h-4 w-4 text-primary shrink-0" />
+                      {jaAdicionado ? (
+                        <Check className="h-4 w-4 text-primary shrink-0" />
+                      ) : (
+                        <Plus className="h-4 w-4 text-primary shrink-0" />
+                      )}
                     </button>
-                  ))
-                )}
-              </div>
-            )}
+                  );
+                })
+              )}
+              {/* Opção "Outro" */}
+              <button
+                onClick={addItemNovo}
+                className="w-full flex items-center gap-2 px-4 py-3 border-t-2 border-dashed text-left hover:bg-accent/30 transition-colors"
+              >
+                <Plus className="h-4 w-4 text-accent-foreground" />
+                <div>
+                  <p className="text-sm font-semibold">Outro EPI (não cadastrado)</p>
+                  <p className="text-[10px] text-muted-foreground">Descrever manualmente um novo item</p>
+                </div>
+              </button>
+            </div>
 
             {/* Selected items */}
             {itens.length > 0 && (
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{itens.length} item(ns) selecionado(s)</p>
-                {itens.map(item => (
-                  <div key={item.produto_id} className="rounded-xl border bg-card p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium flex-1">{item.produto_nome}</p>
-                      <button onClick={() => removeItem(item.produto_id)} className="p-1 text-destructive"><X className="h-4 w-4" /></button>
+                {itens.map((item, idx) => (
+                  <div key={idx} className={`rounded-xl border bg-card p-4 space-y-3 ${item.is_novo ? "border-accent" : ""}`}>
+                    <div className="flex items-start justify-between gap-2">
+                      {item.is_novo ? (
+                        <div className="flex-1">
+                          <label className="text-[10px] font-medium text-muted-foreground">Descrição do novo EPI <span className="text-destructive">*</span></label>
+                          <input
+                            type="text"
+                            value={item.produto_nome}
+                            onChange={e => updateItem(idx, "produto_nome", e.target.value)}
+                            placeholder="Ex: Luva nitrílica azul"
+                            className={`w-full rounded-lg border bg-background px-3 py-2 text-sm ${!item.produto_nome.trim() ? "border-destructive" : ""}`}
+                          />
+                        </div>
+                      ) : (
+                        <p className="text-sm font-medium flex-1">{item.produto_nome}</p>
+                      )}
+                      <button onClick={() => removeItem(idx)} className="p-1 text-destructive shrink-0"><X className="h-4 w-4" /></button>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
@@ -305,7 +368,7 @@ export default function EntregaEPIMobile() {
                           type="number"
                           min={1}
                           value={item.quantidade}
-                          onChange={e => updateItem(item.produto_id, "quantidade", Number(e.target.value))}
+                          onChange={e => updateItem(idx, "quantidade", Number(e.target.value))}
                           className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm text-center"
                         />
                       </div>
@@ -314,7 +377,7 @@ export default function EntregaEPIMobile() {
                         <input
                           type="text"
                           value={item.ca_numero}
-                          onChange={e => updateItem(item.produto_id, "ca_numero", e.target.value)}
+                          onChange={e => updateItem(idx, "ca_numero", e.target.value)}
                           placeholder="Obrigatório"
                           className={`w-full rounded-lg border bg-background px-3 py-2.5 text-sm ${!item.ca_numero.trim() ? "border-destructive" : ""}`}
                         />
@@ -339,9 +402,9 @@ export default function EntregaEPIMobile() {
 
             {itens.length > 0 && (
               <button onClick={() => setStep("confirma")}
-                disabled={!allCaFilled}
+                disabled={!podeRevisar}
                 className="w-full rounded-xl bg-primary px-6 py-4 text-sm font-semibold text-primary-foreground shadow-md disabled:opacity-50">
-                {!allCaFilled ? "Preencha o CA de todos os itens" : "Revisar Entrega →"}
+                {!podeRevisar ? "Preencha nome e CA de todos os itens" : "Revisar Entrega →"}
               </button>
             )}
           </div>
@@ -373,10 +436,10 @@ export default function EntregaEPIMobile() {
             </div>
 
             <div className="rounded-xl border bg-card divide-y">
-              {itens.map(item => (
-                <div key={item.produto_id} className="px-4 py-3 flex items-center justify-between">
+              {itens.map((item, idx) => (
+                <div key={idx} className="px-4 py-3 flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium">{item.produto_nome}</p>
+                    <p className="text-sm font-medium">{item.produto_nome} {item.is_novo && <span className="text-[9px] uppercase text-accent-foreground bg-accent/30 px-1.5 py-0.5 rounded ml-1">NOVO</span>}</p>
                     {item.ca_numero && <p className="text-[10px] text-muted-foreground">CA: {item.ca_numero}</p>}
                   </div>
                   <span className="rounded-full bg-primary/10 px-3 py-1 text-sm font-bold text-primary">{item.quantidade}x</span>
