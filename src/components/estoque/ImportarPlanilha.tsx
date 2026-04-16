@@ -29,7 +29,39 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const downloadTemplate = () => {
-    window.open("/modelo_importacao_estoque.xlsx", "_blank");
+    const wb = XLSX.utils.book_new();
+    const data = [
+      ["Código", "Descrição", "Categoria", "Unidade", "Estoque Mínimo", "NCM"],
+      ["EPI-001", "Capacete de Segurança", "EPI", "un", 10, "6506.10.00"],
+      ["EPI-002", "Luva de Proteção", "EPI", "par", 20, ""],
+      ["FER-001", "Furadeira Elétrica", "Ferramentas", "un", 2, ""],
+      ["MAT-001", "Cimento CP II", "Material", "sc", 50, "2523.29.10"],
+      ["CON-001", "Disco de Corte 7\"", "Consumível", "un", 30, ""],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    ws["!cols"] = [{ wch: 14 }, { wch: 30 }, { wch: 16 }, { wch: 10 }, { wch: 16 }, { wch: 14 }];
+    XLSX.utils.book_append_sheet(wb, ws, "Produtos");
+
+    const instrucoes = [
+      ["MODELO DE IMPORTAÇÃO - ESTOQUE"],
+      [""],
+      ["Preencha a aba 'Produtos' seguindo as regras:"],
+      [""],
+      ["• Descrição: Obrigatório"],
+      ["• Código: Opcional (identificador único)"],
+      ["• Categoria: EPI, Ferramentas, Material, Consumível ou Outros"],
+      ["• Unidade: un, par, kg, m, m², m³, l, cx, sc"],
+      ["• Estoque Mínimo: Número inteiro (0 se não aplicável)"],
+      ["• NCM: Opcional (código fiscal)"],
+      [""],
+      ["IMPORTANTE: Apague as linhas de exemplo antes de importar"],
+      ["Não altere os cabeçalhos da primeira linha"],
+    ];
+    const ws2 = XLSX.utils.aoa_to_sheet(instrucoes);
+    ws2["!cols"] = [{ wch: 60 }];
+    XLSX.utils.book_append_sheet(wb, ws2, "Instruções");
+
+    XLSX.writeFile(wb, "modelo_importacao_estoque.xlsx");
   };
 
   const parseFile = async (file: File) => {
