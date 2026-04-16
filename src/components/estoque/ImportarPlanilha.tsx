@@ -276,11 +276,11 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
                   {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                   {loading ? "Processando..." : "Selecionar Arquivo"}
                 </button>
+              </div>
             </div>
 
             <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground">
               💡 Produtos já existentes (mesmo código ou descrição) terão o <strong>CA, estoque mínimo, NCM e categoria atualizados</strong> conforme a planilha. Produtos novos serão criados com saldo inicial.
-            </div>
             </div>
 
             {errors.length > 0 && (
