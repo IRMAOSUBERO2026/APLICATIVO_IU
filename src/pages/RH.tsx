@@ -123,7 +123,15 @@ export default function RH() {
     })),
   ];
 
+  // Filter based on tab (ativos vs inativos) + user filters
+  const isAtivosTab = tab === "lista";
+  const isInativosTab = tab === "lista_inativos";
+  
   const filtered = allFuncionarios.filter(f => {
+    // Tab-based status filter
+    if (isAtivosTab && !STATUS_ATIVOS.includes(f.status?.toLowerCase())) return false;
+    if (isInativosTab && !STATUS_INATIVOS.includes(f.status?.toLowerCase())) return false;
+    
     const searchMatch = !search || 
       f.nome?.toLowerCase().includes(search.toLowerCase()) ||
       f.cargo?.toLowerCase().includes(search.toLowerCase()) ||
