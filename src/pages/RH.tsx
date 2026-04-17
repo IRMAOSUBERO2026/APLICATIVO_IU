@@ -404,25 +404,46 @@ export default function RH() {
               </select>
             </div>
 
-            {/* KPI cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="rounded-xl border bg-card p-4 shadow-sm">
-                <p className="text-xs text-muted-foreground">Total</p>
-                <p className="text-2xl font-bold">{allFuncionarios.length}</p>
+            {/* KPI cards - diferentes para cada aba */}
+            {isAtivosTab ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="rounded-xl border bg-card p-4 shadow-sm">
+                  <p className="text-xs text-muted-foreground">Total Ativos</p>
+                  <p className="text-2xl font-bold">{allFuncionarios.filter(f => STATUS_ATIVOS.includes(f.status?.toLowerCase())).length}</p>
+                </div>
+                <div className="rounded-xl border bg-card p-4 shadow-sm">
+                  <p className="text-xs text-muted-foreground">Ativos</p>
+                  <p className="text-2xl font-bold text-success">{allFuncionarios.filter(f => f.status === "ativo").length}</p>
+                </div>
+                <div className="rounded-xl border bg-card p-4 shadow-sm">
+                  <p className="text-xs text-muted-foreground">Experiência</p>
+                  <p className="text-2xl font-bold text-accent">{allFuncionarios.filter(f => f.status === "experiência" || f.status === "experiencia").length}</p>
+                </div>
+                <div className="rounded-xl border bg-card p-4 shadow-sm">
+                  <p className="text-xs text-muted-foreground">Pré-Cadastro</p>
+                  <p className="text-2xl font-bold text-warning">{allFuncionarios.filter(f => f.status === "pré-cadastro" || f.status === "pre-cadastro").length}</p>
+                </div>
               </div>
-              <div className="rounded-xl border bg-card p-4 shadow-sm">
-                <p className="text-xs text-muted-foreground">Ativos</p>
-                <p className="text-2xl font-bold text-success">{allFuncionarios.filter(f => f.status === "ativo").length}</p>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="rounded-xl border bg-card p-4 shadow-sm">
+                  <p className="text-xs text-muted-foreground">Total Inativos</p>
+                  <p className="text-2xl font-bold">{allFuncionarios.filter(f => STATUS_INATIVOS.includes(f.status?.toLowerCase())).length}</p>
+                </div>
+                <div className="rounded-xl border bg-card p-4 shadow-sm">
+                  <p className="text-xs text-muted-foreground">Desligados</p>
+                  <p className="text-2xl font-bold text-destructive">{allFuncionarios.filter(f => f.status === "desligado").length}</p>
+                </div>
+                <div className="rounded-xl border bg-card p-4 shadow-sm">
+                  <p className="text-xs text-muted-foreground">Abandono</p>
+                  <p className="text-2xl font-bold text-destructive">{allFuncionarios.filter(f => f.status === "abandono").length}</p>
+                </div>
+                <div className="rounded-xl border bg-card p-4 shadow-sm">
+                  <p className="text-xs text-muted-foreground">Atestado</p>
+                  <p className="text-2xl font-bold text-muted-foreground">{allFuncionarios.filter(f => f.status === "atestado").length}</p>
+                </div>
               </div>
-              <div className="rounded-xl border bg-card p-4 shadow-sm">
-                <p className="text-xs text-muted-foreground">Experiência</p>
-                <p className="text-2xl font-bold text-accent">{allFuncionarios.filter(f => f.status === "experiência" || f.status === "experiencia").length}</p>
-              </div>
-              <div className="rounded-xl border bg-card p-4 shadow-sm">
-                <p className="text-xs text-muted-foreground">Desligados</p>
-                <p className="text-2xl font-bold text-destructive">{allFuncionarios.filter(f => f.status === "desligado").length}</p>
-              </div>
-            </div>
+            )}
 
             {/* Table */}
             <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
