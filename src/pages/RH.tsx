@@ -18,7 +18,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-type TabKey = "lista" | "exames_tab" | "exames_modulo";
+type TabKey = "lista" | "lista_inativos" | "exames_tab" | "exames_modulo";
+
+const STATUS_ATIVOS = ["ativo", "experiência", "experiencia", "pré-cadastro", "pre-cadastro"];
+const STATUS_INATIVOS = ["desligado", "abandono", "atestado"];
 
 const STATUS_OPTIONS = ["Pré-Cadastro", "Ativo", "Experiência", "Desligado", "Abandono", "Atestado"] as const;
 
@@ -260,7 +263,15 @@ export default function RH() {
         {/* Tabs */}
         <div className="flex gap-1 rounded-lg bg-muted p-1">
           <button onClick={() => setTab("lista")} className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${tab === "lista" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
-            Lista de Funcionários
+            Funcionários Ativos
+          </button>
+          <button onClick={() => setTab("lista_inativos")} className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors relative ${tab === "lista_inativos" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+            Inativos / Afastados
+            {allFuncionarios.filter(f => STATUS_INATIVOS.includes(f.status?.toLowerCase())).length > 0 && (
+              <span className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+                {allFuncionarios.filter(f => STATUS_INATIVOS.includes(f.status?.toLowerCase())).length}
+              </span>
+            )}
           </button>
           <button onClick={() => setTab("exames_tab")} className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors relative ${tab === "exames_tab" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
             Exames e Treinamentos
