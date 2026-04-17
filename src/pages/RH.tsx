@@ -18,7 +18,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-type TabKey = "lista" | "exames_tab" | "exames_modulo";
+type TabKey = "lista" | "lista_inativos" | "exames_tab" | "exames_modulo";
+
+const STATUS_ATIVOS = ["ativo", "experiência", "experiencia", "pré-cadastro", "pre-cadastro"];
+const STATUS_INATIVOS = ["desligado", "abandono", "atestado"];
 
 const STATUS_OPTIONS = ["Pré-Cadastro", "Ativo", "Experiência", "Desligado", "Abandono", "Atestado"] as const;
 
@@ -120,7 +123,15 @@ export default function RH() {
     })),
   ];
 
+  // Filter based on tab (ativos vs inativos) + user filters
+  const isAtivosTab = tab === "lista";
+  const isInativosTab = tab === "lista_inativos";
+  
   const filtered = allFuncionarios.filter(f => {
+    // Tab-based status filter
+    if (isAtivosTab && !STATUS_ATIVOS.includes(f.status?.toLowerCase())) return false;
+    if (isInativosTab && !STATUS_INATIVOS.includes(f.status?.toLowerCase())) return false;
+    
     const searchMatch = !search || 
       f.nome?.toLowerCase().includes(search.toLowerCase()) ||
       f.cargo?.toLowerCase().includes(search.toLowerCase()) ||
@@ -260,7 +271,15 @@ export default function RH() {
         {/* Tabs */}
         <div className="flex gap-1 rounded-lg bg-muted p-1">
           <button onClick={() => setTab("lista")} className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${tab === "lista" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
-            Lista de Funcionários
+            Funcionários Ativos
+          </button>
+          <button onClick={() => setTab("lista_inativos")} className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors relative ${tab === "lista_inativos" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+            Inativos / Afastados
+            {allFuncionarios.filter(f => STATUS_INATIVOS.includes(f.status?.toLowerCase())).length > 0 && (
+              <span className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+                {allFuncionarios.filter(f => STATUS_INATIVOS.includes(f.status?.toLowerCase())).length}
+              </span>
+            )}
           </button>
           <button onClick={() => setTab("exames_tab")} className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors relative ${tab === "exames_tab" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
             Exames e Treinamentos
@@ -375,7 +394,19 @@ export default function RH() {
               </select>
               <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="rounded-lg border bg-card px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
                 <option value="">Todos os Status</option>
-                {STATUS_OPTIONS.map(s => <option key={s} value={s.toLowerCase()}>{s}</option>)}
+                {isAtivosTab ? (
+                  <>
+                    <option value="ativo">Ativo</option>
+                    <option value="experiência">Experiência</option>
+                    <option value="pré-cadastro">Pré-Cadastro</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="desligado">Desligado</option>
+                    <option value="abandono">Abandono</option>
+                    <option value="atestado">Atestado</option>
+                  </>
+                )}
               </select>
               <select value={sortBy} onChange={e => setSortBy(e.target.value as any)} className="rounded-lg border bg-card px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
                 <option value="nome">Ordenar por Nome</option>
@@ -385,30 +416,51 @@ export default function RH() {
               </select>
             </div>
 
-            {/* KPI cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="rounded-xl border bg-card p-4 shadow-sm">
-                <p className="text-xs text-muted-foreground">Total</p>
-                <p className="text-2xl font-bold">{allFuncionarios.length}</p>
+            {/* KPI cards - diferentes para cada aba */}
+            {isAtivosTab ? (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="rounded-xl border bg-card p-4 shadow-sm">
+                  <p className="text-xs text-muted-foreground">Total Ativos</p>
+                  <p className="text-2xl font-bold">{allFuncionarios.filter(f => STATUS_ATIVOS.includes(f.status?.toLowerCase())).length}</p>
+                </div>
+                <div className="rounded-xl border bg-card p-4 shadow-sm">
+                  <p className="text-xs text-muted-foreground">Ativos</p>
+                  <p className="text-2xl font-bold text-success">{allFuncionarios.filter(f => f.status === "ativo").length}</p>
+                </div>
+                <div className="rounded-xl border bg-card p-4 shadow-sm">
+                  <p className="text-xs text-muted-foreground">Experiência</p>
+                  <p className="text-2xl font-bold text-accent">{allFuncionarios.filter(f => f.status === "experiência" || f.status === "experiencia").length}</p>
+                </div>
+                <div className="rounded-xl border bg-card p-4 shadow-sm">
+                  <p className="text-xs text-muted-foreground">Pré-Cadastro</p>
+                  <p className="text-2xl font-bold text-warning">{allFuncionarios.filter(f => f.status === "pré-cadastro" || f.status === "pre-cadastro").length}</p>
+                </div>
               </div>
-              <div className="rounded-xl border bg-card p-4 shadow-sm">
-                <p className="text-xs text-muted-foreground">Ativos</p>
-                <p className="text-2xl font-bold text-success">{allFuncionarios.filter(f => f.status === "ativo").length}</p>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="rounded-xl border bg-card p-4 shadow-sm">
+                  <p className="text-xs text-muted-foreground">Total Inativos</p>
+                  <p className="text-2xl font-bold">{allFuncionarios.filter(f => STATUS_INATIVOS.includes(f.status?.toLowerCase())).length}</p>
+                </div>
+                <div className="rounded-xl border bg-card p-4 shadow-sm">
+                  <p className="text-xs text-muted-foreground">Desligados</p>
+                  <p className="text-2xl font-bold text-destructive">{allFuncionarios.filter(f => f.status === "desligado").length}</p>
+                </div>
+                <div className="rounded-xl border bg-card p-4 shadow-sm">
+                  <p className="text-xs text-muted-foreground">Abandono</p>
+                  <p className="text-2xl font-bold text-destructive">{allFuncionarios.filter(f => f.status === "abandono").length}</p>
+                </div>
+                <div className="rounded-xl border bg-card p-4 shadow-sm">
+                  <p className="text-xs text-muted-foreground">Atestado</p>
+                  <p className="text-2xl font-bold text-muted-foreground">{allFuncionarios.filter(f => f.status === "atestado").length}</p>
+                </div>
               </div>
-              <div className="rounded-xl border bg-card p-4 shadow-sm">
-                <p className="text-xs text-muted-foreground">Experiência</p>
-                <p className="text-2xl font-bold text-accent">{allFuncionarios.filter(f => f.status === "experiência" || f.status === "experiencia").length}</p>
-              </div>
-              <div className="rounded-xl border bg-card p-4 shadow-sm">
-                <p className="text-xs text-muted-foreground">Desligados</p>
-                <p className="text-2xl font-bold text-destructive">{allFuncionarios.filter(f => f.status === "desligado").length}</p>
-              </div>
-            </div>
+            )}
 
             {/* Table */}
             <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
               <div className="px-4 py-3 border-b bg-muted/30">
-                <h3 className="text-sm font-semibold">Funcionários ({sorted.length})</h3>
+                <h3 className="text-sm font-semibold">{isAtivosTab ? "Funcionários Ativos" : "Funcionários Inativos / Afastados"} ({sorted.length})</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
