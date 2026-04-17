@@ -394,7 +394,19 @@ export default function RH() {
               </select>
               <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="rounded-lg border bg-card px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
                 <option value="">Todos os Status</option>
-                {STATUS_OPTIONS.map(s => <option key={s} value={s.toLowerCase()}>{s}</option>)}
+                {isAtivosTab ? (
+                  <>
+                    <option value="ativo">Ativo</option>
+                    <option value="experiência">Experiência</option>
+                    <option value="pré-cadastro">Pré-Cadastro</option>
+                  </>
+                ) : (
+                  <>
+                    <option value="desligado">Desligado</option>
+                    <option value="abandono">Abandono</option>
+                    <option value="atestado">Atestado</option>
+                  </>
+                )}
               </select>
               <select value={sortBy} onChange={e => setSortBy(e.target.value as any)} className="rounded-lg border bg-card px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
                 <option value="nome">Ordenar por Nome</option>
