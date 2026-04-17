@@ -460,7 +460,7 @@ export default function RH() {
             {/* Table */}
             <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
               <div className="px-4 py-3 border-b bg-muted/30">
-                <h3 className="text-sm font-semibold">Funcionários ({sorted.length})</h3>
+                <h3 className="text-sm font-semibold">{isAtivosTab ? "Funcionários Ativos" : "Funcionários Inativos / Afastados"} ({sorted.length})</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
