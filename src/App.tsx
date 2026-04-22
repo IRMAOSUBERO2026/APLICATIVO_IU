@@ -32,6 +32,7 @@ import Assinaturas from "./pages/Assinaturas";
 import AssinaturaPublica from "./pages/AssinaturaPublica";
 import CustosObra from "./pages/CustosObra";
 import Clientes from "./pages/Clientes";
+import Solicitacoes from "./pages/Solicitacoes";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -72,6 +73,7 @@ const App = () => (
           <Route path="/assinar" element={<AssinaturaPublica />} />
           <Route path="/custos-obra" element={<CustosObra />} />
           <Route path="/clientes" element={<Clientes />} />
+          <Route path="/solicitacoes" element={<Solicitacoes />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
