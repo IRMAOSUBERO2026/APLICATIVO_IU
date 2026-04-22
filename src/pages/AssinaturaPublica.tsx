@@ -439,6 +439,17 @@ function PageWrapper({ children, logo }: { children: React.ReactNode; logo?: str
   );
 }
 
+function safeFormatDate(value: any, fmt = "dd/MM/yyyy"): string {
+  if (!value) return "—";
+  try {
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return "—";
+    return format(d, fmt);
+  } catch {
+    return "—";
+  }
+}
+
 function FichaEPICompleta({ dados }: { dados: any }) {
   const empresa = dados?.empresa || {};
   const func = dados?.funcionario || {};
