@@ -380,47 +380,7 @@ export default function Estoque() {
         </div>
       )}
 
-      {/* Modal: Entrega EPI */}
-      {showNewEpi && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setShowNewEpi(false)}>
-          <div className="bg-card rounded-xl p-6 w-full max-w-lg shadow-xl space-y-4" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold flex items-center gap-2"><HardHat className="h-5 w-5 text-warning" /> Entrega de EPI</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div><label className="text-xs text-muted-foreground">Empresa *</label>
-                <select value={ne.empresa_id} onChange={e => setNe(p => ({ ...p, empresa_id: e.target.value }))} className={inputClass}>
-                  <option value="">Selecione a empresa...</option>
-                  {empresasList.map(emp => <option key={emp.id} value={emp.id}>{emp.nome_fantasia || emp.razao_social} — {emp.cnpj}</option>)}
-                </select>
-              </div>
-              <div><label className="text-xs text-muted-foreground">Funcionário *</label>
-                <select value={ne.funcionario_id} onChange={e => setNe(p => ({ ...p, funcionario_id: e.target.value }))} className={inputClass}>
-                  <option value="">Selecione...</option>
-                  {funcionarios.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
-                </select>
-              </div>
-              <div><label className="text-xs text-muted-foreground">EPI (Produto) *</label>
-                <select value={ne.produto_id} onChange={e => setNe(p => ({ ...p, produto_id: e.target.value }))} className={inputClass}>
-                  <option value="">Selecione...</option>
-                  {produtos.filter(p => p.categoria === "EPI" || !p.categoria).map(p => <option key={p.id} value={p.id}>{p.descricao}</option>)}
-                </select>
-              </div>
-              <div><label className="text-xs text-muted-foreground">Obra</label>
-                <select value={ne.obra_id} onChange={e => setNe(p => ({ ...p, obra_id: e.target.value }))} className={inputClass}>
-                  <option value="">Nenhuma</option>
-                  {obras.map(o => <option key={o.id} value={o.id}>{o.codigo} — {o.nome}</option>)}
-                </select>
-              </div>
-              <div><label className="text-xs text-muted-foreground">Quantidade</label><input type="number" value={ne.quantidade} onChange={e => setNe(p => ({ ...p, quantidade: Number(e.target.value) }))} className={inputClass} /></div>
-              <div><label className="text-xs text-muted-foreground">Nº CA</label><input value={ne.ca_numero} onChange={e => setNe(p => ({ ...p, ca_numero: e.target.value }))} className={inputClass} /></div>
-              <div><label className="text-xs text-muted-foreground">Observações</label><input value={ne.observacoes} onChange={e => setNe(p => ({ ...p, observacoes: e.target.value }))} className={inputClass} /></div>
-            </div>
-            <div className="flex gap-2 justify-end">
-              <button onClick={() => setShowNewEpi(false)} className="rounded-lg border px-4 py-2 text-sm hover:bg-muted">Cancelar</button>
-              <button onClick={saveEpi} className="rounded-lg bg-warning px-4 py-2 text-sm font-medium text-warning-foreground hover:bg-warning/90">Entregar e Baixar Estoque</button>
-            </div>
-          </div>
-        </div>
-      )}
     </AppLayout>
   );
+}
 }
