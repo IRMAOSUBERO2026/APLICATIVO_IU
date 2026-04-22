@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { CompraForm } from "@/components/compras/CompraForm";
 import { ImportadorArquivos } from "@/components/compras/ImportadorArquivos";
+import { ConferenciaRecebimento } from "@/components/compras/ConferenciaRecebimento";
 import { CompraStatus, STATUS_LABELS, STATUS_COLORS, ORIGEM_LABELS, OrigemLancamento } from "@/components/compras/types";
 import { useCompras, useEmpresas, useObras, useCreateCompra, useUpdateCompraStatus, CompraDB } from "@/hooks/useCompras";
 import jsPDF from "jspdf";
@@ -30,6 +31,7 @@ export default function Compras() {
   const [showForm, setShowForm] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [detalhesCompra, setDetalhesCompra] = useState<CompraDB | null>(null);
+  const [conferenciaCompra, setConferenciaCompra] = useState<CompraDB | null>(null);
   const [filtroObra, setFiltroObra] = useState("todas");
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const [busca, setBusca] = useState("");
@@ -262,8 +264,8 @@ export default function Compras() {
                         </>
                       )}
                       {detalhesCompra.status === "aprovada" && (
-                        <Button size="sm" onClick={() => handleUpdateStatus(detalhesCompra.id, "recebida")}>
-                          <Package className="h-4 w-4 mr-1" />Confirmar Recebimento
+                        <Button size="sm" onClick={() => { const c = detalhesCompra; setDetalhesCompra(null); setConferenciaCompra(c); }}>
+                          <Package className="h-4 w-4 mr-1" />Conferir e Receber
                         </Button>
                       )}
                     </div>
@@ -274,6 +276,16 @@ export default function Compras() {
             )}
           </DialogContent>
         </Dialog>
+
+        {conferenciaCompra && (
+          <ConferenciaRecebimento
+            compraId={conferenciaCompra.id}
+            obraId={conferenciaCompra.obra_id}
+            open={!!conferenciaCompra}
+            onClose={() => setConferenciaCompra(null)}
+            onCompleted={() => { /* react-query auto-invalidate via mutation; refetch via window */ window.location.reload(); }}
+          />
+        )}
 
         {/* Table */}
         <Card>
