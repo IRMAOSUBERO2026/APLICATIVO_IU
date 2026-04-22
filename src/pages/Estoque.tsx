@@ -19,15 +19,11 @@ export default function Estoque() {
   const [search, setSearch] = useState("");
   const [showNewProduto, setShowNewProduto] = useState(false);
   const [showNewMov, setShowNewMov] = useState(false);
-  const [showNewEpi, setShowNewEpi] = useState(false);
 
   // New produto form
   const [np, setNp] = useState({ descricao: "", codigo: "", categoria: "", unidade: "un", estoque_minimo: 0, ncm: "" });
   // New movimentação form
   const [nm, setNm] = useState({ produto_id: "", tipo: "entrada", quantidade: 0, valor_unitario: 0, obra_id: "", documento: "", observacoes: "" });
-  // New EPI delivery form
-  const [ne, setNe] = useState({ funcionario_id: "", produto_id: "", obra_id: "", quantidade: 1, ca_numero: "", observacoes: "", empresa_id: "" });
-  const { empresas: empresasList } = useEmpresasObras();
 
   const loadData = useCallback(async () => {
     const [{ data: p }, { data: m }, { data: mAll }, { data: o }, { data: f }] = await Promise.all([
