@@ -2,7 +2,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Package, Plus, ArrowDown, ArrowUp, Search, HardHat, FileDown, AlertTriangle } from "lucide-react";
+import { Package, Plus, ArrowDown, Search, AlertTriangle } from "lucide-react";
 import { ImportarPlanilha } from "@/components/estoque/ImportarPlanilha";
 import { format } from "date-fns";
 import { useEmpresasObras } from "@/hooks/useEmpresasObras";
@@ -126,11 +126,12 @@ export default function Estoque() {
             <button onClick={() => setShowNewMov(true)} className="inline-flex items-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">
               <ArrowDown className="h-4 w-4" /> Movimentação
             </button>
-            <button onClick={() => setShowNewEpi(true)} className="inline-flex items-center gap-2 rounded-lg bg-warning px-4 py-2.5 text-sm font-medium text-warning-foreground shadow-sm hover:bg-warning/90 transition-colors">
-              <HardHat className="h-4 w-4" /> Entrega EPI
-            </button>
           </div>
         </div>
+
+        <p className="text-xs text-muted-foreground -mt-3">
+          As entradas são geradas automaticamente quando uma compra é recebida. Para entrega de EPI, use o módulo dedicado.
+        </p>
 
         {/* KPI */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
