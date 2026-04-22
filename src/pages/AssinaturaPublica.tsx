@@ -299,7 +299,7 @@ export default function AssinaturaPublica() {
               <p className="text-sm text-muted-foreground mt-1">{data.documento_descricao}</p>
             )}
             <p className="text-xs text-muted-foreground mt-2">
-              Solicitado por: {data?.solicitado_por || "Gestão"} • {format(new Date(data?.created_at || ""), "dd/MM/yyyy")}
+              Solicitado por: {data?.solicitado_por || "Gestão"} • {data?.created_at ? format(new Date(data.created_at), "dd/MM/yyyy") : ""}
             </p>
           </div>
 
@@ -439,6 +439,17 @@ function PageWrapper({ children, logo }: { children: React.ReactNode; logo?: str
   );
 }
 
+function safeFormatDate(value: any, fmt = "dd/MM/yyyy"): string {
+  if (!value) return "—";
+  try {
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return "—";
+    return format(d, fmt);
+  } catch {
+    return "—";
+  }
+}
+
 function FichaEPICompleta({ dados }: { dados: any }) {
   const empresa = dados?.empresa || {};
   const func = dados?.funcionario || {};
@@ -469,7 +480,7 @@ function FichaEPICompleta({ dados }: { dados: any }) {
         <p><strong>Nome:</strong> {func.nome}</p>
         <p><strong>CPF:</strong> {func.cpf} {func.rg && <span className="ml-2"><strong>RG:</strong> {func.rg}</span>}</p>
         <p><strong>Cargo:</strong> {func.cargo}</p>
-        {func.data_admissao && <p><strong>Admissão:</strong> {format(new Date(func.data_admissao), "dd/MM/yyyy")}</p>}
+        {func.data_admissao && <p><strong>Admissão:</strong> {safeFormatDate(func.data_admissao)}</p>}
       </div>
 
       <div className="px-4 py-3 border-b">
@@ -484,7 +495,7 @@ function FichaEPICompleta({ dados }: { dados: any }) {
                   <p className="text-muted-foreground">CA: {item.ca_numero || "—"} • Qtd: {item.qtd}</p>
                 </div>
                 <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded whitespace-nowrap">
-                  {item.data && format(new Date(item.data), "dd/MM/yyyy")}
+                  {safeFormatDate(item.data)}
                 </span>
               </div>
               <p className="text-[10px] mt-1"><strong>Motivo:</strong> {item.motivo}</p>

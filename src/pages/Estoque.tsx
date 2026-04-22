@@ -13,6 +13,7 @@ export default function Estoque() {
   const [tab, setTab] = useState<TabKey>("produtos");
   const [produtos, setProdutos] = useState<any[]>([]);
   const [movimentacoes, setMovimentacoes] = useState<any[]>([]);
+  const [allMovs, setAllMovs] = useState<any[]>([]);
   const [obras, setObras] = useState<any[]>([]);
   const [funcionarios, setFuncionarios] = useState<any[]>([]);
   const [search, setSearch] = useState("");
@@ -29,24 +30,27 @@ export default function Estoque() {
   const { empresas: empresasList } = useEmpresasObras();
 
   const loadData = useCallback(async () => {
-    const [{ data: p }, { data: m }, { data: o }, { data: f }] = await Promise.all([
+    const [{ data: p }, { data: m }, { data: mAll }, { data: o }, { data: f }] = await Promise.all([
       supabase.from("produtos").select("*").order("descricao"),
       supabase.from("movimentacoes_estoque").select("*, produtos(descricao, unidade), obras(nome)").order("data_movimentacao", { ascending: false }).limit(100),
+      // Saldo total — sem limite, apenas campos necessários
+      supabase.from("movimentacoes_estoque").select("produto_id, tipo, quantidade, valor_unitario"),
       supabase.from("obras").select("id, nome, codigo").eq("status", "em_andamento"),
       supabase.from("funcionarios").select("id, nome, obra_id").eq("status", "ativo"),
     ]);
     if (p) setProdutos(p);
     if (m) setMovimentacoes(m);
+    if (mAll) setAllMovs(mAll);
     if (o) setObras(o);
     if (f) setFuncionarios(f);
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // Calculate stock balance per product
+  // Calculate stock balance per product (usa allMovs para saldo correto, sem limite)
   const stockBalances = produtos.map(p => {
-    const entradas = movimentacoes.filter(m => m.produto_id === p.id && m.tipo === "entrada").reduce((s, m) => s + Number(m.quantidade), 0);
-    const saidas = movimentacoes.filter(m => m.produto_id === p.id && m.tipo !== "entrada").reduce((s, m) => s + Number(m.quantidade), 0);
+    const entradas = allMovs.filter(m => m.produto_id === p.id && m.tipo === "entrada").reduce((s, m) => s + Number(m.quantidade), 0);
+    const saidas = allMovs.filter(m => m.produto_id === p.id && m.tipo !== "entrada").reduce((s, m) => s + Number(m.quantidade), 0);
     const saldo = entradas - saidas;
     return { ...p, saldo, entradas, saidas, abaixoMinimo: p.estoque_minimo > 0 && saldo < p.estoque_minimo };
   });
