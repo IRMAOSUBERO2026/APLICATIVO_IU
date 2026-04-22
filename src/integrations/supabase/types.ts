@@ -1457,8 +1457,10 @@ export type Database = {
           cfop: string | null
           compra_id: string
           descricao: string
+          estoque_processado: boolean
           id: string
           ncm: string | null
+          produto_id: string | null
           quantidade: number
           subtotal: number
           unidade: string
@@ -1469,8 +1471,10 @@ export type Database = {
           cfop?: string | null
           compra_id: string
           descricao: string
+          estoque_processado?: boolean
           id?: string
           ncm?: string | null
+          produto_id?: string | null
           quantidade?: number
           subtotal?: number
           unidade?: string
@@ -1481,8 +1485,10 @@ export type Database = {
           cfop?: string | null
           compra_id?: string
           descricao?: string
+          estoque_processado?: boolean
           id?: string
           ncm?: string | null
+          produto_id?: string | null
           quantidade?: number
           subtotal?: number
           unidade?: string
@@ -2295,6 +2301,66 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      solicitacoes_diario: {
+        Row: {
+          atendido_por: string | null
+          created_at: string
+          data_atendimento: string | null
+          descricao_livre: string | null
+          diario_id: string | null
+          empresa_id: string
+          equipamento_proprio_id: string | null
+          id: string
+          justificativa: string
+          obra_id: string
+          observacoes_atendimento: string | null
+          produto_id: string | null
+          quantidade: number
+          solicitante: string | null
+          status: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          atendido_por?: string | null
+          created_at?: string
+          data_atendimento?: string | null
+          descricao_livre?: string | null
+          diario_id?: string | null
+          empresa_id: string
+          equipamento_proprio_id?: string | null
+          id?: string
+          justificativa: string
+          obra_id: string
+          observacoes_atendimento?: string | null
+          produto_id?: string | null
+          quantidade?: number
+          solicitante?: string | null
+          status?: string
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          atendido_por?: string | null
+          created_at?: string
+          data_atendimento?: string | null
+          descricao_livre?: string | null
+          diario_id?: string | null
+          empresa_id?: string
+          equipamento_proprio_id?: string | null
+          id?: string
+          justificativa?: string
+          obra_id?: string
+          observacoes_atendimento?: string | null
+          produto_id?: string | null
+          quantidade?: number
+          solicitante?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       solicitacoes_exame: {
         Row: {
