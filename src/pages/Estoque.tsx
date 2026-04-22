@@ -5,7 +5,7 @@ import { toast } from "@/hooks/use-toast";
 import { Package, Plus, ArrowDown, Search, AlertTriangle } from "lucide-react";
 import { ImportarPlanilha } from "@/components/estoque/ImportarPlanilha";
 import { format } from "date-fns";
-import { useEmpresasObras } from "@/hooks/useEmpresasObras";
+
 
 type TabKey = "produtos" | "movimentacoes" | "epi" | "estoque_minimo";
 
@@ -76,31 +76,6 @@ export default function Estoque() {
     // If saida, auto-generate conta_pagar? No, just track stock
     setNm({ produto_id: "", tipo: "entrada", quantidade: 0, valor_unitario: 0, obra_id: "", documento: "", observacoes: "" });
     setShowNewMov(false);
-    loadData();
-  };
-
-  const saveEpi = async () => {
-    if (!ne.funcionario_id || !ne.produto_id || !ne.empresa_id) { toast({ title: "Funcionário, EPI e Empresa são obrigatórios", variant: "destructive" }); return; }
-    const empresaId = ne.empresa_id;
-
-    // Register EPI delivery
-    const { error: epiError } = await supabase.from("entregas_epi").insert({
-      funcionario_id: ne.funcionario_id, produto_id: ne.produto_id,
-      obra_id: ne.obra_id || null, empresa_id: empresaId,
-      quantidade: Number(ne.quantidade), ca_numero: ne.ca_numero || null,
-      observacoes: ne.observacoes || null,
-    });
-    if (epiError) { toast({ title: "Erro", description: epiError.message, variant: "destructive" }); return; }
-
-    // Auto stock withdrawal
-    await supabase.from("movimentacoes_estoque").insert({
-      produto_id: ne.produto_id, tipo: "saida_epi", quantidade: Number(ne.quantidade),
-      obra_id: ne.obra_id || null, observacoes: `Entrega EPI - ${funcionarios.find(f => f.id === ne.funcionario_id)?.nome || ""}`,
-    });
-
-    toast({ title: "EPI entregue e baixa no estoque realizada" });
-    setNe({ funcionario_id: "", produto_id: "", obra_id: "", quantidade: 1, ca_numero: "", observacoes: "", empresa_id: "" });
-    setShowNewEpi(false);
     loadData();
   };
 
