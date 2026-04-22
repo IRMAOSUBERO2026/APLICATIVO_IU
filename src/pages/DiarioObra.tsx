@@ -254,21 +254,44 @@ export default function DiarioObra() {
       `\nHoras-Homem: ${horasHomem} | Produtividade: ${produtividade}`,
     ].join("");
 
-    const { error } = await supabase.from("diarios_obra").insert({
+    const { data: diarioInserido, error } = await supabase.from("diarios_obra").insert({
       obra_id: selectedObra,
       data,
       mao_de_obra_presente: totalPresentes,
       atividades_executadas: atividadesTexto || null,
       observacoes: obsCompleta || null,
       responsavel: responsavel || null,
-    });
+    }).select("id").single();
+
+    if (error) {
+      setSaving(false);
+      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    // Salvar solicitações pendentes
+    const validas = solicitacoes.filter(s => s.justificativa.trim() && (s.produto_id || s.equipamento_proprio_id || s.descricao_livre.trim()));
+    if (validas.length > 0) {
+      const { data: obraInfo } = await supabase.from("obras").select("empresa_id").eq("id", selectedObra).single();
+      if (obraInfo) {
+        await supabase.from("solicitacoes_diario").insert(validas.map(s => ({
+          empresa_id: obraInfo.empresa_id,
+          obra_id: selectedObra,
+          diario_id: diarioInserido?.id || null,
+          tipo: s.tipo,
+          produto_id: s.produto_id,
+          equipamento_proprio_id: s.equipamento_proprio_id,
+          descricao_livre: s.descricao_livre || null,
+          quantidade: s.quantidade,
+          justificativa: s.justificativa,
+          solicitante: responsavel || null,
+        })));
+      }
+    }
 
     setSaving(false);
-    if (error) {
-      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Diário salvo com sucesso!" });
-    }
+    setSolicitacoes([]);
+    toast({ title: "Diário salvo com sucesso!", description: validas.length > 0 ? `${validas.length} solicitação(ões) enviada(s).` : undefined });
   };
 
   return (
