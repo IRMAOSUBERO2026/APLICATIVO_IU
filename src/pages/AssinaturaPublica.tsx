@@ -480,7 +480,7 @@ function FichaEPICompleta({ dados }: { dados: any }) {
         <p><strong>Nome:</strong> {func.nome}</p>
         <p><strong>CPF:</strong> {func.cpf} {func.rg && <span className="ml-2"><strong>RG:</strong> {func.rg}</span>}</p>
         <p><strong>Cargo:</strong> {func.cargo}</p>
-        {func.data_admissao && <p><strong>Admissão:</strong> {format(new Date(func.data_admissao), "dd/MM/yyyy")}</p>}
+        {func.data_admissao && <p><strong>Admissão:</strong> {safeFormatDate(func.data_admissao)}</p>}
       </div>
 
       <div className="px-4 py-3 border-b">
@@ -495,7 +495,7 @@ function FichaEPICompleta({ dados }: { dados: any }) {
                   <p className="text-muted-foreground">CA: {item.ca_numero || "—"} • Qtd: {item.qtd}</p>
                 </div>
                 <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded whitespace-nowrap">
-                  {item.data && format(new Date(item.data), "dd/MM/yyyy")}
+                  {safeFormatDate(item.data)}
                 </span>
               </div>
               <p className="text-[10px] mt-1"><strong>Motivo:</strong> {item.motivo}</p>
