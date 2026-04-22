@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SolicitacoesDiario, SolicitacaoItem } from "@/components/diario/SolicitacoesDiario";
 
 interface ObraOption { id: string; nome: string; codigo: string; status?: string; }
 interface FuncOption { id: string; nome: string; cargo: string; obra_id: string | null; }
@@ -72,6 +73,7 @@ export default function DiarioObra() {
   const [equipsProprios, setEquipsProprios] = useState<EquipProprio[]>([]);
   // Equipamentos locados
   const [equipsLocados, setEquipsLocados] = useState<EquipLocado[]>([]);
+  const [solicitacoes, setSolicitacoes] = useState<SolicitacaoItem[]>([]);
 
   const [saving, setSaving] = useState(false);
   const obraSelecionada = obras.find(o => o.id === selectedObra);
