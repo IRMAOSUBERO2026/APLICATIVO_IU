@@ -299,7 +299,7 @@ export default function AssinaturaPublica() {
               <p className="text-sm text-muted-foreground mt-1">{data.documento_descricao}</p>
             )}
             <p className="text-xs text-muted-foreground mt-2">
-              Solicitado por: {data?.solicitado_por || "Gestão"} • {format(new Date(data?.created_at || ""), "dd/MM/yyyy")}
+              Solicitado por: {data?.solicitado_por || "Gestão"} • {data?.created_at ? format(new Date(data.created_at), "dd/MM/yyyy") : ""}
             </p>
           </div>
 
