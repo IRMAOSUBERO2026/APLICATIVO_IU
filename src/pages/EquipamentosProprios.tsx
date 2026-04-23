@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
-import { Wrench, Plus, Search, MapPin, ShoppingCart, Settings, History, Trash2, Edit } from "lucide-react";
+import { Wrench, Plus, Search, MapPin, ShoppingCart, Settings, History, Trash2, Edit, Camera, Loader2, X } from "lucide-react";
 
 interface Equipamento {
   id: string;
@@ -29,6 +29,7 @@ interface Equipamento {
   empresa_id: string;
   status: string;
   observacoes: string | null;
+  foto_url: string | null;
 }
 
 interface Manutencao {
@@ -97,7 +98,8 @@ export default function EquipamentosProprios() {
   const [selectedEquipId, setSelectedEquipId] = useState<string>("");
 
   // Form states
-  const [formEquip, setFormEquip] = useState({ codigo: "", descricao: "", tipo: "Outros", marca: "", modelo: "", numero_serie: "", data_aquisicao: "", valor_aquisicao: 0, obra_id: "", empresa_id: "", status: "disponivel", observacoes: "" });
+  const [formEquip, setFormEquip] = useState({ codigo: "", descricao: "", tipo: "Outros", marca: "", modelo: "", numero_serie: "", data_aquisicao: "", valor_aquisicao: 0, obra_id: "", empresa_id: "", status: "disponivel", observacoes: "", foto_url: "" });
+  const [uploadingFoto, setUploadingFoto] = useState(false);
   const [formManut, setFormManut] = useState({ equipamento_id: "", tipo: "corretiva", descricao: "", fornecedor: "", valor_orcamento: 0, valor_aprovado: 0, observacoes: "" });
   const [formCompra, setFormCompra] = useState({ descricao: "", tipo: "Outros", marca: "", modelo: "", quantidade: 1, valor_estimado: 0, obra_id: "", solicitante: "", empresa_id: "", observacoes: "" });
 
@@ -209,7 +211,25 @@ export default function EquipamentosProprios() {
     loadData();
   }
 
-  function resetEquipForm() { setFormEquip({ codigo: "", descricao: "", tipo: "Outros", marca: "", modelo: "", numero_serie: "", data_aquisicao: "", valor_aquisicao: 0, obra_id: "", empresa_id: "", status: "disponivel", observacoes: "" }); }
+  async function uploadFoto(file: File) {
+    if (!file) return;
+    setUploadingFoto(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `equipamentos/${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage.from("documentos").upload(path, file, { upsert: false, contentType: file.type });
+      if (error) throw error;
+      const { data: pub } = supabase.storage.from("documentos").getPublicUrl(path);
+      setFormEquip(p => ({ ...p, foto_url: pub.publicUrl }));
+      toast({ title: "Foto enviada!" });
+    } catch (e: any) {
+      toast({ title: "Erro ao enviar foto", description: e.message, variant: "destructive" });
+    } finally {
+      setUploadingFoto(false);
+    }
+  }
+
+  function resetEquipForm() { setFormEquip({ codigo: "", descricao: "", tipo: "Outros", marca: "", modelo: "", numero_serie: "", data_aquisicao: "", valor_aquisicao: 0, obra_id: "", empresa_id: "", status: "disponivel", observacoes: "", foto_url: "" }); }
   function resetManutForm() { setFormManut({ equipamento_id: "", tipo: "corretiva", descricao: "", fornecedor: "", valor_orcamento: 0, valor_aprovado: 0, observacoes: "" }); }
   function resetCompraForm() { setFormCompra({ descricao: "", tipo: "Outros", marca: "", modelo: "", quantidade: 1, valor_estimado: 0, obra_id: "", solicitante: "", empresa_id: "", observacoes: "" }); }
 
@@ -219,6 +239,7 @@ export default function EquipamentosProprios() {
       codigo: eq.codigo, descricao: eq.descricao, tipo: eq.tipo, marca: eq.marca || "", modelo: eq.modelo || "",
       numero_serie: eq.numero_serie || "", data_aquisicao: eq.data_aquisicao || "", valor_aquisicao: eq.valor_aquisicao,
       obra_id: eq.obra_id || "", empresa_id: eq.empresa_id, status: eq.status, observacoes: eq.observacoes || "",
+      foto_url: eq.foto_url || "",
     });
     setShowEquipForm(true);
   }
@@ -315,6 +336,7 @@ export default function EquipamentosProprios() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-14">Foto</TableHead>
                       <TableHead>Código</TableHead>
                       <TableHead>Descrição</TableHead>
                       <TableHead>Tipo</TableHead>
@@ -326,9 +348,16 @@ export default function EquipamentosProprios() {
                   </TableHeader>
                   <TableBody>
                     {filteredEquip.length === 0 ? (
-                      <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhum equipamento cadastrado</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Nenhum equipamento cadastrado</TableCell></TableRow>
                     ) : filteredEquip.map(eq => (
                       <TableRow key={eq.id}>
+                        <TableCell>
+                          {eq.foto_url ? (
+                            <img src={eq.foto_url} alt={eq.descricao} className="h-10 w-10 object-cover rounded border" />
+                          ) : (
+                            <div className="h-10 w-10 rounded border bg-muted/30 flex items-center justify-center text-muted-foreground"><Camera className="h-4 w-4" /></div>
+                          )}
+                        </TableCell>
                         <TableCell className="font-mono text-xs">{eq.codigo}</TableCell>
                         <TableCell className="font-medium">{eq.descricao}</TableCell>
                         <TableCell className="text-sm">{eq.tipo}</TableCell>
@@ -476,6 +505,49 @@ export default function EquipamentosProprios() {
               </Select>
             </div>
             <div className="md:col-span-2"><Label>Observações</Label><Textarea value={formEquip.observacoes} onChange={e => setFormEquip(p => ({ ...p, observacoes: e.target.value }))} /></div>
+            <div className="md:col-span-2 space-y-2">
+              <Label>Foto do Equipamento</Label>
+              <div className="flex items-start gap-3">
+                {formEquip.foto_url ? (
+                  <div className="relative">
+                    <img src={formEquip.foto_url} alt="Equipamento" className="h-28 w-28 object-cover rounded-md border" />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="destructive"
+                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                      onClick={() => setFormEquip(p => ({ ...p, foto_url: "" }))}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="h-28 w-28 rounded-md border border-dashed flex items-center justify-center text-muted-foreground bg-muted/30">
+                    <Camera className="h-8 w-8" />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <input
+                    id="foto-equip-input"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) uploadFoto(f); e.target.value = ""; }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={uploadingFoto}
+                    onClick={() => document.getElementById("foto-equip-input")?.click()}
+                  >
+                    {uploadingFoto ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Camera className="h-4 w-4 mr-1" />}
+                    {uploadingFoto ? "Enviando..." : formEquip.foto_url ? "Trocar Foto" : "Anexar Foto"}
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-1">JPG ou PNG. Salva automaticamente no banco.</p>
+                </div>
+              </div>
+            </div>
           </div>
           <DialogFooter><Button onClick={saveEquip}>{editingEquip ? "Salvar" : "Cadastrar"}</Button></DialogFooter>
         </DialogContent>
