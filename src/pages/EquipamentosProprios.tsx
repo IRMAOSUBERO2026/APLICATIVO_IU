@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
-import { Wrench, Plus, Search, MapPin, ShoppingCart, Settings, History, Trash2, Edit } from "lucide-react";
+import { Wrench, Plus, Search, MapPin, ShoppingCart, Settings, History, Trash2, Edit, Camera, Loader2, X } from "lucide-react";
 
 interface Equipamento {
   id: string;
