@@ -31,7 +31,7 @@ export default function Estoque() {
       supabase.from("movimentacoes_estoque").select("*, produtos(descricao, unidade), obras(nome)").order("data_movimentacao", { ascending: false }).limit(100),
       // Saldo total — sem limite, apenas campos necessários
       supabase.from("movimentacoes_estoque").select("produto_id, tipo, quantidade, valor_unitario"),
-      supabase.from("obras").select("id, nome, codigo").eq("status", "em_andamento"),
+      supabase.from("obras").select("id, nome, codigo").in("status", OBRA_STATUS_ATIVOS_ARR),
       supabase.from("funcionarios").select("id, nome, obra_id").eq("status", "ativo"),
     ]);
     if (p) setProdutos(p);

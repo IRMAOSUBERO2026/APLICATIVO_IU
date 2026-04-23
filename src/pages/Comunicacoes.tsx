@@ -38,7 +38,7 @@ export default function Comunicacoes() {
     Promise.all([
       supabase.from("funcionarios").select("id, nome, cargo, telefone, email, empresa_id, obra_id, status").eq("status", "ativo"),
       supabase.from("empresas").select("id, razao_social, nome_fantasia").eq("ativo", true),
-      supabase.from("obras").select("id, nome, codigo").eq("status", "em_andamento"),
+      supabase.from("obras").select("id, nome, codigo").in("status", OBRA_STATUS_ATIVOS_ARR),
     ]).then(([fRes, eRes, oRes]) => {
       if (fRes.data) setFuncionarios(fRes.data);
       if (eRes.data) setEmpresas(eRes.data);

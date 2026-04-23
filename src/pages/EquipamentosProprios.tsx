@@ -105,7 +105,7 @@ export default function EquipamentosProprios() {
   async function loadData() {
     const [eqRes, obRes, emRes, mnRes, scRes] = await Promise.all([
       supabase.from("equipamentos_proprios").select("*").order("codigo"),
-      supabase.from("obras").select("id, nome, codigo").eq("status", "em_andamento"),
+      supabase.from("obras").select("id, nome, codigo").in("status", OBRA_STATUS_ATIVOS_ARR),
       supabase.from("empresas").select("id, razao_social").eq("ativo", true),
       supabase.from("manutencoes_equipamento").select("*").order("data_solicitacao", { ascending: false }),
       supabase.from("solicitacoes_compra_equipamento").select("*").order("created_at", { ascending: false }),

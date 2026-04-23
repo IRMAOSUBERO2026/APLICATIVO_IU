@@ -21,7 +21,7 @@ export function TransferirFuncionario({ open, onOpenChange, funcionarioId, funci
 
   useEffect(() => {
     if (open) {
-      supabase.from("obras").select("id, nome, codigo, construtora").eq("status", "em_andamento")
+      supabase.from("obras").select("id, nome, codigo, construtora").in("status", OBRA_STATUS_ATIVOS_ARR).order("codigo")
         .then(({ data }) => {
           if (data) setObras(data.filter(o => o.id !== obraAtualId));
         });

@@ -45,7 +45,7 @@ export default function EntregaEPIMobile() {
 
   useEffect(() => {
     Promise.all([
-      supabase.from("obras").select("id, nome, codigo").eq("status", "em_andamento").order("codigo"),
+      supabase.from("obras").select("id, nome, codigo").in("status", OBRA_STATUS_ATIVOS_ARR).order("codigo"),
       supabase.from("funcionarios").select("id, nome, cargo, obra_id, empresa_id").eq("status", "ativo").order("nome"),
       supabase.from("produtos").select("id, descricao, categoria, ca_numero").eq("ativo", true).eq("categoria", "EPI").order("descricao"),
     ]).then(([o, f, p]) => {
