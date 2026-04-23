@@ -29,6 +29,7 @@ interface Equipamento {
   empresa_id: string;
   status: string;
   observacoes: string | null;
+  foto_url: string | null;
 }
 
 interface Manutencao {
