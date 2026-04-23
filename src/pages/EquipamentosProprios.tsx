@@ -497,6 +497,49 @@ export default function EquipamentosProprios() {
               </Select>
             </div>
             <div className="md:col-span-2"><Label>Observações</Label><Textarea value={formEquip.observacoes} onChange={e => setFormEquip(p => ({ ...p, observacoes: e.target.value }))} /></div>
+            <div className="md:col-span-2 space-y-2">
+              <Label>Foto do Equipamento</Label>
+              <div className="flex items-start gap-3">
+                {formEquip.foto_url ? (
+                  <div className="relative">
+                    <img src={formEquip.foto_url} alt="Equipamento" className="h-28 w-28 object-cover rounded-md border" />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="destructive"
+                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                      onClick={() => setFormEquip(p => ({ ...p, foto_url: "" }))}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="h-28 w-28 rounded-md border border-dashed flex items-center justify-center text-muted-foreground bg-muted/30">
+                    <Camera className="h-8 w-8" />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <input
+                    id="foto-equip-input"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) uploadFoto(f); e.target.value = ""; }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={uploadingFoto}
+                    onClick={() => document.getElementById("foto-equip-input")?.click()}
+                  >
+                    {uploadingFoto ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Camera className="h-4 w-4 mr-1" />}
+                    {uploadingFoto ? "Enviando..." : formEquip.foto_url ? "Trocar Foto" : "Anexar Foto"}
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-1">JPG ou PNG. Salva automaticamente no banco.</p>
+                </div>
+              </div>
+            </div>
           </div>
           <DialogFooter><Button onClick={saveEquip}>{editingEquip ? "Salvar" : "Cadastrar"}</Button></DialogFooter>
         </DialogContent>
