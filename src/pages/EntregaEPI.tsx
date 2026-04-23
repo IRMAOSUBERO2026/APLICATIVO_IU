@@ -2,6 +2,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Search, Package, AlertTriangle, Smartphone, Lock } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { isObraAtiva } from "@/lib/obraStatus";
 import { toast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
@@ -74,15 +75,15 @@ export default function EntregaEPI() {
 
   const epiCriticos = produtos.filter(p => p.estoque_minimo > 0 && p.saldo < p.estoque_minimo);
 
-  const obrasAtivas = obras.filter(o => o.status === "em_andamento");
-  const obrasConcluidas = obras.filter(o => o.status !== "em_andamento");
+  const obrasAtivas = obras.filter(o => isObraAtiva(o.status));
+  const obrasConcluidas = obras.filter(o => !isObraAtiva(o.status));
 
   const filtered = entregas.filter(e => {
     if (filterObra !== "todas") {
       const obraMatch = entregas.find(en => en.id === e.id);
       // We need to match by obra name/codigo since we don't have obra_id in the select
       if (filterObra === "concluidas") {
-        if (!e.obra || e.obra.status === "em_andamento") return false;
+        if (!e.obra || isObraAtiva(e.obra.status)) return false;
       } else {
         // filterObra is a specific obra codigo
         if (!e.obra || e.obra.codigo !== filterObra) return false;
@@ -218,7 +219,7 @@ export default function EntregaEPI() {
                       <td className="px-4 py-3.5 text-center font-medium">{e.quantidade}</td>
                       <td className="px-4 py-3.5">
                         <span className="text-muted-foreground">{e.obra ? `${e.obra.codigo} - ${e.obra.nome}` : "—"}</span>
-                        {e.obra && e.obra.status !== "em_andamento" && (
+                        {e.obra && !isObraAtiva(e.obra.status) && (
                           <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1.5 border-muted-foreground/30 text-muted-foreground">
                             Concluída
                           </Badge>

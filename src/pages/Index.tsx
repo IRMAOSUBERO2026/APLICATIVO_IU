@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
+import { isObraAtiva } from "@/lib/obraStatus";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -78,8 +79,8 @@ export default function Dashboard() {
       const medicoes = (medRes.data || []) as any[];
 
       const hoje = new Date();
-      const obrasAtivas = obras.filter(o => o.status === "em_andamento");
-      const obrasConcluidas = obras.filter(o => o.status === "concluida");
+      const obrasAtivas = obras.filter(o => isObraAtiva(o.status));
+      const obrasConcluidas = obras.filter(o => !isObraAtiva(o.status));
 
       const empSummary = empresas.map(e => ({
         nome: e.nome_fantasia || e.razao_social,
