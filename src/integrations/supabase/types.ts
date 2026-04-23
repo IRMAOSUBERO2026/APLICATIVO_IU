@@ -881,6 +881,7 @@ export type Database = {
           data_aquisicao: string | null
           descricao: string
           empresa_id: string
+          foto_url: string | null
           id: string
           marca: string | null
           modelo: string | null
@@ -898,6 +899,7 @@ export type Database = {
           data_aquisicao?: string | null
           descricao: string
           empresa_id: string
+          foto_url?: string | null
           id?: string
           marca?: string | null
           modelo?: string | null
@@ -915,6 +917,7 @@ export type Database = {
           data_aquisicao?: string | null
           descricao?: string
           empresa_id?: string
+          foto_url?: string | null
           id?: string
           marca?: string | null
           modelo?: string | null
