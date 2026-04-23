@@ -1,6 +1,7 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 import { toast } from "@/hooks/use-toast";
 import { Package, Plus, ArrowDown, Search, AlertTriangle } from "lucide-react";
 import { ImportarPlanilha } from "@/components/estoque/ImportarPlanilha";

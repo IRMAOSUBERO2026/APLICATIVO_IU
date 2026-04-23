@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 import { toast } from "@/hooks/use-toast";
 import { ArrowLeft, HardHat, Plus, Save, Check, Search, X, ChevronDown, ChevronUp, Camera, FileSignature, Copy, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
