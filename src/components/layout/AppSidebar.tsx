@@ -43,6 +43,7 @@ const menuSections = [
     items: [
       { icon: HardHat, label: "Obras", path: "/obras" },
       { icon: ClipboardList, label: "Diário de Obra", path: "/diario-obra" },
+      { icon: HardDrive, label: "Entrega de EPI", path: "/entrega-epi" },
       { icon: Calculator, label: "Orçamentos", path: "/orcamento" },
     ],
   },
@@ -67,7 +68,6 @@ const menuSections = [
     items: [
       { icon: ShoppingCart, label: "Compras", path: "/compras" },
       { icon: Package, label: "Estoque", path: "/estoque" },
-      { icon: HardDrive, label: "Entrega de EPI", path: "/entrega-epi" },
       { icon: Wrench, label: "Equip. Próprios", path: "/equipamentos-proprios" },
       { icon: Truck, label: "Equip. Locados", path: "/equipamentos-locados" },
     ],
@@ -97,7 +97,7 @@ export function AppSidebar({ onClose }: AppSidebarProps) {
   const location = useLocation();
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto scrollbar-thin">
+    <div className="flex h-full flex-col overflow-y-auto scrollbar-sidebar">
       <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border">
         <div className="flex items-center gap-2.5">
           <img src={logoPreto} alt="Irmãos Ubero" className="h-10 w-auto" />
