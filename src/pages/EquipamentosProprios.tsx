@@ -211,6 +211,24 @@ export default function EquipamentosProprios() {
     loadData();
   }
 
+  async function uploadFoto(file: File) {
+    if (!file) return;
+    setUploadingFoto(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `equipamentos/${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage.from("documentos").upload(path, file, { upsert: false, contentType: file.type });
+      if (error) throw error;
+      const { data: pub } = supabase.storage.from("documentos").getPublicUrl(path);
+      setFormEquip(p => ({ ...p, foto_url: pub.publicUrl }));
+      toast({ title: "Foto enviada!" });
+    } catch (e: any) {
+      toast({ title: "Erro ao enviar foto", description: e.message, variant: "destructive" });
+    } finally {
+      setUploadingFoto(false);
+    }
+  }
+
   function resetEquipForm() { setFormEquip({ codigo: "", descricao: "", tipo: "Outros", marca: "", modelo: "", numero_serie: "", data_aquisicao: "", valor_aquisicao: 0, obra_id: "", empresa_id: "", status: "disponivel", observacoes: "", foto_url: "" }); }
   function resetManutForm() { setFormManut({ equipamento_id: "", tipo: "corretiva", descricao: "", fornecedor: "", valor_orcamento: 0, valor_aprovado: 0, observacoes: "" }); }
   function resetCompraForm() { setFormCompra({ descricao: "", tipo: "Outros", marca: "", modelo: "", quantidade: 1, valor_estimado: 0, obra_id: "", solicitante: "", empresa_id: "", observacoes: "" }); }
