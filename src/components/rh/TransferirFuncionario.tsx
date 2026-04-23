@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { ArrowRightLeft } from "lucide-react";
+import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 
 interface TransferirFuncionarioProps {
   open: boolean;
