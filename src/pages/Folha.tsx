@@ -122,7 +122,7 @@ export default function Folha() {
     supabase
       .from("obras")
       .select("id, nome, codigo, horario_padrao, empresa_id")
-      .eq("status", "em_andamento")
+      .in("status", OBRA_STATUS_ATIVOS_ARR)
       .order("nome")
       .then(({ data }) => { if (data) setObras(data as any); });
   }, []);
