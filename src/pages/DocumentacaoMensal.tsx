@@ -1,6 +1,7 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { isObraAtiva } from "@/lib/obraStatus";
 import { toast } from "@/hooks/use-toast";
 import {
   FileText, FolderOpen, ChevronRight, ArrowLeft, Upload, Trash2, Download,
