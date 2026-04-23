@@ -207,19 +207,42 @@ export default function RH() {
   };
 
   const saveStatus = async (funcId: string, newStatus: string) => {
-    const updateData: any = { status: newStatus.toLowerCase() };
-    // If desligado and no rescisao date, set today
-    if (newStatus.toLowerCase() === "desligado") {
+    const statusLower = newStatus.toLowerCase();
+    const updateData: any = { status: statusLower };
+
+    // Se ficar inativo (desligado/abandono/atestado), desalocar da obra
+    // para que módulos operacionais (Diário, Folha, Estoque, EPI) parem de listá-lo como alocado.
+    if (STATUS_INATIVOS.includes(statusLower)) {
+      updateData.obra_id = null;
+    }
+
+    // Se desligado e sem data de rescisão, define hoje
+    if (statusLower === "desligado") {
       const f = dbFuncionarios.find(x => x.id === funcId);
       if (!f?.data_rescisao) {
         updateData.data_rescisao = format(new Date(), "yyyy-MM-dd");
       }
     }
+
+    // Se abandono, registrar motivo padrão e data se vazios
+    if (statusLower === "abandono") {
+      const f = dbFuncionarios.find(x => x.id === funcId);
+      if (!f?.motivo_rescisao) {
+        updateData.motivo_rescisao = "Abandono de emprego";
+      }
+      if (!f?.data_rescisao) {
+        updateData.data_rescisao = format(new Date(), "yyyy-MM-dd");
+      }
+    }
+
     const { error } = await supabase.from("funcionarios").update(updateData).eq("id", funcId);
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Status atualizado" });
+      const msg = STATUS_INATIVOS.includes(statusLower)
+        ? "Status atualizado e funcionário desalocado da obra."
+        : "Status atualizado";
+      toast({ title: msg });
       loadDbFuncionarios();
     }
   };
@@ -237,11 +260,12 @@ export default function RH() {
       data_rescisao: desligamentoData,
       motivo_rescisao: desligamentoMotivo || null,
       status: "desligado",
+      obra_id: null, // desalocar da obra ao desligar
     }).eq("id", desligamentoFunc.id);
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Desligamento registrado", description: `${desligamentoFunc.nome} foi desligado.` });
+      toast({ title: "Desligamento registrado", description: `${desligamentoFunc.nome} foi desligado e desalocado da obra.` });
       setDesligamentoOpen(false);
       loadDbFuncionarios();
     }
