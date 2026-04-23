@@ -221,6 +221,7 @@ export default function EquipamentosProprios() {
       codigo: eq.codigo, descricao: eq.descricao, tipo: eq.tipo, marca: eq.marca || "", modelo: eq.modelo || "",
       numero_serie: eq.numero_serie || "", data_aquisicao: eq.data_aquisicao || "", valor_aquisicao: eq.valor_aquisicao,
       obra_id: eq.obra_id || "", empresa_id: eq.empresa_id, status: eq.status, observacoes: eq.observacoes || "",
+      foto_url: eq.foto_url || "",
     });
     setShowEquipForm(true);
   }
