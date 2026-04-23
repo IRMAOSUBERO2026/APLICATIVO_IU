@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SolicitacoesDiario, SolicitacaoItem } from "@/components/diario/SolicitacoesDiario";
+import { isObraAtiva } from "@/lib/obraStatus";
 
 interface ObraOption { id: string; nome: string; codigo: string; status?: string; }
 interface FuncOption { id: string; nome: string; cargo: string; obra_id: string | null; }
@@ -77,7 +78,7 @@ export default function DiarioObra() {
 
   const [saving, setSaving] = useState(false);
   const obraSelecionada = obras.find(o => o.id === selectedObra);
-  const isObraConcluida = obraSelecionada?.status !== "em_andamento" && !!selectedObra;
+  const isObraConcluida = !!selectedObra && !isObraAtiva(obraSelecionada?.status);
 
   // AI Summary
   const [resumoIA, setResumoIA] = useState("");
@@ -320,11 +321,11 @@ export default function DiarioObra() {
                 className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm focus:ring-2 focus:ring-ring">
                 <option value="">Selecione a obra...</option>
                 <optgroup label="Obras ativas">
-                  {obras.filter(o => o.status === "em_andamento").map(o => <option key={o.id} value={o.id}>{o.codigo} - {o.nome}</option>)}
+                  {obras.filter(o => isObraAtiva(o.status)).map(o => <option key={o.id} value={o.id}>{o.codigo} - {o.nome}</option>)}
                 </optgroup>
-                {obras.filter(o => o.status !== "em_andamento").length > 0 && (
+                {obras.filter(o => !isObraAtiva(o.status)).length > 0 && (
                   <optgroup label="Obras concluídas (somente consulta)">
-                    {obras.filter(o => o.status !== "em_andamento").map(o => <option key={o.id} value={o.id}>🔒 {o.codigo} - {o.nome}</option>)}
+                    {obras.filter(o => !isObraAtiva(o.status)).map(o => <option key={o.id} value={o.id}>🔒 {o.codigo} - {o.nome}</option>)}
                   </optgroup>
                 )}
               </select>
