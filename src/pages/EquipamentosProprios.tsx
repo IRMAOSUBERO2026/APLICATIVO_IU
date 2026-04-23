@@ -211,7 +211,7 @@ export default function EquipamentosProprios() {
     loadData();
   }
 
-  function resetEquipForm() { setFormEquip({ codigo: "", descricao: "", tipo: "Outros", marca: "", modelo: "", numero_serie: "", data_aquisicao: "", valor_aquisicao: 0, obra_id: "", empresa_id: "", status: "disponivel", observacoes: "" }); }
+  function resetEquipForm() { setFormEquip({ codigo: "", descricao: "", tipo: "Outros", marca: "", modelo: "", numero_serie: "", data_aquisicao: "", valor_aquisicao: 0, obra_id: "", empresa_id: "", status: "disponivel", observacoes: "", foto_url: "" }); }
   function resetManutForm() { setFormManut({ equipamento_id: "", tipo: "corretiva", descricao: "", fornecedor: "", valor_orcamento: 0, valor_aprovado: 0, observacoes: "" }); }
   function resetCompraForm() { setFormCompra({ descricao: "", tipo: "Outros", marca: "", modelo: "", quantidade: 1, valor_estimado: 0, obra_id: "", solicitante: "", empresa_id: "", observacoes: "" }); }
 
