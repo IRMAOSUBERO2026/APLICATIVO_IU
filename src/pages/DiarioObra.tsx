@@ -614,6 +614,9 @@ export default function DiarioObra() {
               )}
             </div>
 
+            {/* Solicitações de EPI / Equipamento */}
+            <SolicitacoesDiario itens={solicitacoes} onChange={setSolicitacoes} disabled={saving} />
+
             {/* Observações */}
             <div className="rounded-xl border bg-card p-5 shadow-sm space-y-3">
               <label className="text-sm font-semibold">Observações Gerais</label>
