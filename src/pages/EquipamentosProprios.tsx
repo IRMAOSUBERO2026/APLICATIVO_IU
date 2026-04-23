@@ -461,10 +461,10 @@ export default function EquipamentosProprios() {
               </Select>
             </div>
             <div><Label>Obra (Localização)</Label>
-              <Select value={formEquip.obra_id} onValueChange={v => setFormEquip(p => ({ ...p, obra_id: v }))}>
+              <Select value={formEquip.obra_id || "__none__"} onValueChange={v => setFormEquip(p => ({ ...p, obra_id: v === "__none__" ? "" : v }))}>
                 <SelectTrigger><SelectValue placeholder="Sem obra" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Sem obra</SelectItem>
+                  <SelectItem value="__none__">Sem obra</SelectItem>
                   {obras.map(o => <SelectItem key={o.id} value={o.id}>{o.codigo} - {o.nome}</SelectItem>)}
                 </SelectContent>
               </Select>
