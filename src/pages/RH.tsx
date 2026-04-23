@@ -12,6 +12,7 @@ import { ExamesModule } from "@/components/rh/ExamesModule";
 import { TransferirFuncionario } from "@/components/rh/TransferirFuncionario";
 import { EditFuncionarioForm } from "@/components/rh/EditFuncionarioForm";
 import { supabase } from "@/integrations/supabase/client";
+import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 import { differenceInDays, parseISO, format, addDays } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
