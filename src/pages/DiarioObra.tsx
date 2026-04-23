@@ -1,5 +1,5 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Plus, Users, Calendar, Save, Trash2, Smartphone, Clock, Calculator, Wrench, UserPlus, Truck, Sparkles, Loader2, Lock } from "lucide-react";
+import { Plus, Users, Calendar, Save, Trash2, Smartphone, Clock, Calculator, Wrench, UserPlus, Truck, Sparkles, Loader2 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,10 +8,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { SolicitacoesDiario, SolicitacaoItem } from "@/components/diario/SolicitacoesDiario";
-import { isObraAtiva } from "@/lib/obraStatus";
 
-interface ObraOption { id: string; nome: string; codigo: string; status?: string; }
+interface ObraOption { id: string; nome: string; codigo: string; }
 interface FuncOption { id: string; nome: string; cargo: string; obra_id: string | null; }
 
 interface FuncPresenca {
@@ -74,11 +72,14 @@ export default function DiarioObra() {
   const [equipsProprios, setEquipsProprios] = useState<EquipProprio[]>([]);
   // Equipamentos locados
   const [equipsLocados, setEquipsLocados] = useState<EquipLocado[]>([]);
-  const [solicitacoes, setSolicitacoes] = useState<SolicitacaoItem[]>([]);
+
+  // Estados de toque rápido (Mobile-First)
+  const [clima, setClima] = useState<"sol" | "nublado" | "chuva" | "">("");
+  const [chuvaIntensidade, setChuvaIntensidade] = useState<"fraca" | "moderada" | "forte" | "">("");
+  const [chuvaPeriodo, setChuvaPeriodo] = useState<"manha" | "tarde" | "todo_dia" | "">("");
+  const [ocorrencias, setOcorrencias] = useState<string[]>([]);
 
   const [saving, setSaving] = useState(false);
-  const obraSelecionada = obras.find(o => o.id === selectedObra);
-  const isObraConcluida = !!selectedObra && !isObraAtiva(obraSelecionada?.status);
 
   // AI Summary
   const [resumoIA, setResumoIA] = useState("");
@@ -163,7 +164,7 @@ export default function DiarioObra() {
 
   useEffect(() => {
     Promise.all([
-      supabase.from("obras").select("id, nome, codigo, status").order("codigo"),
+      supabase.from("obras").select("id, nome, codigo").eq("status", "em_andamento"),
       supabase.from("funcionarios").select("id, nome, cargo, obra_id").eq("status", "ativo"),
     ]).then(([obrasRes, funcRes]) => {
       if (obrasRes.data) setObras(obrasRes.data);
@@ -255,44 +256,23 @@ export default function DiarioObra() {
       `\nHoras-Homem: ${horasHomem} | Produtividade: ${produtividade}`,
     ].join("");
 
-    const { data: diarioInserido, error } = await supabase.from("diarios_obra").insert({
+    const { error } = await supabase.from("diarios_obra").insert({
       obra_id: selectedObra,
       data,
       mao_de_obra_presente: totalPresentes,
       atividades_executadas: atividadesTexto || null,
       observacoes: obsCompleta || null,
       responsavel: responsavel || null,
-    }).select("id").single();
-
-    if (error) {
-      setSaving(false);
-      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
-      return;
-    }
-
-    // Salvar solicitações pendentes
-    const validas = solicitacoes.filter(s => s.justificativa.trim() && (s.produto_id || s.equipamento_proprio_id || s.descricao_livre.trim()));
-    if (validas.length > 0) {
-      const { data: obraInfo } = await supabase.from("obras").select("empresa_id").eq("id", selectedObra).single();
-      if (obraInfo) {
-        await supabase.from("solicitacoes_diario").insert(validas.map(s => ({
-          empresa_id: obraInfo.empresa_id,
-          obra_id: selectedObra,
-          diario_id: diarioInserido?.id || null,
-          tipo: s.tipo,
-          produto_id: s.produto_id,
-          equipamento_proprio_id: s.equipamento_proprio_id,
-          descricao_livre: s.descricao_livre || null,
-          quantidade: s.quantidade,
-          justificativa: s.justificativa,
-          solicitante: responsavel || null,
-        })));
-      }
-    }
+      clima: clima || null,
+      ocorrencias: ocorrencias.length > 0 ? ocorrencias.join(", ") : null,
+    });
 
     setSaving(false);
-    setSolicitacoes([]);
-    toast({ title: "Diário salvo com sucesso!", description: validas.length > 0 ? `${validas.length} solicitação(ões) enviada(s).` : undefined });
+    if (error) {
+      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Diário salvo com sucesso!" });
+    }
   };
 
   return (
@@ -320,14 +300,7 @@ export default function DiarioObra() {
               <select value={selectedObra} onChange={e => setSelectedObra(e.target.value)}
                 className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm focus:ring-2 focus:ring-ring">
                 <option value="">Selecione a obra...</option>
-                <optgroup label="Obras ativas">
-                  {obras.filter(o => isObraAtiva(o.status)).map(o => <option key={o.id} value={o.id}>{o.codigo} - {o.nome}</option>)}
-                </optgroup>
-                {obras.filter(o => !isObraAtiva(o.status)).length > 0 && (
-                  <optgroup label="Obras concluídas (somente consulta)">
-                    {obras.filter(o => !isObraAtiva(o.status)).map(o => <option key={o.id} value={o.id}>🔒 {o.codigo} - {o.nome}</option>)}
-                  </optgroup>
-                )}
+                {obras.map(o => <option key={o.id} value={o.id}>{o.codigo} - {o.nome}</option>)}
               </select>
             </div>
             <div>
@@ -342,20 +315,90 @@ export default function DiarioObra() {
         </div>
 
         {selectedObra && (
-          <>
-            {/* Banner obra concluída */}
-            {isObraConcluida && (
-              <div className="flex items-center gap-3 rounded-xl border border-muted bg-muted/30 px-5 py-4">
-                <Lock className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-medium">Obra Concluída</p>
-                  <p className="text-xs text-muted-foreground">Os dados são somente para consulta. Novos lançamentos não estão disponíveis.</p>
+          <div className="grid gap-6">
+            {/* Seção de Toque Rápido (Mobile-First) */}
+            <div className="grid gap-4 md:grid-cols-2">
+              {/* Clima Card */}
+              <div className="rounded-xl border bg-card p-5 shadow-sm space-y-4">
+                <h2 className="text-sm font-semibold flex items-center gap-2 text-primary">
+                  <Cloud className="h-4 w-4" /> Condições Climáticas
+                </h2>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { id: "sol", label: "Ensolarado", icon: Sun, color: "bg-warning/10 text-warning border-warning/20" },
+                    { id: "nublado", label: "Nublado", icon: Cloud, color: "bg-muted text-muted-foreground border-border" },
+                    { id: "chuva", label: "Chuva", icon: CloudRain, color: "bg-destructive/10 text-destructive border-destructive/20" },
+                  ].map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setClima(clima === item.id ? "" : item.id as any)}
+                      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 transition-all ${
+                        clima === item.id ? `${item.color} border-current ring-2 ring-current ring-offset-2` : "bg-card border-transparent text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      <item.icon size={18} />
+                      <span className="text-sm font-bold uppercase tracking-tight">{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {clima === "chuva" && (
+                  <div className="pt-4 space-y-3 border-t animate-in fade-in slide-in-from-top-2">
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Intensidade:</p>
+                    <div className="flex gap-2">
+                      {["fraca", "moderada", "forte"].map((int) => (
+                        <button
+                          key={int}
+                          onClick={() => setChuvaIntensidade(int as any)}
+                          className={`flex-1 py-2 text-xs font-black rounded-lg border transition-all ${
+                            chuvaIntensidade === int ? "bg-destructive text-destructive-foreground border-destructive" : "bg-card text-muted-foreground border-border"
+                          }`}
+                        >
+                          {int.toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-2">Duração:</p>
+                    <div className="flex gap-2">
+                      {["manha", "tarde", "todo_dia"].map((per) => (
+                        <button
+                          key={per}
+                          onClick={() => setChuvaPeriodo(per as any)}
+                          className={`flex-1 py-2 text-xs font-black rounded-lg border transition-all ${
+                            chuvaPeriodo === per ? "bg-primary text-primary-foreground border-primary" : "bg-card text-muted-foreground border-border"
+                          }`}
+                        >
+                          {per.replace("_", " ").toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Ocorrências Card */}
+              <div className="rounded-xl border bg-card p-5 shadow-sm space-y-4">
+                <h2 className="text-sm font-semibold flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="h-4 w-4" /> Ocorrências do Dia
+                </h2>
+                <div className="grid grid-cols-2 gap-2">
+                   {[
+                    "Falta de Material", "Atraso Fornecedor", "Problema Máquina", 
+                    "Acidente Trabalho", "Visita Fiscaliza", "Greve/Paralisa"
+                  ].map((oc) => (
+                    <button
+                      key={oc}
+                      onClick={() => setOcorrencias(prev => prev.includes(oc) ? prev.filter(x => x !== oc) : [...prev, oc])}
+                      className={`flex items-center justify-center p-3 rounded-xl border-2 text-[10px] font-bold leading-tight transition-all ${
+                        ocorrencias.includes(oc) ? "bg-destructive/10 text-destructive border-destructive" : "bg-card border-border text-muted-foreground hover:bg-muted"
+                      }`}
+                    >
+                      {oc.toUpperCase()}
+                    </button>
+                  ))}
                 </div>
               </div>
-            )}
-
-            {!isObraConcluida && (
-            <>
+            </div>
             {/* KPIs automáticos */}
             <div className="grid gap-4 sm:grid-cols-4">
               <div className="rounded-xl border bg-card p-4 shadow-sm text-center">
@@ -615,27 +658,13 @@ export default function DiarioObra() {
               )}
             </div>
 
-            {/* Solicitações de EPI / Equipamento */}
-            <SolicitacoesDiario itens={solicitacoes} onChange={setSolicitacoes} disabled={saving} />
-
             {/* Observações */}
             <div className="rounded-xl border bg-card p-5 shadow-sm space-y-3">
               <label className="text-sm font-semibold">Observações Gerais</label>
               <Textarea value={observacoes} onChange={e => setObservacoes(e.target.value)} rows={3} placeholder="Ocorrências, condições climáticas, atrasos..." />
             </div>
 
-            {/* Salvar */}
-            <div className="flex justify-end">
-              <button onClick={handleSave} disabled={saving}
-                className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors disabled:opacity-50">
-                <Save className="h-4 w-4" />
-                {saving ? "Salvando..." : "Salvar Diário de Obra"}
-              </button>
-            </div>
-            </>
-            )}
-
-            {/* Resumo IA - disponível para obras ativas e concluídas */}
+            {/* Resumo IA */}
             <div className="rounded-xl border bg-card p-5 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold flex items-center gap-2">
@@ -655,6 +684,15 @@ export default function DiarioObra() {
                   <div className="whitespace-pre-wrap text-sm">{resumoIA}</div>
                 </div>
               )}
+            </div>
+
+            {/* Salvar */}
+            <div className="flex justify-end">
+              <button onClick={handleSave} disabled={saving}
+                className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors disabled:opacity-50">
+                <Save className="h-4 w-4" />
+                {saving ? "Salvando..." : "Salvar Diário de Obra"}
+              </button>
             </div>
           </>
         )}

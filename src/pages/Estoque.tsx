@@ -1,12 +1,11 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 import { toast } from "@/hooks/use-toast";
-import { Package, Plus, ArrowDown, Search, AlertTriangle } from "lucide-react";
-import { ImportarPlanilha } from "@/components/estoque/ImportarPlanilha";
+import { Package, Plus, ArrowDown, Search, HardHat, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
-
+import { useEmpresasObras } from "@/hooks/useEmpresasObras";
+import { ScrollableTable } from "@/components/shared/ScrollableTable";
 
 type TabKey = "produtos" | "movimentacoes" | "epi" | "estoque_minimo";
 
@@ -14,40 +13,40 @@ export default function Estoque() {
   const [tab, setTab] = useState<TabKey>("produtos");
   const [produtos, setProdutos] = useState<any[]>([]);
   const [movimentacoes, setMovimentacoes] = useState<any[]>([]);
-  const [allMovs, setAllMovs] = useState<any[]>([]);
   const [obras, setObras] = useState<any[]>([]);
   const [funcionarios, setFuncionarios] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [showNewProduto, setShowNewProduto] = useState(false);
   const [showNewMov, setShowNewMov] = useState(false);
+  const [showNewEpi, setShowNewEpi] = useState(false);
 
   // New produto form
   const [np, setNp] = useState({ descricao: "", codigo: "", categoria: "", unidade: "un", estoque_minimo: 0, ncm: "" });
   // New movimentação form
   const [nm, setNm] = useState({ produto_id: "", tipo: "entrada", quantidade: 0, valor_unitario: 0, obra_id: "", documento: "", observacoes: "" });
+  // New EPI delivery form
+  const [ne, setNe] = useState({ funcionario_id: "", produto_id: "", obra_id: "", quantidade: 1, ca_numero: "", observacoes: "", empresa_id: "" });
+  const { empresas: empresasList } = useEmpresasObras();
 
   const loadData = useCallback(async () => {
-    const [{ data: p }, { data: m }, { data: mAll }, { data: o }, { data: f }] = await Promise.all([
+    const [{ data: p }, { data: m }, { data: o }, { data: f }] = await Promise.all([
       supabase.from("produtos").select("*").order("descricao"),
       supabase.from("movimentacoes_estoque").select("*, produtos(descricao, unidade), obras(nome)").order("data_movimentacao", { ascending: false }).limit(100),
-      // Saldo total — sem limite, apenas campos necessários
-      supabase.from("movimentacoes_estoque").select("produto_id, tipo, quantidade, valor_unitario"),
-      supabase.from("obras").select("id, nome, codigo").in("status", OBRA_STATUS_ATIVOS_ARR),
+      supabase.from("obras").select("id, nome, codigo").eq("status", "em_andamento"),
       supabase.from("funcionarios").select("id, nome, obra_id").eq("status", "ativo"),
     ]);
     if (p) setProdutos(p);
     if (m) setMovimentacoes(m);
-    if (mAll) setAllMovs(mAll);
     if (o) setObras(o);
     if (f) setFuncionarios(f);
   }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // Calculate stock balance per product (usa allMovs para saldo correto, sem limite)
+  // Calculate stock balance per product
   const stockBalances = produtos.map(p => {
-    const entradas = allMovs.filter(m => m.produto_id === p.id && m.tipo === "entrada").reduce((s, m) => s + Number(m.quantidade), 0);
-    const saidas = allMovs.filter(m => m.produto_id === p.id && m.tipo !== "entrada").reduce((s, m) => s + Number(m.quantidade), 0);
+    const entradas = movimentacoes.filter(m => m.produto_id === p.id && m.tipo === "entrada").reduce((s, m) => s + Number(m.quantidade), 0);
+    const saidas = movimentacoes.filter(m => m.produto_id === p.id && m.tipo !== "entrada").reduce((s, m) => s + Number(m.quantidade), 0);
     const saldo = entradas - saidas;
     return { ...p, saldo, entradas, saidas, abaixoMinimo: p.estoque_minimo > 0 && saldo < p.estoque_minimo };
   });
@@ -80,6 +79,31 @@ export default function Estoque() {
     loadData();
   };
 
+  const saveEpi = async () => {
+    if (!ne.funcionario_id || !ne.produto_id || !ne.empresa_id) { toast({ title: "Funcionário, EPI e Empresa são obrigatórios", variant: "destructive" }); return; }
+    const empresaId = ne.empresa_id;
+
+    // Register EPI delivery
+    const { error: epiError } = await supabase.from("entregas_epi").insert({
+      funcionario_id: ne.funcionario_id, produto_id: ne.produto_id,
+      obra_id: ne.obra_id || null, empresa_id: empresaId,
+      quantidade: Number(ne.quantidade), ca_numero: ne.ca_numero || null,
+      observacoes: ne.observacoes || null,
+    });
+    if (epiError) { toast({ title: "Erro", description: epiError.message, variant: "destructive" }); return; }
+
+    // Auto stock withdrawal
+    await supabase.from("movimentacoes_estoque").insert({
+      produto_id: ne.produto_id, tipo: "saida_epi", quantidade: Number(ne.quantidade),
+      obra_id: ne.obra_id || null, observacoes: `Entrega EPI - ${funcionarios.find(f => f.id === ne.funcionario_id)?.nome || ""}`,
+    });
+
+    toast({ title: "EPI entregue e baixa no estoque realizada" });
+    setNe({ funcionario_id: "", produto_id: "", obra_id: "", quantidade: 1, ca_numero: "", observacoes: "", empresa_id: "" });
+    setShowNewEpi(false);
+    loadData();
+  };
+
   const inputClass = "w-full rounded-lg border bg-card py-2 px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring";
 
   return (
@@ -91,19 +115,17 @@ export default function Estoque() {
             <p className="text-sm text-muted-foreground">{produtos.length} produtos • {abaixoMinimo.length} abaixo do mínimo</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <ImportarPlanilha onImportComplete={loadData} />
             <button onClick={() => setShowNewProduto(true)} className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors">
               <Plus className="h-4 w-4" /> Novo Produto
             </button>
             <button onClick={() => setShowNewMov(true)} className="inline-flex items-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">
               <ArrowDown className="h-4 w-4" /> Movimentação
             </button>
+            <button onClick={() => setShowNewEpi(true)} className="inline-flex items-center gap-2 rounded-lg bg-warning px-4 py-2.5 text-sm font-medium text-warning-foreground shadow-sm hover:bg-warning/90 transition-colors">
+              <HardHat className="h-4 w-4" /> Entrega EPI
+            </button>
           </div>
         </div>
-
-        <p className="text-xs text-muted-foreground -mt-3">
-          As entradas são geradas automaticamente quando uma compra é recebida. Para entrega de EPI, use o módulo dedicado.
-        </p>
 
         {/* KPI */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -161,7 +183,7 @@ export default function Estoque() {
         {/* Content */}
         {tab === "produtos" && (
           <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
+            <ScrollableTable>
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50">
@@ -191,13 +213,13 @@ export default function Estoque() {
                   {filteredProdutos.length === 0 && <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">Nenhum produto cadastrado</td></tr>}
                 </tbody>
               </table>
-            </div>
+            </ScrollableTable>
           </div>
         )}
 
         {tab === "movimentacoes" && (
           <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
+            <ScrollableTable>
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50">
@@ -229,14 +251,14 @@ export default function Estoque() {
                   {movimentacoes.length === 0 && <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">Nenhuma movimentação</td></tr>}
                 </tbody>
               </table>
-            </div>
+            </ScrollableTable>
           </div>
         )}
 
         {tab === "epi" && (
           <div className="rounded-xl border bg-card shadow-sm p-6">
             <p className="text-sm text-muted-foreground mb-4">Entregas de EPI são registradas com baixa automática no estoque. Use o botão "Entrega EPI" para registrar.</p>
-            <div className="overflow-x-auto">
+            <ScrollableTable>
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50">
@@ -257,7 +279,7 @@ export default function Estoque() {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ScrollableTable>
           </div>
         )}
 
@@ -352,6 +374,47 @@ export default function Estoque() {
         </div>
       )}
 
+      {/* Modal: Entrega EPI */}
+      {showNewEpi && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setShowNewEpi(false)}>
+          <div className="bg-card rounded-xl p-6 w-full max-w-lg shadow-xl space-y-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold flex items-center gap-2"><HardHat className="h-5 w-5 text-warning" /> Entrega de EPI</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="text-xs text-muted-foreground">Empresa *</label>
+                <select value={ne.empresa_id} onChange={e => setNe(p => ({ ...p, empresa_id: e.target.value }))} className={inputClass}>
+                  <option value="">Selecione a empresa...</option>
+                  {empresasList.map(emp => <option key={emp.id} value={emp.id}>{emp.nome_fantasia || emp.razao_social} — {emp.cnpj}</option>)}
+                </select>
+              </div>
+              <div><label className="text-xs text-muted-foreground">Funcionário *</label>
+                <select value={ne.funcionario_id} onChange={e => setNe(p => ({ ...p, funcionario_id: e.target.value }))} className={inputClass}>
+                  <option value="">Selecione...</option>
+                  {funcionarios.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
+                </select>
+              </div>
+              <div><label className="text-xs text-muted-foreground">EPI (Produto) *</label>
+                <select value={ne.produto_id} onChange={e => setNe(p => ({ ...p, produto_id: e.target.value }))} className={inputClass}>
+                  <option value="">Selecione...</option>
+                  {produtos.filter(p => p.categoria === "EPI" || !p.categoria).map(p => <option key={p.id} value={p.id}>{p.descricao}</option>)}
+                </select>
+              </div>
+              <div><label className="text-xs text-muted-foreground">Obra</label>
+                <select value={ne.obra_id} onChange={e => setNe(p => ({ ...p, obra_id: e.target.value }))} className={inputClass}>
+                  <option value="">Nenhuma</option>
+                  {obras.map(o => <option key={o.id} value={o.id}>{o.codigo} — {o.nome}</option>)}
+                </select>
+              </div>
+              <div><label className="text-xs text-muted-foreground">Quantidade</label><input type="number" value={ne.quantidade} onChange={e => setNe(p => ({ ...p, quantidade: Number(e.target.value) }))} className={inputClass} /></div>
+              <div><label className="text-xs text-muted-foreground">Nº CA</label><input value={ne.ca_numero} onChange={e => setNe(p => ({ ...p, ca_numero: e.target.value }))} className={inputClass} /></div>
+              <div><label className="text-xs text-muted-foreground">Observações</label><input value={ne.observacoes} onChange={e => setNe(p => ({ ...p, observacoes: e.target.value }))} className={inputClass} /></div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setShowNewEpi(false)} className="rounded-lg border px-4 py-2 text-sm hover:bg-muted">Cancelar</button>
+              <button onClick={saveEpi} className="rounded-lg bg-warning px-4 py-2 text-sm font-medium text-warning-foreground hover:bg-warning/90">Entregar e Baixar Estoque</button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }

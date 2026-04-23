@@ -1,6 +1,6 @@
 
 -- Create storage bucket for documents
-INSERT INTO storage.buckets (id, name, public) VALUES ('documentos', 'documentos', true);
+INSERT INTO storage.buckets (id, name, public) VALUES ('documentos', 'documentos', true) ON CONFLICT (id) DO NOTHING;
 
 -- RLS policies for the storage bucket
 CREATE POLICY "Acesso público upload documentos" ON storage.objects FOR INSERT TO public WITH CHECK (bucket_id = 'documentos');

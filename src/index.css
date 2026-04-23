@@ -102,17 +102,56 @@
 }
 
 @layer utilities {
+
+  /* ─── Scrollbar fino e elegante (vertical) ─── */
   .scrollbar-thin {
     scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.35) transparent;
   }
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 6px;
-  }
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: transparent;
-  }
+  .scrollbar-thin::-webkit-scrollbar { width: 5px; height: 5px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
   .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.35);
+    border-radius: 99px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.6);
+  }
+
+  /* ─── Oculta scrollbar nativo (substituto pelo sticky) ─── */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+  /* ─── Scrollbar elegante para sidebar / áreas fixas ─── */
+  .scrollbar-sidebar {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--sidebar-muted) / 0.5) transparent;
+  }
+  .scrollbar-sidebar::-webkit-scrollbar { width: 4px; }
+  .scrollbar-sidebar::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-sidebar::-webkit-scrollbar-thumb {
+    background: hsl(var(--sidebar-muted) / 0.5);
+    border-radius: 99px;
+  }
+  .scrollbar-sidebar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--sidebar-primary) / 0.7);
+  }
+
+  /* ─── Scrollbar global da página principal ─── */
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+  }
+  html::-webkit-scrollbar { width: 6px; }
+  html::-webkit-scrollbar-track { background: transparent; }
+  html::-webkit-scrollbar-thumb {
     background: hsl(var(--muted-foreground) / 0.3);
-    border-radius: 3px;
+    border-radius: 99px;
+  }
+  html::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.5);
   }
 }

@@ -20,6 +20,7 @@ import { useCompras, useEmpresas, useObras, useCreateCompra, useUpdateCompraStat
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
+import { ScrollableTable } from "@/components/shared/ScrollableTable";
 
 export default function Compras() {
   const { data: compras = [], isLoading } = useCompras();
@@ -324,7 +325,7 @@ export default function Compras() {
                 {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full" />)}
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <ScrollableTable>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -361,7 +362,7 @@ export default function Compras() {
                     )}
                   </TableBody>
                 </Table>
-              </div>
+              </ScrollableTable>
             )}
           </CardContent>
         </Card>

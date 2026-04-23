@@ -12,17 +12,14 @@ import { ExamesModule } from "@/components/rh/ExamesModule";
 import { TransferirFuncionario } from "@/components/rh/TransferirFuncionario";
 import { EditFuncionarioForm } from "@/components/rh/EditFuncionarioForm";
 import { supabase } from "@/integrations/supabase/client";
-import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 import { differenceInDays, parseISO, format, addDays } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollableTable } from "@/components/shared/ScrollableTable";
 
-type TabKey = "lista" | "lista_inativos" | "exames_tab" | "exames_modulo";
-
-const STATUS_ATIVOS = ["ativo", "experiência", "experiencia", "pré-cadastro", "pre-cadastro"];
-const STATUS_INATIVOS = ["desligado", "abandono", "atestado"];
+type TabKey = "lista" | "exames_tab" | "exames_modulo";
 
 const STATUS_OPTIONS = ["Pré-Cadastro", "Ativo", "Experiência", "Desligado", "Abandono", "Atestado"] as const;
 
@@ -88,7 +85,7 @@ export default function RH() {
 
   useEffect(() => {
     loadDbFuncionarios();
-    supabase.from("obras").select("id, nome, codigo").in("status", OBRA_STATUS_ATIVOS_ARR)
+    supabase.from("obras").select("id, nome, codigo").eq("status", "em_andamento")
       .then(({ data }) => { if (data) setObras(data); });
     supabase.from("empresas").select("id, razao_social, nome_fantasia, cnpj")
       .then(({ data }) => { if (data) setEmpresas(data); });
@@ -124,15 +121,7 @@ export default function RH() {
     })),
   ];
 
-  // Filter based on tab (ativos vs inativos) + user filters
-  const isAtivosTab = tab === "lista";
-  const isInativosTab = tab === "lista_inativos";
-  
   const filtered = allFuncionarios.filter(f => {
-    // Tab-based status filter
-    if (isAtivosTab && !STATUS_ATIVOS.includes(f.status?.toLowerCase())) return false;
-    if (isInativosTab && !STATUS_INATIVOS.includes(f.status?.toLowerCase())) return false;
-    
     const searchMatch = !search || 
       f.nome?.toLowerCase().includes(search.toLowerCase()) ||
       f.cargo?.toLowerCase().includes(search.toLowerCase()) ||
@@ -153,22 +142,10 @@ export default function RH() {
     }
   });
 
-  const examesVencendo = dbFuncionarios.filter(f =>
-    f.status === "ativo" && (
-      getExamStatus(f.data_aso || "", 1) !== "ok" || getExamStatus(f.data_nr6 || "", 1) !== "ok" ||
-      getExamStatus(f.data_nr12 || "", 2) !== "ok" || getExamStatus(f.data_nr18 || "", 2) !== "ok" || getExamStatus(f.data_nr35 || "", 2) !== "ok"
-    )
+  const examesVencendo = funcionarios.filter(f =>
+    getExamStatus(f.aso, 1) !== "ok" || getExamStatus(f.nr6, 1) !== "ok" ||
+    getExamStatus(f.nr12, 2) !== "ok" || getExamStatus(f.nr18, 2) !== "ok" || getExamStatus(f.nr35, 2) !== "ok"
   );
-
-  const saveExamDate = async (funcId: string, field: string, value: string) => {
-    const { error } = await supabase.from("funcionarios").update({ [field]: value || null }).eq("id", funcId);
-    if (error) {
-      toast({ title: "Erro ao salvar data", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Data atualizada" });
-      loadDbFuncionarios();
-    }
-  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -207,42 +184,19 @@ export default function RH() {
   };
 
   const saveStatus = async (funcId: string, newStatus: string) => {
-    const statusLower = newStatus.toLowerCase();
-    const updateData: any = { status: statusLower };
-
-    // Se ficar inativo (desligado/abandono/atestado), desalocar da obra
-    // para que módulos operacionais (Diário, Folha, Estoque, EPI) parem de listá-lo como alocado.
-    if (STATUS_INATIVOS.includes(statusLower)) {
-      updateData.obra_id = null;
-    }
-
-    // Se desligado e sem data de rescisão, define hoje
-    if (statusLower === "desligado") {
+    const updateData: any = { status: newStatus.toLowerCase() };
+    // If desligado and no rescisao date, set today
+    if (newStatus.toLowerCase() === "desligado") {
       const f = dbFuncionarios.find(x => x.id === funcId);
       if (!f?.data_rescisao) {
         updateData.data_rescisao = format(new Date(), "yyyy-MM-dd");
       }
     }
-
-    // Se abandono, registrar motivo padrão e data se vazios
-    if (statusLower === "abandono") {
-      const f = dbFuncionarios.find(x => x.id === funcId);
-      if (!f?.motivo_rescisao) {
-        updateData.motivo_rescisao = "Abandono de emprego";
-      }
-      if (!f?.data_rescisao) {
-        updateData.data_rescisao = format(new Date(), "yyyy-MM-dd");
-      }
-    }
-
     const { error } = await supabase.from("funcionarios").update(updateData).eq("id", funcId);
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
-      const msg = STATUS_INATIVOS.includes(statusLower)
-        ? "Status atualizado e funcionário desalocado da obra."
-        : "Status atualizado";
-      toast({ title: msg });
+      toast({ title: "Status atualizado" });
       loadDbFuncionarios();
     }
   };
@@ -260,12 +214,11 @@ export default function RH() {
       data_rescisao: desligamentoData,
       motivo_rescisao: desligamentoMotivo || null,
       status: "desligado",
-      obra_id: null, // desalocar da obra ao desligar
     }).eq("id", desligamentoFunc.id);
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Desligamento registrado", description: `${desligamentoFunc.nome} foi desligado e desalocado da obra.` });
+      toast({ title: "Desligamento registrado", description: `${desligamentoFunc.nome} foi desligado.` });
       setDesligamentoOpen(false);
       loadDbFuncionarios();
     }
@@ -293,18 +246,53 @@ export default function RH() {
           </div>
         </div>
 
+        {/* Quick Actions - Ações Rápidas do RH (Master Design) */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div onClick={() => setPreCadastroOpen(true)} className="group bg-card hover:bg-primary/5 cursor-pointer border-2 border-transparent hover:border-primary/20 rounded-2xl p-5 flex flex-col items-center justify-center gap-3 transition-all duration-300 shadow-sm hover:shadow-md active:scale-95">
+            <div className="h-12 w-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+              <UserPlus size={24} />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-bold text-foreground">Onboarding</p>
+              <p className="text-[10px] text-muted-foreground">Novo Contratado</p>
+            </div>
+          </div>
+          
+          <div onClick={() => setTab("exames_modulo")} className="group bg-card hover:bg-warning/5 cursor-pointer border-2 border-transparent hover:border-warning/20 rounded-2xl p-5 flex flex-col items-center justify-center gap-3 transition-all duration-300 shadow-sm hover:shadow-md active:scale-95">
+            <div className="h-12 w-12 bg-warning/10 rounded-xl flex items-center justify-center text-warning group-hover:scale-110 transition-transform">
+              <Stethoscope size={24} />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-bold text-foreground">Gestão ASO</p>
+              <p className="text-[10px] text-muted-foreground">Exames e Prazos</p>
+            </div>
+          </div>
+
+          <div onClick={() => setTab("exames_tab")} className="group bg-card hover:bg-accent/5 cursor-pointer border-2 border-transparent hover:border-accent/20 rounded-2xl p-5 flex flex-col items-center justify-center gap-3 transition-all duration-300 shadow-sm hover:shadow-md active:scale-95">
+            <div className="h-12 w-12 bg-accent/10 rounded-xl flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
+              <FolderOpen size={24} />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-bold text-foreground">Documentos</p>
+              <p className="text-[10px] text-muted-foreground">Digitalização</p>
+            </div>
+          </div>
+
+          <div className="group bg-card hover:bg-destructive/5 cursor-pointer border-2 border-transparent hover:border-destructive/20 rounded-2xl p-5 flex flex-col items-center justify-center gap-3 transition-all duration-300 shadow-sm hover:shadow-md active:scale-95 opacity-80 hover:opacity-100">
+            <div className="h-12 w-12 bg-destructive/10 rounded-xl flex items-center justify-center text-destructive group-hover:scale-110 transition-transform">
+              <LogOut size={24} />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-bold text-foreground">Rescisão</p>
+              <p className="text-[10px] text-muted-foreground">Fluxo de Desligamento</p>
+            </div>
+          </div>
+        </div>
+
         {/* Tabs */}
         <div className="flex gap-1 rounded-lg bg-muted p-1">
           <button onClick={() => setTab("lista")} className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${tab === "lista" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
-            Funcionários Ativos
-          </button>
-          <button onClick={() => setTab("lista_inativos")} className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors relative ${tab === "lista_inativos" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
-            Inativos / Afastados
-            {allFuncionarios.filter(f => STATUS_INATIVOS.includes(f.status?.toLowerCase())).length > 0 && (
-              <span className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
-                {allFuncionarios.filter(f => STATUS_INATIVOS.includes(f.status?.toLowerCase())).length}
-              </span>
-            )}
+            Lista de Funcionários
           </button>
           <button onClick={() => setTab("exames_tab")} className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors relative ${tab === "exames_tab" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
             Exames e Treinamentos
@@ -318,92 +306,35 @@ export default function RH() {
         {tab === "exames_modulo" ? (
           <ExamesModule />
         ) : tab === "exames_tab" ? (
-          <div className="space-y-6">
-            {/* Alertas de Vencimento */}
-            {examesVencendo.length > 0 && (
-              <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 space-y-2">
-                <h3 className="text-sm font-bold text-destructive flex items-center gap-2">
-                  <Calendar className="h-4 w-4" /> Alertas de Vencimento ({examesVencendo.length} funcionários)
-                </h3>
-                <div className="grid gap-2 max-h-[200px] overflow-y-auto">
-                  {examesVencendo.map(f => {
-                    const alerts: string[] = [];
-                    if (getExamStatus(f.data_aso || "", 1) !== "ok") alerts.push("ASO");
-                    if (getExamStatus(f.data_nr6 || "", 1) !== "ok") alerts.push("NR6");
-                    if (getExamStatus(f.data_nr12 || "", 2) !== "ok") alerts.push("NR12");
-                    if (getExamStatus(f.data_nr18 || "", 2) !== "ok") alerts.push("NR18");
-                    if (getExamStatus(f.data_nr35 || "", 2) !== "ok") alerts.push("NR35");
-                    return (
-                      <div key={f.id} className="flex items-center justify-between text-xs bg-card rounded-lg px-3 py-2 border">
-                        <span className="font-medium">{f.nome}</span>
-                        <div className="flex gap-1">
-                          {alerts.map(a => (
-                            <span key={a} className="rounded-full bg-destructive/10 text-destructive px-2 py-0.5 text-[10px] font-medium">{a}</span>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Tabela de Exames - dados do banco */}
-            <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-              <div className="px-4 py-3 border-b bg-muted/30">
-                <p className="text-xs text-muted-foreground">Clique na data para editar. ASO e NR6 = validade 1 ano | NR12, NR18 e NR35 = validade 2 anos</p>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Nome</th>
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Obra</th>
-                      <th className="px-4 py-3 text-center font-medium text-muted-foreground">ASO (1a)</th>
-                      <th className="px-4 py-3 text-center font-medium text-muted-foreground">NR6 (1a)</th>
-                      <th className="px-4 py-3 text-center font-medium text-muted-foreground">NR12 (2a)</th>
-                      <th className="px-4 py-3 text-center font-medium text-muted-foreground">NR18 (2a)</th>
-                      <th className="px-4 py-3 text-center font-medium text-muted-foreground">NR35 (2a)</th>
+          <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+            <ScrollableTable>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Nome</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Empresa</th>
+                    <th className="px-4 py-3 text-center font-medium text-muted-foreground">ASO</th>
+                    <th className="px-4 py-3 text-center font-medium text-muted-foreground">NR6</th>
+                    <th className="px-4 py-3 text-center font-medium text-muted-foreground">NR12</th>
+                    <th className="px-4 py-3 text-center font-medium text-muted-foreground">NR18</th>
+                    <th className="px-4 py-3 text-center font-medium text-muted-foreground">NR35</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {funcionarios.map((f) => (
+                    <tr key={f.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                      <td className="px-4 py-3.5"><div className="flex items-center gap-3"><FuncionarioAvatar nome={f.nome} foto={f.foto} size="sm" /><span className="font-medium">{f.nome}</span></div></td>
+                      <td className="px-4 py-3.5 text-xs text-muted-foreground">{f.empresa}</td>
+                      <td className="px-4 py-3.5 text-center"><ExamBadge date={f.aso} validityYears={1} label="ASO" /></td>
+                      <td className="px-4 py-3.5 text-center"><ExamBadge date={f.nr6} validityYears={1} label="NR6" /></td>
+                      <td className="px-4 py-3.5 text-center"><ExamBadge date={f.nr12} validityYears={2} label="NR12" /></td>
+                      <td className="px-4 py-3.5 text-center"><ExamBadge date={f.nr18} validityYears={2} label="NR18" /></td>
+                      <td className="px-4 py-3.5 text-center"><ExamBadge date={f.nr35} validityYears={2} label="NR35" /></td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {dbFuncionarios.filter(f => f.status === "ativo").map((f) => (
-                      <tr key={f.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                        <td className="px-4 py-3.5">
-                          <div>
-                            <span className="font-medium">{f.nome}</span>
-                            <p className="text-[10px] text-muted-foreground">{f.cargo}</p>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3.5 text-xs text-muted-foreground">{(f as any).obras?.nome || "—"}</td>
-                        {[
-                          { field: "data_aso", val: f.data_aso, years: 1, label: "ASO" },
-                          { field: "data_nr6", val: f.data_nr6, years: 1, label: "NR6" },
-                          { field: "data_nr12", val: f.data_nr12, years: 2, label: "NR12" },
-                          { field: "data_nr18", val: f.data_nr18, years: 2, label: "NR18" },
-                          { field: "data_nr35", val: f.data_nr35, years: 2, label: "NR35" },
-                        ].map(exam => (
-                          <td key={exam.field} className="px-4 py-3.5 text-center">
-                            <div className="flex flex-col items-center gap-1">
-                              <ExamBadge date={exam.val || ""} validityYears={exam.years} label={exam.label} />
-                              <input
-                                type="date"
-                                value={exam.val || ""}
-                                onChange={e => saveExamDate(f.id, exam.field, e.target.value)}
-                                className="w-[110px] rounded border bg-background px-1 py-0.5 text-[10px] text-center focus:outline-none focus:ring-1 focus:ring-ring"
-                              />
-                            </div>
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                    {dbFuncionarios.filter(f => f.status === "ativo").length === 0 && (
-                      <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">Nenhum funcionário ativo</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+                  ))}
+                </tbody>
+              </table>
+            </ScrollableTable>
           </div>
         ) : (
           <>
@@ -419,19 +350,7 @@ export default function RH() {
               </select>
               <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="rounded-lg border bg-card px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
                 <option value="">Todos os Status</option>
-                {isAtivosTab ? (
-                  <>
-                    <option value="ativo">Ativo</option>
-                    <option value="experiência">Experiência</option>
-                    <option value="pré-cadastro">Pré-Cadastro</option>
-                  </>
-                ) : (
-                  <>
-                    <option value="desligado">Desligado</option>
-                    <option value="abandono">Abandono</option>
-                    <option value="atestado">Atestado</option>
-                  </>
-                )}
+                {STATUS_OPTIONS.map(s => <option key={s} value={s.toLowerCase()}>{s}</option>)}
               </select>
               <select value={sortBy} onChange={e => setSortBy(e.target.value as any)} className="rounded-lg border bg-card px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
                 <option value="nome">Ordenar por Nome</option>
@@ -441,53 +360,32 @@ export default function RH() {
               </select>
             </div>
 
-            {/* KPI cards - diferentes para cada aba */}
-            {isAtivosTab ? (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="rounded-xl border bg-card p-4 shadow-sm">
-                  <p className="text-xs text-muted-foreground">Total Ativos</p>
-                  <p className="text-2xl font-bold">{allFuncionarios.filter(f => STATUS_ATIVOS.includes(f.status?.toLowerCase())).length}</p>
-                </div>
-                <div className="rounded-xl border bg-card p-4 shadow-sm">
-                  <p className="text-xs text-muted-foreground">Ativos</p>
-                  <p className="text-2xl font-bold text-success">{allFuncionarios.filter(f => f.status === "ativo").length}</p>
-                </div>
-                <div className="rounded-xl border bg-card p-4 shadow-sm">
-                  <p className="text-xs text-muted-foreground">Experiência</p>
-                  <p className="text-2xl font-bold text-accent">{allFuncionarios.filter(f => f.status === "experiência" || f.status === "experiencia").length}</p>
-                </div>
-                <div className="rounded-xl border bg-card p-4 shadow-sm">
-                  <p className="text-xs text-muted-foreground">Pré-Cadastro</p>
-                  <p className="text-2xl font-bold text-warning">{allFuncionarios.filter(f => f.status === "pré-cadastro" || f.status === "pre-cadastro").length}</p>
-                </div>
+            {/* KPI cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="rounded-xl border bg-card p-4 shadow-sm">
+                <p className="text-xs text-muted-foreground">Total</p>
+                <p className="text-2xl font-bold">{allFuncionarios.length}</p>
               </div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <div className="rounded-xl border bg-card p-4 shadow-sm">
-                  <p className="text-xs text-muted-foreground">Total Inativos</p>
-                  <p className="text-2xl font-bold">{allFuncionarios.filter(f => STATUS_INATIVOS.includes(f.status?.toLowerCase())).length}</p>
-                </div>
-                <div className="rounded-xl border bg-card p-4 shadow-sm">
-                  <p className="text-xs text-muted-foreground">Desligados</p>
-                  <p className="text-2xl font-bold text-destructive">{allFuncionarios.filter(f => f.status === "desligado").length}</p>
-                </div>
-                <div className="rounded-xl border bg-card p-4 shadow-sm">
-                  <p className="text-xs text-muted-foreground">Abandono</p>
-                  <p className="text-2xl font-bold text-destructive">{allFuncionarios.filter(f => f.status === "abandono").length}</p>
-                </div>
-                <div className="rounded-xl border bg-card p-4 shadow-sm">
-                  <p className="text-xs text-muted-foreground">Atestado</p>
-                  <p className="text-2xl font-bold text-muted-foreground">{allFuncionarios.filter(f => f.status === "atestado").length}</p>
-                </div>
+              <div className="rounded-xl border bg-card p-4 shadow-sm">
+                <p className="text-xs text-muted-foreground">Ativos</p>
+                <p className="text-2xl font-bold text-success">{allFuncionarios.filter(f => f.status === "ativo").length}</p>
               </div>
-            )}
+              <div className="rounded-xl border bg-card p-4 shadow-sm">
+                <p className="text-xs text-muted-foreground">Experiência</p>
+                <p className="text-2xl font-bold text-accent">{allFuncionarios.filter(f => f.status === "experiência" || f.status === "experiencia").length}</p>
+              </div>
+              <div className="rounded-xl border bg-card p-4 shadow-sm">
+                <p className="text-xs text-muted-foreground">Desligados</p>
+                <p className="text-2xl font-bold text-destructive">{allFuncionarios.filter(f => f.status === "desligado").length}</p>
+              </div>
+            </div>
 
             {/* Table */}
             <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
               <div className="px-4 py-3 border-b bg-muted/30">
-                <h3 className="text-sm font-semibold">{isAtivosTab ? "Funcionários Ativos" : "Funcionários Inativos / Afastados"} ({sorted.length})</h3>
+                <h3 className="text-sm font-semibold">Funcionários ({sorted.length})</h3>
               </div>
-              <div className="overflow-x-auto">
+              <ScrollableTable>
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-muted/50">
@@ -591,7 +489,7 @@ export default function RH() {
                     )}
                   </tbody>
                 </table>
-              </div>
+              </ScrollableTable>
             </div>
           </>
         )}

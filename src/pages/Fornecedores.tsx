@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Truck, Plus, Search, Edit2, Trash2, Save, X, Phone, Mail, MapPin } from "lucide-react";
+import { ScrollableTable } from "@/components/shared/ScrollableTable";
 
 interface Fornecedor {
   id: string;
@@ -202,7 +203,7 @@ export default function Fornecedores() {
 
         {/* Table */}
         <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
+          <ScrollableTable>
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/50">
@@ -268,7 +269,7 @@ export default function Fornecedores() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollableTable>
         </div>
       </div>
     </AppLayout>

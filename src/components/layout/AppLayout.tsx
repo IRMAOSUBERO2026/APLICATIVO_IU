@@ -38,7 +38,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           <img src={logoBranco} alt="Irmãos Ubero" className="h-8 w-auto" />
         </header>
 
-        <main className="flex-1 overflow-auto p-4 lg:p-6">
+        <main className="flex-1 overflow-auto scrollbar-thin p-4 lg:p-6">
           {children}
         </main>
       </div>
