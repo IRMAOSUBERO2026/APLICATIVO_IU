@@ -336,6 +336,7 @@ export default function EquipamentosProprios() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-14">Foto</TableHead>
                       <TableHead>Código</TableHead>
                       <TableHead>Descrição</TableHead>
                       <TableHead>Tipo</TableHead>
@@ -347,9 +348,16 @@ export default function EquipamentosProprios() {
                   </TableHeader>
                   <TableBody>
                     {filteredEquip.length === 0 ? (
-                      <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhum equipamento cadastrado</TableCell></TableRow>
+                      <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Nenhum equipamento cadastrado</TableCell></TableRow>
                     ) : filteredEquip.map(eq => (
                       <TableRow key={eq.id}>
+                        <TableCell>
+                          {eq.foto_url ? (
+                            <img src={eq.foto_url} alt={eq.descricao} className="h-10 w-10 object-cover rounded border" />
+                          ) : (
+                            <div className="h-10 w-10 rounded border bg-muted/30 flex items-center justify-center text-muted-foreground"><Camera className="h-4 w-4" /></div>
+                          )}
+                        </TableCell>
                         <TableCell className="font-mono text-xs">{eq.codigo}</TableCell>
                         <TableCell className="font-medium">{eq.descricao}</TableCell>
                         <TableCell className="text-sm">{eq.tipo}</TableCell>
