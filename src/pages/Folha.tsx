@@ -9,6 +9,7 @@ import { FuncionariosList } from "@/components/folha/FuncionariosList";
 import { DocumentManager } from "@/components/rh/DocumentManager";
 import { calcularFolha, type FolhaInput, type FolhaOutput } from "@/lib/motorFolha";
 import { supabase } from "@/integrations/supabase/client";
+import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
