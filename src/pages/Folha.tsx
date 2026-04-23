@@ -9,6 +9,7 @@ import { FuncionariosList } from "@/components/folha/FuncionariosList";
 import { DocumentManager } from "@/components/rh/DocumentManager";
 import { calcularFolha, type FolhaInput, type FolhaOutput } from "@/lib/motorFolha";
 import { supabase } from "@/integrations/supabase/client";
+import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -122,7 +123,7 @@ export default function Folha() {
     supabase
       .from("obras")
       .select("id, nome, codigo, horario_padrao, empresa_id")
-      .eq("status", "em_andamento")
+      .in("status", OBRA_STATUS_ATIVOS_ARR)
       .order("nome")
       .then(({ data }) => { if (data) setObras(data as any); });
   }, []);

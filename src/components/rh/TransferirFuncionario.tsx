@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { ArrowRightLeft } from "lucide-react";
+import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 
 interface TransferirFuncionarioProps {
   open: boolean;
@@ -20,7 +21,7 @@ export function TransferirFuncionario({ open, onOpenChange, funcionarioId, funci
 
   useEffect(() => {
     if (open) {
-      supabase.from("obras").select("id, nome, codigo, construtora").eq("status", "em_andamento")
+      supabase.from("obras").select("id, nome, codigo, construtora").in("status", OBRA_STATUS_ATIVOS_ARR).order("codigo")
         .then(({ data }) => {
           if (data) setObras(data.filter(o => o.id !== obraAtualId));
         });

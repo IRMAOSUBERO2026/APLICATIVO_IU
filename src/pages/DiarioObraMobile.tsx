@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 import { toast } from "@/hooks/use-toast";
 import {
   Camera, Cloud, Sun, CloudRain, CloudSnow, Users, Save, ArrowLeft,
@@ -59,7 +60,7 @@ export default function DiarioObraMobile() {
 
   useEffect(() => {
     Promise.all([
-      supabase.from("obras").select("id, nome, codigo").eq("status", "em_andamento"),
+      supabase.from("obras").select("id, nome, codigo").in("status", OBRA_STATUS_ATIVOS_ARR),
       supabase.from("funcionarios").select("id, nome, cargo, obra_id").eq("status", "ativo"),
     ]).then(([obrasRes, funcRes]) => {
       if (obrasRes.data) setObras(obrasRes.data);

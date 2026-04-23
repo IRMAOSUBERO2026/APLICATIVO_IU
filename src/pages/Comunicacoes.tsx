@@ -1,6 +1,7 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 import { toast } from "@/hooks/use-toast";
 import { MessageCircle, Mail, Users, Send, Search, UserCheck, Building2, HardHat, Filter } from "lucide-react";
 
@@ -38,7 +39,7 @@ export default function Comunicacoes() {
     Promise.all([
       supabase.from("funcionarios").select("id, nome, cargo, telefone, email, empresa_id, obra_id, status").eq("status", "ativo"),
       supabase.from("empresas").select("id, razao_social, nome_fantasia").eq("ativo", true),
-      supabase.from("obras").select("id, nome, codigo").eq("status", "em_andamento"),
+      supabase.from("obras").select("id, nome, codigo").in("status", OBRA_STATUS_ATIVOS_ARR),
     ]).then(([fRes, eRes, oRes]) => {
       if (fRes.data) setFuncionarios(fRes.data);
       if (eRes.data) setEmpresas(eRes.data);

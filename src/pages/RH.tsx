@@ -12,6 +12,7 @@ import { ExamesModule } from "@/components/rh/ExamesModule";
 import { TransferirFuncionario } from "@/components/rh/TransferirFuncionario";
 import { EditFuncionarioForm } from "@/components/rh/EditFuncionarioForm";
 import { supabase } from "@/integrations/supabase/client";
+import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 import { differenceInDays, parseISO, format, addDays } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -87,7 +88,7 @@ export default function RH() {
 
   useEffect(() => {
     loadDbFuncionarios();
-    supabase.from("obras").select("id, nome, codigo").eq("status", "em_andamento")
+    supabase.from("obras").select("id, nome, codigo").in("status", OBRA_STATUS_ATIVOS_ARR)
       .then(({ data }) => { if (data) setObras(data); });
     supabase.from("empresas").select("id, razao_social, nome_fantasia, cnpj")
       .then(({ data }) => { if (data) setEmpresas(data); });

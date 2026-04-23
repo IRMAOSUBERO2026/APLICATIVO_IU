@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { supabase } from "@/integrations/supabase/client";
+import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -105,7 +106,7 @@ export default function EquipamentosProprios() {
   async function loadData() {
     const [eqRes, obRes, emRes, mnRes, scRes] = await Promise.all([
       supabase.from("equipamentos_proprios").select("*").order("codigo"),
-      supabase.from("obras").select("id, nome, codigo").eq("status", "em_andamento"),
+      supabase.from("obras").select("id, nome, codigo").in("status", OBRA_STATUS_ATIVOS_ARR),
       supabase.from("empresas").select("id, razao_social").eq("ativo", true),
       supabase.from("manutencoes_equipamento").select("*").order("data_solicitacao", { ascending: false }),
       supabase.from("solicitacoes_compra_equipamento").select("*").order("created_at", { ascending: false }),

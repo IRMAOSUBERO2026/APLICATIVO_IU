@@ -1,6 +1,7 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { isObraAtiva } from "@/lib/obraStatus";
 import { toast } from "@/hooks/use-toast";
 import {
   FileText, FolderOpen, ChevronRight, ArrowLeft, Upload, Trash2, Download,
@@ -297,9 +298,9 @@ export default function DocumentacaoMensal() {
                   <p className="text-xs text-muted-foreground truncate">{obra.construtora || obra.codigo}</p>
                 </div>
                 <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold flex-shrink-0 ${
-                  obra.status === "em_andamento" ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"
+                  isObraAtiva(obra.status) ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"
                 }`}>
-                  {obra.status === "em_andamento" ? "Em andamento" : obra.status}
+                  {isObraAtiva(obra.status) ? "Em andamento" : obra.status}
                 </span>
                 <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
               </button>
