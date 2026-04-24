@@ -228,6 +228,7 @@ export default function Comunicacoes() {
               </button>
             </div>
           </div>
+        </div>
           </TabsContent>
 
           <TabsContent value="documentos">
