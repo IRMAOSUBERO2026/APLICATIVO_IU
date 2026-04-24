@@ -62,13 +62,6 @@ export default function Dashboard() {
             <h1 className="text-2xl font-bold tracking-tight">Dashboard Executivo</h1>
             <p className="text-sm text-muted-foreground">Visão geral da operação — Março 2026</p>
           </div>
-          <Button 
-            onClick={executeImport} 
-            className="w-full sm:w-auto gap-2 bg-amber-600 hover:bg-amber-700 text-white font-bold animate-pulse"
-          >
-            <DatabaseBackup className="h-4 w-4" />
-            IMPORTAR DADOS REAIS
-          </Button>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
