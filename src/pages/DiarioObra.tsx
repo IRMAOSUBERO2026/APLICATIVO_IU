@@ -1,5 +1,5 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Plus, Users, Calendar, Save, Trash2, Smartphone, Clock, Calculator, Wrench, UserPlus, Truck, Sparkles, Loader2 } from "lucide-react";
+import { Plus, Users, Calendar, Save, Trash2, Smartphone, Clock, Calculator, Wrench, UserPlus, Truck, Sparkles, Loader2, Cloud, Sun, CloudRain, AlertTriangle } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -694,7 +694,7 @@ export default function DiarioObra() {
                 {saving ? "Salvando..." : "Salvar Diário de Obra"}
               </button>
             </div>
-          </>
+          </div>
         )}
       </div>
     </AppLayout>
