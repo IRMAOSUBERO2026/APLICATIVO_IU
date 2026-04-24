@@ -227,6 +227,7 @@ export default function Comunicacoes() {
                 Enviar {canal === "whatsapp" ? "WhatsApp" : "E-mail"} ({selectedIds.size})
               </button>
             </div>
+          </div>
           </TabsContent>
 
           <TabsContent value="documentos">
