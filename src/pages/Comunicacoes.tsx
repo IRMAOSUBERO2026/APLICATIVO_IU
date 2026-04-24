@@ -3,7 +3,9 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 import { toast } from "@/hooks/use-toast";
-import { MessageCircle, Mail, Users, Send, Search, UserCheck, Building2, HardHat, Filter } from "lucide-react";
+import { MessageCircle, Mail, Users, Send, Search, UserCheck, Building2, HardHat, Filter, Bot, FileText } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { GeradorDocumentos } from "@/components/comunicacoes/GeradorDocumentos";
 
 interface Funcionario {
   id: string;
@@ -109,9 +111,17 @@ export default function Comunicacoes() {
     <AppLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Comunicações</h1>
-          <p className="text-sm text-muted-foreground">Envie WhatsApp e e-mails individuais ou em grupo</p>
+          <h1 className="text-2xl font-bold tracking-tight">Comunicações e Documentos</h1>
+          <p className="text-sm text-muted-foreground">Envie mensagens instantâneas ou gere documentos oficiais (Advertências, Recibos) com assistência inteligente.</p>
         </div>
+
+        <Tabs defaultValue="mensagens" className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="mensagens" className="gap-2"><MessageCircle className="h-4 w-4"/> Avisos Rápidos</TabsTrigger>
+            <TabsTrigger value="documentos" className="gap-2"><Bot className="h-4 w-4 text-primary"/> Gerador Oficial (IA)</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="mensagens" className="space-y-6">
 
         {/* Canal + Modo */}
         <div className="flex flex-col gap-4 sm:flex-row">
@@ -217,8 +227,12 @@ export default function Comunicacoes() {
                 Enviar {canal === "whatsapp" ? "WhatsApp" : "E-mail"} ({selectedIds.size})
               </button>
             </div>
-          </div>
-        </div>
+          </TabsContent>
+
+          <TabsContent value="documentos">
+            <GeradorDocumentos />
+          </TabsContent>
+        </Tabs>
       </div>
     </AppLayout>
   );
