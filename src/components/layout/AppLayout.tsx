@@ -2,6 +2,7 @@ import { ReactNode, useState } from "react";
 import { AppSidebar } from "./AppSidebar";
 import { Menu } from "lucide-react";
 import logoBranco from "@/assets/logo-branco.png";
+import { ContextoSelector } from "./ContextoSelector";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -28,14 +29,16 @@ export function AppLayout({ children }: AppLayoutProps) {
       </aside>
 
       <div className="flex flex-1 flex-col min-w-0">
-        <header className="flex h-14 items-center gap-3 border-b px-4 lg:hidden">
+        {/* Header desktop + mobile com seletor de contexto */}
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background/95 backdrop-blur px-4">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="rounded-md p-2 text-muted-foreground hover:bg-secondary"
+            className="rounded-md p-2 text-muted-foreground hover:bg-secondary lg:hidden"
           >
             <Menu className="h-5 w-5" />
           </button>
-          <img src={logoBranco} alt="Irmãos Ubero" className="h-8 w-auto" />
+          <img src={logoBranco} alt="Irmãos Ubero" className="h-8 w-auto lg:hidden" />
+          <ContextoSelector />
         </header>
 
         <main className="flex-1 overflow-auto scrollbar-thin p-4 lg:p-6">
