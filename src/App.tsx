@@ -34,6 +34,7 @@ import CustosObra from "./pages/CustosObra";
 import Clientes from "./pages/Clientes";
 import Solicitacoes from "./pages/Solicitacoes";
 import NotFound from "./pages/NotFound";
+import { EmpresaObraProvider } from "./contexts/EmpresaObraContext";
 
 const queryClient = new QueryClient();
 
@@ -42,6 +43,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <EmpresaObraProvider>
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
