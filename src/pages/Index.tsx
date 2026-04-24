@@ -1,6 +1,5 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { KPICard } from "@/components/dashboard/KPICard";
-import { executeImport } from "@/lib/importData";
 import { Button } from "@/components/ui/button";
 import { 
   DollarSign,
