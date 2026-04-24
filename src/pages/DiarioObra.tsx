@@ -694,7 +694,7 @@ export default function DiarioObra() {
                 {saving ? "Salvando..." : "Salvar Diário de Obra"}
               </button>
             </div>
-          </>
+          </div>
         )}
       </div>
     </AppLayout>
