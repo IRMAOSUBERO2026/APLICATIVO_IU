@@ -460,8 +460,10 @@ export default function Dashboard() {
                 </Link>
               ))}
             </div>
-          </div>
         </div>
+
+        {/* ─── Avisos, Solicitações e Pendências ─── */}
+        <PendenciasPanel pendencias={pendencias} />
 
         {/* ─── Tendência de Faturamento (sparkline grande) ─── */}
         <div className="rounded-xl border bg-card p-5 shadow-sm">
