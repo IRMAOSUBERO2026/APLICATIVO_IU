@@ -1,42 +1,14 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { KPICard } from "@/components/dashboard/KPICard";
-import { Button } from "@/components/ui/button";
-import { 
-  DollarSign,
-  TrendingUp,
-  HardHat,
-  Users,
-  AlertTriangle,
-  
+import { useDashboardData } from "@/hooks/useDashboardData";
+import { useEmpresaObra } from "@/contexts/EmpresaObraContext";
+import {
+  DollarSign, TrendingUp, HardHat, Users, AlertTriangle,
 } from "lucide-react";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell,
 } from "recharts";
-
-const faturamentoData = [
-  { mes: "Jan", valor: 320000 },
-  { mes: "Fev", valor: 280000 },
-  { mes: "Mar", valor: 410000 },
-  { mes: "Abr", valor: 350000 },
-  { mes: "Mai", valor: 480000 },
-  { mes: "Jun", valor: 520000 },
-];
-
-const margemData = [
-  { name: "Ed. Aurora", value: 32 },
-  { name: "Galpão Ind.", value: 18 },
-  { name: "Ponte BR-101", value: 25 },
-  { name: "Res. Sol", value: 15 },
-];
 
 const COLORS = [
   "hsl(100, 35%, 28%)",
@@ -45,43 +17,96 @@ const COLORS = [
   "hsl(38, 92%, 50%)",
 ];
 
-const obrasRecentes = [
-  { nome: "Edifício Aurora", status: "Em andamento", progresso: 68, valor: "R$ 2.4M" },
-  { nome: "Galpão Industrial Alfa", status: "Em andamento", progresso: 45, valor: "R$ 1.1M" },
-  { nome: "Ponte BR-101 Km 42", status: "Medição pendente", progresso: 82, valor: "R$ 3.8M" },
-  { nome: "Residencial Sol Nascente", status: "Iniciando", progresso: 12, valor: "R$ 890K" },
-];
+const fmtBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+const fmtCompact = (v: number) => {
+  if (Math.abs(v) >= 1_000_000) return `R$ ${(v / 1_000_000).toFixed(2)}M`;
+  if (Math.abs(v) >= 1_000) return `R$ ${(v / 1_000).toFixed(0)}K`;
+  return fmtBRL(v);
+};
+const pctChange = (atual: number, anterior: number) => {
+  if (anterior === 0) return atual === 0 ? "—" : "+100%";
+  const p = ((atual - anterior) / Math.abs(anterior)) * 100;
+  return `${p >= 0 ? "+" : ""}${p.toFixed(0)}% vs mês anterior`;
+};
 
+const MES_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
 export default function Dashboard() {
+  const { kpis, faturamentoSerie, margemPorObra, obrasAndamento, loading } = useDashboardData();
+  const { empresaAtual, obraAtual } = useEmpresaObra();
+  const hoje = new Date();
+  const periodo = `${MES_PT[hoje.getMonth()]} ${hoje.getFullYear()}`;
+
+  const escopo = obraAtual
+    ? `${obraAtual.codigo} — ${obraAtual.nome}`
+    : empresaAtual
+      ? (empresaAtual.nome_fantasia || empresaAtual.razao_social)
+      : "Todas as empresas";
+
   return (
     <AppLayout>
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Dashboard Executivo</h1>
-            <p className="text-sm text-muted-foreground">Visão geral da operação — Março 2026</p>
+            <p className="text-sm text-muted-foreground">{escopo} — {periodo}</p>
           </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          <KPICard title="Faturamento" value="R$ 2.36M" change="+12% vs mês anterior" changeType="positive" icon={<DollarSign className="h-5 w-5" />} />
-          <KPICard title="Custos Totais" value="R$ 1.78M" change="+8% vs mês anterior" changeType="negative" icon={<TrendingUp className="h-5 w-5" />} />
-          <KPICard title="Margem Média" value="24.6%" change="+2.1pp" changeType="positive" icon={<TrendingUp className="h-5 w-5" />} />
-          <KPICard title="Obras Ativas" value="4" change="1 nova este mês" changeType="neutral" icon={<HardHat className="h-5 w-5" />} />
-          <KPICard title="Folha Total" value="R$ 485K" change="142 funcionários" changeType="neutral" icon={<Users className="h-5 w-5" />} />
-          <KPICard title="Estoque Crítico" value="7 itens" change="Ação necessária" changeType="negative" icon={<AlertTriangle className="h-5 w-5" />} />
+          <KPICard
+            title="Faturamento"
+            value={fmtCompact(kpis.faturamentoMes)}
+            change={pctChange(kpis.faturamentoMes, kpis.faturamentoMesAnterior)}
+            changeType={kpis.faturamentoMes >= kpis.faturamentoMesAnterior ? "positive" : "negative"}
+            icon={<DollarSign className="h-5 w-5" />}
+          />
+          <KPICard
+            title="Custos Totais"
+            value={fmtCompact(kpis.custosMes)}
+            change={pctChange(kpis.custosMes, kpis.custosMesAnterior)}
+            changeType={kpis.custosMes <= kpis.custosMesAnterior ? "positive" : "negative"}
+            icon={<TrendingUp className="h-5 w-5" />}
+          />
+          <KPICard
+            title="Margem Média"
+            value={`${kpis.margemPercentual.toFixed(1)}%`}
+            change={`${(kpis.margemPercentual - kpis.margemAnterior >= 0 ? "+" : "")}${(kpis.margemPercentual - kpis.margemAnterior).toFixed(1)}pp`}
+            changeType={kpis.margemPercentual >= kpis.margemAnterior ? "positive" : "negative"}
+            icon={<TrendingUp className="h-5 w-5" />}
+          />
+          <KPICard
+            title="Obras Ativas"
+            value={String(kpis.obrasAtivas)}
+            change={kpis.obrasNovasMes > 0 ? `${kpis.obrasNovasMes} nova(s) este mês` : "—"}
+            changeType="neutral"
+            icon={<HardHat className="h-5 w-5" />}
+          />
+          <KPICard
+            title="Folha Total"
+            value={fmtCompact(kpis.folhaTotal)}
+            change={`${kpis.totalFuncionarios} funcionários`}
+            changeType="neutral"
+            icon={<Users className="h-5 w-5" />}
+          />
+          <KPICard
+            title="Estoque Crítico"
+            value={`${kpis.estoqueCritico} itens`}
+            change={kpis.estoqueCritico > 0 ? "Ação necessária" : "Tudo ok"}
+            changeType={kpis.estoqueCritico > 0 ? "negative" : "positive"}
+            icon={<AlertTriangle className="h-5 w-5" />}
+          />
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 rounded-xl border bg-card p-5 shadow-sm">
-            <h3 className="mb-4 text-sm font-semibold">Faturamento Mensal</h3>
+            <h3 className="mb-4 text-sm font-semibold">Faturamento Mensal (últimos 6 meses)</h3>
             <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={faturamentoData}>
+              <BarChart data={faturamentoSerie}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(0, 0%, 85%)" />
                 <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${v / 1000}K`} />
-                <Tooltip formatter={(v: number) => [`R$ ${(v / 1000).toFixed(0)}K`, "Valor"]} />
+                <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => v >= 1000 ? `${(v / 1000).toFixed(0)}K` : `${v}`} />
+                <Tooltip formatter={(v: number) => [fmtCompact(v), "Faturamento"]} />
                 <Bar dataKey="valor" fill="hsl(100, 35%, 28%)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -89,25 +114,31 @@ export default function Dashboard() {
 
           <div className="rounded-xl border bg-card p-5 shadow-sm">
             <h3 className="mb-4 text-sm font-semibold">Margem por Obra (%)</h3>
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie data={margemData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" label={({ value }) => `${value}%`}>
-                  {margemData.map((_, index) => (
-                    <Cell key={index} fill={COLORS[index % COLORS.length]} />
+            {margemPorObra.length === 0 ? (
+              <p className="text-xs text-muted-foreground py-8 text-center">Sem dados de medição/custos para calcular margem.</p>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie data={margemPorObra} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" label={({ value }) => `${value}%`}>
+                      {margemPorObra.map((_, index) => (
+                        <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="mt-2 space-y-1.5">
+                  {margemPorObra.map((item, i) => (
+                    <div key={item.obraId} className="flex items-center gap-2 text-xs">
+                      <div className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[i] }} />
+                      <span className="text-muted-foreground truncate">{item.name}</span>
+                      <span className="ml-auto font-medium">{item.value}%</span>
+                    </div>
                   ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="mt-2 space-y-1.5">
-              {margemData.map((item, i) => (
-                <div key={item.name} className="flex items-center gap-2 text-xs">
-                  <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: COLORS[i] }} />
-                  <span className="text-muted-foreground">{item.name}</span>
-                  <span className="ml-auto font-medium">{item.value}%</span>
                 </div>
-              ))}
-            </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -126,15 +157,19 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody>
-                {obrasRecentes.map((obra) => (
-                  <tr key={obra.nome} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                    <td className="px-5 py-3.5 font-medium">{obra.nome}</td>
+                {loading && (
+                  <tr><td colSpan={4} className="px-5 py-6 text-center text-xs text-muted-foreground">Carregando…</td></tr>
+                )}
+                {!loading && obrasAndamento.length === 0 && (
+                  <tr><td colSpan={4} className="px-5 py-6 text-center text-xs text-muted-foreground">Nenhuma obra ativa no escopo.</td></tr>
+                )}
+                {obrasAndamento.map((obra) => (
+                  <tr key={obra.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                    <td className="px-5 py-3.5 font-medium">{obra.codigo} — {obra.nome}</td>
                     <td className="px-5 py-3.5">
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                        obra.status === "Em andamento" ? "bg-success/10 text-success"
-                        : obra.status === "Medição pendente" ? "bg-warning/10 text-warning"
-                        : "bg-accent/10 text-accent"
-                      }`}>{obra.status}</span>
+                      <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-success/10 text-success capitalize">
+                        {obra.status.replace(/_/g, " ")}
+                      </span>
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
@@ -144,7 +179,7 @@ export default function Dashboard() {
                         <span className="text-xs text-muted-foreground">{obra.progresso}%</span>
                       </div>
                     </td>
-                    <td className="px-5 py-3.5 text-right font-medium">{obra.valor}</td>
+                    <td className="px-5 py-3.5 text-right font-medium">{fmtCompact(obra.valorContrato)}</td>
                   </tr>
                 ))}
               </tbody>
