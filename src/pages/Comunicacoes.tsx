@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 import { toast } from "@/hooks/use-toast";
-import { MessageCircle, Mail, Users, Send, Search, UserCheck, Building2, HardHat, Filter, Bot, FileText } from "lucide-react";
+import { MessageCircle, Mail, Users, Send, Search, UserCheck, Bot } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GeradorDocumentos } from "@/components/comunicacoes/GeradorDocumentos";
 
