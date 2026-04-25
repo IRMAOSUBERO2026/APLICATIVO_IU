@@ -86,12 +86,28 @@ export default function DiarioObra() {
   const [gerandoResumo, setGerandoResumo] = useState(false);
   const [diariosSalvos, setDiariosSalvos] = useState<any[]>([]);
 
-  // Load saved diarios for the selected obra
-  useEffect(() => {
-    if (!selectedObra) { setDiariosSalvos([]); return; }
-    supabase.from("diarios_obra").select("*, obras(nome)").eq("obra_id", selectedObra).order("data", { ascending: false }).limit(30)
-      .then(({ data }) => { if (data) setDiariosSalvos(data); });
-  }, [selectedObra]);
+    // Load saved diarios for the selected obra
+    useEffect(() => {
+      if (!selectedObra) { setDiariosSalvos([]); return; }
+      supabase.from("diarios_obra").select("*, obras(nome)").eq("obra_id", selectedObra).order("data", { ascending: false }).limit(30)
+        .then(({ data }) => { if (data) setDiariosSalvos(data); });
+      
+      // Carregar equipamentos prprios ALOCADOS NESTA OBRA
+      supabase.from("equipamentos_proprios")
+        .select("id, codigo, descricao")
+        .eq("obra_id", selectedObra)
+        .then(({ data }) => {
+          if (data) {
+            setEquipsProprios(data.map(e => ({
+              id: e.id,
+              nome: `${e.codigo} - ${e.descricao}`,
+              selecionado: false
+            })));
+          } else {
+            setEquipsProprios([]);
+          }
+        });
+    }, [selectedObra]);
 
   const gerarResumoIA = async () => {
     if (diariosSalvos.length === 0) {
@@ -253,6 +269,7 @@ export default function DiarioObra() {
       `\n---\nPresença (${presentes.length} func.): ${JSON.stringify(presentes)}`,
       `\nAtividades estruturadas: ${JSON.stringify(atividades.filter(a => a.servico))}`,
       equipsLocados.length > 0 ? `\nEquip. locados: ${JSON.stringify(equipsLocados)}` : "",
+      equipsProprios.filter(e => e.selecionado).length > 0 ? `\nEquip. prprios (IU) usados: ${JSON.stringify(equipsProprios.filter(e => e.selecionado).map(e => e.nome))}` : "",
       `\nHoras-Homem: ${horasHomem} | Produtividade: ${produtividade}`,
     ].join("");
 
