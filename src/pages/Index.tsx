@@ -7,7 +7,8 @@ import { Link } from "react-router-dom";
 import {
   DollarSign, TrendingUp, TrendingDown, HardHat, Users, AlertTriangle,
   ArrowUpRight, ArrowDownRight, Activity, Clock, ShoppingCart, FileText,
-  Wallet, Calendar, ChevronRight, Sparkles,
+  Wallet, Calendar, ChevronRight, Sparkles, Bell, ClipboardList,
+  PackageSearch, Stethoscope, Wrench, MessageSquare,
 } from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -93,6 +94,15 @@ function KpiHero({ label, value, delta, deltaLabel, invertColor, icon, series, a
 interface FluxoPonto { dia: string; entrada: number; saida: number; saldo: number; }
 interface AlertaItem { id: string; tipo: "atraso" | "estoque" | "exame" | "vencimento"; titulo: string; descricao: string; link: string; severidade: "alta" | "media" | "baixa"; }
 interface AtividadeItem { id: string; tipo: string; titulo: string; quando: string; }
+interface PendenciaItem {
+  id: string;
+  categoria: "aviso" | "solicitacao_diario" | "solicitacao_compra" | "solicitacao_exame" | "manutencao" | "tarefa";
+  titulo: string;
+  descricao: string;
+  data: string;
+  link: string;
+  prioridade: "alta" | "media" | "baixa";
+}
 
 /* ───────── Página ───────── */
 export default function Dashboard() {
@@ -103,6 +113,7 @@ export default function Dashboard() {
   const [atividades, setAtividades] = useState<AtividadeItem[]>([]);
   const [contasReceber30d, setContasReceber30d] = useState(0);
   const [contasPagar30d, setContasPagar30d] = useState(0);
+  const [pendencias, setPendencias] = useState<PendenciaItem[]>([]);
 
   const hoje = new Date();
   const periodo = `${MES_PT[hoje.getMonth()]} ${hoje.getFullYear()}`;
