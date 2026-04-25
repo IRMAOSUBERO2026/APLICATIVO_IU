@@ -617,3 +617,109 @@ function MiniStat({ icon, label, value, sub, link, tone = "default" }: MiniStatP
     </Link>
   );
 }
+
+/* ───────── PendenciasPanel ───────── */
+const CAT_META: Record<PendenciaItem["categoria"], { label: string; icon: React.ReactNode; tone: string }> = {
+  aviso: { label: "Aviso", icon: <Bell className="h-3.5 w-3.5" />, tone: "bg-warning/10 text-warning" },
+  solicitacao_diario: { label: "Diário", icon: <ClipboardList className="h-3.5 w-3.5" />, tone: "bg-primary/10 text-primary" },
+  solicitacao_compra: { label: "Compra", icon: <PackageSearch className="h-3.5 w-3.5" />, tone: "bg-accent/20 text-accent-foreground" },
+  solicitacao_exame: { label: "Exame", icon: <Stethoscope className="h-3.5 w-3.5" />, tone: "bg-destructive/10 text-destructive" },
+  manutencao: { label: "Manutenção", icon: <Wrench className="h-3.5 w-3.5" />, tone: "bg-warning/10 text-warning" },
+  tarefa: { label: "Tarefa", icon: <MessageSquare className="h-3.5 w-3.5" />, tone: "bg-primary/10 text-primary" },
+};
+
+function PendenciasPanel({ pendencias }: { pendencias: PendenciaItem[] }) {
+  const [filtro, setFiltro] = useState<"todas" | PendenciaItem["categoria"]>("todas");
+  const lista = filtro === "todas" ? pendencias : pendencias.filter(p => p.categoria === filtro);
+  const counts = pendencias.reduce((acc, p) => {
+    acc[p.categoria] = (acc[p.categoria] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  const totalAlta = pendencias.filter(p => p.prioridade === "alta").length;
+
+  const filtros: Array<{ key: "todas" | PendenciaItem["categoria"]; label: string }> = [
+    { key: "todas", label: `Todas (${pendencias.length})` },
+    { key: "aviso", label: `Avisos (${counts.aviso || 0})` },
+    { key: "solicitacao_diario", label: `Diário (${counts.solicitacao_diario || 0})` },
+    { key: "solicitacao_compra", label: `Compras (${counts.solicitacao_compra || 0})` },
+    { key: "solicitacao_exame", label: `Exames (${counts.solicitacao_exame || 0})` },
+    { key: "manutencao", label: `Manutenção (${counts.manutencao || 0})` },
+    { key: "tarefa", label: `Tarefas (${counts.tarefa || 0})` },
+  ];
+
+  return (
+    <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between border-b px-5 py-4 gap-4 flex-wrap">
+        <div>
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <Bell className="h-4 w-4 text-warning" /> Avisos, Solicitações e Pendências
+          </h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Tudo que precisa da sua atenção, consolidado de todos os módulos
+            {totalAlta > 0 && <span className="ml-2 font-semibold text-destructive">• {totalAlta} de alta prioridade</span>}
+          </p>
+        </div>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {filtros.map(f => (
+            <button
+              key={f.key}
+              onClick={() => setFiltro(f.key)}
+              className={`text-[11px] font-medium rounded-full px-2.5 py-1 transition-colors ${
+                filtro === f.key
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted-foreground/10"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {lista.length === 0 ? (
+        <div className="px-5 py-12 text-center">
+          <Bell className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">Nada pendente nesta categoria ✓</p>
+        </div>
+      ) : (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-px bg-border">
+          {lista.slice(0, 12).map(p => {
+            const meta = CAT_META[p.categoria];
+            return (
+              <Link
+                key={p.id}
+                to={p.link}
+                className="bg-card p-3.5 hover:bg-muted/40 transition-colors group flex gap-3"
+              >
+                <div className={`flex h-8 w-8 items-center justify-center rounded-lg flex-shrink-0 ${meta.tone}`}>
+                  {meta.icon}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground">{meta.label}</span>
+                    <span className={`h-1.5 w-1.5 rounded-full ${
+                      p.prioridade === "alta" ? "bg-destructive" : p.prioridade === "media" ? "bg-warning" : "bg-muted-foreground"
+                    }`} />
+                    <span className="text-[10px] text-muted-foreground ml-auto">
+                      {p.data ? new Date(p.data).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : ""}
+                    </span>
+                  </div>
+                  <p className="text-xs font-semibold leading-snug line-clamp-2">{p.titulo}</p>
+                  <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">{p.descricao}</p>
+                </div>
+                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary flex-shrink-0 self-center" />
+              </Link>
+            );
+          })}
+        </div>
+      )}
+
+      {lista.length > 12 && (
+        <div className="border-t px-5 py-2.5 text-center">
+          <span className="text-[11px] text-muted-foreground">+ {lista.length - 12} pendências adicionais</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
