@@ -215,6 +215,103 @@ export default function Dashboard() {
       (lastMedicoes || []).forEach((m: any) => atvs.push({ id: `m-${m.id}`, tipo: "Medição", titulo: `Medição #${m.numero} — ${fmtCompact(m.valor_liquido)}`, quando: String(m.created_at).slice(0,10) }));
       atvs.sort((a,b) => b.quando.localeCompare(a.quando));
 
+      // ===== AVISOS, SOLICITAÇÕES E PENDÊNCIAS =====
+      const pends: PendenciaItem[] = [];
+
+      // 1. Avisos não lidos
+      let avisosQ = supabase.from("avisos").select("id, titulo, mensagem, tipo, categoria, created_at").eq("lido", false).order("created_at", { ascending: false }).limit(8);
+      avisosQ = filtroEmp(avisosQ); avisosQ = filtroObra(avisosQ);
+      const { data: avisosData } = await avisosQ;
+      (avisosData || []).forEach((a: any) => pends.push({
+        id: `av-${a.id}`, categoria: "aviso",
+        titulo: a.titulo, descricao: a.mensagem,
+        data: String(a.created_at).slice(0,10),
+        link: "/diario-obra",
+        prioridade: a.tipo === "urgente" ? "alta" : a.tipo === "atencao" ? "media" : "baixa",
+      }));
+
+      // 2. Solicitações pendentes do diário (materiais/equipamentos)
+      let solDiaQ = supabase.from("solicitacoes_diario").select("id, tipo, justificativa, descricao_livre, quantidade, solicitante, created_at, status").eq("status", "pendente").order("created_at", { ascending: false }).limit(10);
+      solDiaQ = filtroEmp(solDiaQ); solDiaQ = filtroObra(solDiaQ);
+      const { data: solDia } = await solDiaQ;
+      (solDia || []).forEach((s: any) => pends.push({
+        id: `sd-${s.id}`, categoria: "solicitacao_diario",
+        titulo: `${s.tipo === "material" ? "Material" : s.tipo === "equipamento" ? "Equipamento" : s.tipo}: ${s.descricao_livre || s.justificativa}`.slice(0, 80),
+        descricao: `${s.quantidade || 1} un • ${s.solicitante || "—"}`,
+        data: String(s.created_at).slice(0,10),
+        link: "/diario-obra",
+        prioridade: "media",
+      }));
+
+      // 3. Solicitações de compra/equipamento
+      let solCompQ = supabase.from("solicitacoes_compra_equipamento").select("id, descricao, tipo, quantidade, valor_estimado, solicitante, created_at, status").eq("status", "pendente").order("created_at", { ascending: false }).limit(10);
+      solCompQ = filtroEmp(solCompQ); solCompQ = filtroObra(solCompQ);
+      const { data: solComp } = await solCompQ;
+      (solComp || []).forEach((s: any) => pends.push({
+        id: `sc-${s.id}`, categoria: "solicitacao_compra",
+        titulo: s.descricao,
+        descricao: `${s.quantidade}x • ${s.valor_estimado ? fmtCompact(s.valor_estimado) : "sem estimativa"} • ${s.solicitante || "—"}`,
+        data: String(s.created_at).slice(0,10),
+        link: "/solicitacoes",
+        prioridade: Number(s.valor_estimado || 0) > 5000 ? "alta" : "media",
+      }));
+
+      // 4. Solicitações de exame pendentes
+      let solExQ = supabase.from("solicitacoes_exame").select("id, tipo_exame, valor, funcionario_id, data_solicitacao, status").eq("status", "pendente").order("data_solicitacao", { ascending: false }).limit(10);
+      solExQ = filtroEmp(solExQ);
+      const { data: solEx } = await solExQ;
+      if (solEx && solEx.length > 0) {
+        const funcIds = [...new Set(solEx.map((s: any) => s.funcionario_id))];
+        const { data: funcsEx } = await supabase.from("funcionarios").select("id, nome").in("id", funcIds);
+        const fmap = new Map((funcsEx || []).map((f: any) => [f.id, f.nome]));
+        solEx.forEach((s: any) => pends.push({
+          id: `se-${s.id}`, categoria: "solicitacao_exame",
+          titulo: `Exame ${s.tipo_exame}`,
+          descricao: `${fmap.get(s.funcionario_id) || "Funcionário"} • ${fmtCompact(s.valor || 0)}`,
+          data: String(s.data_solicitacao),
+          link: "/rh",
+          prioridade: "media",
+        }));
+      }
+
+      // 5. Manutenções de equipamento solicitadas
+      let manutQ = supabase.from("manutencoes_equipamento").select("id, descricao, tipo, data_solicitacao, valor_orcamento, status").eq("status", "solicitada").order("data_solicitacao", { ascending: false }).limit(8);
+      manutQ = filtroEmp(manutQ);
+      const { data: manuts } = await manutQ;
+      (manuts || []).forEach((m: any) => pends.push({
+        id: `mn-${m.id}`, categoria: "manutencao",
+        titulo: `Manutenção ${m.tipo}`,
+        descricao: `${String(m.descricao).slice(0, 80)} • ${m.valor_orcamento ? fmtCompact(m.valor_orcamento) : "sem orçamento"}`,
+        data: String(m.data_solicitacao),
+        link: "/equipamentos-proprios",
+        prioridade: m.tipo === "corretiva" ? "alta" : "media",
+      }));
+
+      // 6. Tarefas em aberto com prazo
+      let tarQ = supabase.from("tarefas").select("id, titulo, descricao, prioridade, data_limite, status").in("status", ["pendente", "em_andamento"]).order("data_limite", { ascending: true, nullsFirst: false }).limit(8);
+      tarQ = filtroEmp(tarQ); tarQ = filtroObra(tarQ);
+      const { data: tarefas } = await tarQ;
+      (tarefas || []).forEach((t: any) => {
+        const dl = t.data_limite ? new Date(t.data_limite) : null;
+        const atrasada = dl && dl.getTime() < Date.now();
+        pends.push({
+          id: `tr-${t.id}`, categoria: "tarefa",
+          titulo: t.titulo,
+          descricao: dl ? `${atrasada ? "⚠ Atrasada" : "Vence"} ${dl.toLocaleDateString("pt-BR")}` : "Sem prazo",
+          data: t.data_limite || String(new Date().toISOString().slice(0,10)),
+          link: "/comunicacoes",
+          prioridade: atrasada ? "alta" : (t.prioridade === "alta" ? "alta" : t.prioridade === "baixa" ? "baixa" : "media"),
+        });
+      });
+
+      // Ordena por prioridade desc, depois data desc
+      const ordemP: Record<string, number> = { alta: 0, media: 1, baixa: 2 };
+      pends.sort((a, b) => {
+        const dp = ordemP[a.prioridade] - ordemP[b.prioridade];
+        if (dp !== 0) return dp;
+        return b.data.localeCompare(a.data);
+      });
+
       if (cancel) return;
       setFluxo(serie);
       setAlertas(alerts.sort((a, b) => {
@@ -224,6 +321,7 @@ export default function Dashboard() {
       setAtividades(atvs.slice(0, 6));
       setContasReceber30d(totCR);
       setContasPagar30d(totCP);
+      setPendencias(pends);
     })();
     return () => { cancel = true; };
   }, [empresaId, obraId]);
