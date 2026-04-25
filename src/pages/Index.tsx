@@ -7,7 +7,8 @@ import { Link } from "react-router-dom";
 import {
   DollarSign, TrendingUp, TrendingDown, HardHat, Users, AlertTriangle,
   ArrowUpRight, ArrowDownRight, Activity, Clock, ShoppingCart, FileText,
-  Wallet, Calendar, ChevronRight, Sparkles,
+  Wallet, Calendar, ChevronRight, Sparkles, Bell, ClipboardList,
+  PackageSearch, Stethoscope, Wrench, MessageSquare,
 } from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -93,6 +94,15 @@ function KpiHero({ label, value, delta, deltaLabel, invertColor, icon, series, a
 interface FluxoPonto { dia: string; entrada: number; saida: number; saldo: number; }
 interface AlertaItem { id: string; tipo: "atraso" | "estoque" | "exame" | "vencimento"; titulo: string; descricao: string; link: string; severidade: "alta" | "media" | "baixa"; }
 interface AtividadeItem { id: string; tipo: string; titulo: string; quando: string; }
+interface PendenciaItem {
+  id: string;
+  categoria: "aviso" | "solicitacao_diario" | "solicitacao_compra" | "solicitacao_exame" | "manutencao" | "tarefa";
+  titulo: string;
+  descricao: string;
+  data: string;
+  link: string;
+  prioridade: "alta" | "media" | "baixa";
+}
 
 /* ───────── Página ───────── */
 export default function Dashboard() {
@@ -103,6 +113,7 @@ export default function Dashboard() {
   const [atividades, setAtividades] = useState<AtividadeItem[]>([]);
   const [contasReceber30d, setContasReceber30d] = useState(0);
   const [contasPagar30d, setContasPagar30d] = useState(0);
+  const [pendencias, setPendencias] = useState<PendenciaItem[]>([]);
 
   const hoje = new Date();
   const periodo = `${MES_PT[hoje.getMonth()]} ${hoje.getFullYear()}`;
@@ -204,6 +215,103 @@ export default function Dashboard() {
       (lastMedicoes || []).forEach((m: any) => atvs.push({ id: `m-${m.id}`, tipo: "Medição", titulo: `Medição #${m.numero} — ${fmtCompact(m.valor_liquido)}`, quando: String(m.created_at).slice(0,10) }));
       atvs.sort((a,b) => b.quando.localeCompare(a.quando));
 
+      // ===== AVISOS, SOLICITAÇÕES E PENDÊNCIAS =====
+      const pends: PendenciaItem[] = [];
+
+      // 1. Avisos não lidos
+      let avisosQ = supabase.from("avisos").select("id, titulo, mensagem, tipo, categoria, created_at").eq("lido", false).order("created_at", { ascending: false }).limit(8);
+      avisosQ = filtroEmp(avisosQ); avisosQ = filtroObra(avisosQ);
+      const { data: avisosData } = await avisosQ;
+      (avisosData || []).forEach((a: any) => pends.push({
+        id: `av-${a.id}`, categoria: "aviso",
+        titulo: a.titulo, descricao: a.mensagem,
+        data: String(a.created_at).slice(0,10),
+        link: "/diario-obra",
+        prioridade: a.tipo === "urgente" ? "alta" : a.tipo === "atencao" ? "media" : "baixa",
+      }));
+
+      // 2. Solicitações pendentes do diário (materiais/equipamentos)
+      let solDiaQ = supabase.from("solicitacoes_diario").select("id, tipo, justificativa, descricao_livre, quantidade, solicitante, created_at, status").eq("status", "pendente").order("created_at", { ascending: false }).limit(10);
+      solDiaQ = filtroEmp(solDiaQ); solDiaQ = filtroObra(solDiaQ);
+      const { data: solDia } = await solDiaQ;
+      (solDia || []).forEach((s: any) => pends.push({
+        id: `sd-${s.id}`, categoria: "solicitacao_diario",
+        titulo: `${s.tipo === "material" ? "Material" : s.tipo === "equipamento" ? "Equipamento" : s.tipo}: ${s.descricao_livre || s.justificativa}`.slice(0, 80),
+        descricao: `${s.quantidade || 1} un • ${s.solicitante || "—"}`,
+        data: String(s.created_at).slice(0,10),
+        link: "/diario-obra",
+        prioridade: "media",
+      }));
+
+      // 3. Solicitações de compra/equipamento
+      let solCompQ = supabase.from("solicitacoes_compra_equipamento").select("id, descricao, tipo, quantidade, valor_estimado, solicitante, created_at, status").eq("status", "pendente").order("created_at", { ascending: false }).limit(10);
+      solCompQ = filtroEmp(solCompQ); solCompQ = filtroObra(solCompQ);
+      const { data: solComp } = await solCompQ;
+      (solComp || []).forEach((s: any) => pends.push({
+        id: `sc-${s.id}`, categoria: "solicitacao_compra",
+        titulo: s.descricao,
+        descricao: `${s.quantidade}x • ${s.valor_estimado ? fmtCompact(s.valor_estimado) : "sem estimativa"} • ${s.solicitante || "—"}`,
+        data: String(s.created_at).slice(0,10),
+        link: "/solicitacoes",
+        prioridade: Number(s.valor_estimado || 0) > 5000 ? "alta" : "media",
+      }));
+
+      // 4. Solicitações de exame pendentes
+      let solExQ = supabase.from("solicitacoes_exame").select("id, tipo_exame, valor, funcionario_id, data_solicitacao, status").eq("status", "pendente").order("data_solicitacao", { ascending: false }).limit(10);
+      solExQ = filtroEmp(solExQ);
+      const { data: solEx } = await solExQ;
+      if (solEx && solEx.length > 0) {
+        const funcIds = [...new Set(solEx.map((s: any) => s.funcionario_id))];
+        const { data: funcsEx } = await supabase.from("funcionarios").select("id, nome").in("id", funcIds);
+        const fmap = new Map((funcsEx || []).map((f: any) => [f.id, f.nome]));
+        solEx.forEach((s: any) => pends.push({
+          id: `se-${s.id}`, categoria: "solicitacao_exame",
+          titulo: `Exame ${s.tipo_exame}`,
+          descricao: `${fmap.get(s.funcionario_id) || "Funcionário"} • ${fmtCompact(s.valor || 0)}`,
+          data: String(s.data_solicitacao),
+          link: "/rh",
+          prioridade: "media",
+        }));
+      }
+
+      // 5. Manutenções de equipamento solicitadas
+      let manutQ = supabase.from("manutencoes_equipamento").select("id, descricao, tipo, data_solicitacao, valor_orcamento, status").eq("status", "solicitada").order("data_solicitacao", { ascending: false }).limit(8);
+      manutQ = filtroEmp(manutQ);
+      const { data: manuts } = await manutQ;
+      (manuts || []).forEach((m: any) => pends.push({
+        id: `mn-${m.id}`, categoria: "manutencao",
+        titulo: `Manutenção ${m.tipo}`,
+        descricao: `${String(m.descricao).slice(0, 80)} • ${m.valor_orcamento ? fmtCompact(m.valor_orcamento) : "sem orçamento"}`,
+        data: String(m.data_solicitacao),
+        link: "/equipamentos-proprios",
+        prioridade: m.tipo === "corretiva" ? "alta" : "media",
+      }));
+
+      // 6. Tarefas em aberto com prazo
+      let tarQ = supabase.from("tarefas").select("id, titulo, descricao, prioridade, data_limite, status").in("status", ["pendente", "em_andamento"]).order("data_limite", { ascending: true, nullsFirst: false }).limit(8);
+      tarQ = filtroEmp(tarQ); tarQ = filtroObra(tarQ);
+      const { data: tarefas } = await tarQ;
+      (tarefas || []).forEach((t: any) => {
+        const dl = t.data_limite ? new Date(t.data_limite) : null;
+        const atrasada = dl && dl.getTime() < Date.now();
+        pends.push({
+          id: `tr-${t.id}`, categoria: "tarefa",
+          titulo: t.titulo,
+          descricao: dl ? `${atrasada ? "⚠ Atrasada" : "Vence"} ${dl.toLocaleDateString("pt-BR")}` : "Sem prazo",
+          data: t.data_limite || String(new Date().toISOString().slice(0,10)),
+          link: "/comunicacoes",
+          prioridade: atrasada ? "alta" : (t.prioridade === "alta" ? "alta" : t.prioridade === "baixa" ? "baixa" : "media"),
+        });
+      });
+
+      // Ordena por prioridade desc, depois data desc
+      const ordemP: Record<string, number> = { alta: 0, media: 1, baixa: 2 };
+      pends.sort((a, b) => {
+        const dp = ordemP[a.prioridade] - ordemP[b.prioridade];
+        if (dp !== 0) return dp;
+        return b.data.localeCompare(a.data);
+      });
+
       if (cancel) return;
       setFluxo(serie);
       setAlertas(alerts.sort((a, b) => {
@@ -213,6 +321,7 @@ export default function Dashboard() {
       setAtividades(atvs.slice(0, 6));
       setContasReceber30d(totCR);
       setContasPagar30d(totCP);
+      setPendencias(pends);
     })();
     return () => { cancel = true; };
   }, [empresaId, obraId]);
@@ -353,6 +462,9 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+
+        {/* ─── Avisos, Solicitações e Pendências ─── */}
+        <PendenciasPanel pendencias={pendencias} />
 
         {/* ─── Tendência de Faturamento (sparkline grande) ─── */}
         <div className="rounded-xl border bg-card p-5 shadow-sm">
@@ -505,3 +617,109 @@ function MiniStat({ icon, label, value, sub, link, tone = "default" }: MiniStatP
     </Link>
   );
 }
+
+/* ───────── PendenciasPanel ───────── */
+const CAT_META: Record<PendenciaItem["categoria"], { label: string; icon: React.ReactNode; tone: string }> = {
+  aviso: { label: "Aviso", icon: <Bell className="h-3.5 w-3.5" />, tone: "bg-warning/10 text-warning" },
+  solicitacao_diario: { label: "Diário", icon: <ClipboardList className="h-3.5 w-3.5" />, tone: "bg-primary/10 text-primary" },
+  solicitacao_compra: { label: "Compra", icon: <PackageSearch className="h-3.5 w-3.5" />, tone: "bg-accent/20 text-accent-foreground" },
+  solicitacao_exame: { label: "Exame", icon: <Stethoscope className="h-3.5 w-3.5" />, tone: "bg-destructive/10 text-destructive" },
+  manutencao: { label: "Manutenção", icon: <Wrench className="h-3.5 w-3.5" />, tone: "bg-warning/10 text-warning" },
+  tarefa: { label: "Tarefa", icon: <MessageSquare className="h-3.5 w-3.5" />, tone: "bg-primary/10 text-primary" },
+};
+
+function PendenciasPanel({ pendencias }: { pendencias: PendenciaItem[] }) {
+  const [filtro, setFiltro] = useState<"todas" | PendenciaItem["categoria"]>("todas");
+  const lista = filtro === "todas" ? pendencias : pendencias.filter(p => p.categoria === filtro);
+  const counts = pendencias.reduce((acc, p) => {
+    acc[p.categoria] = (acc[p.categoria] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  const totalAlta = pendencias.filter(p => p.prioridade === "alta").length;
+
+  const filtros: Array<{ key: "todas" | PendenciaItem["categoria"]; label: string }> = [
+    { key: "todas", label: `Todas (${pendencias.length})` },
+    { key: "aviso", label: `Avisos (${counts.aviso || 0})` },
+    { key: "solicitacao_diario", label: `Diário (${counts.solicitacao_diario || 0})` },
+    { key: "solicitacao_compra", label: `Compras (${counts.solicitacao_compra || 0})` },
+    { key: "solicitacao_exame", label: `Exames (${counts.solicitacao_exame || 0})` },
+    { key: "manutencao", label: `Manutenção (${counts.manutencao || 0})` },
+    { key: "tarefa", label: `Tarefas (${counts.tarefa || 0})` },
+  ];
+
+  return (
+    <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between border-b px-5 py-4 gap-4 flex-wrap">
+        <div>
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <Bell className="h-4 w-4 text-warning" /> Avisos, Solicitações e Pendências
+          </h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Tudo que precisa da sua atenção, consolidado de todos os módulos
+            {totalAlta > 0 && <span className="ml-2 font-semibold text-destructive">• {totalAlta} de alta prioridade</span>}
+          </p>
+        </div>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {filtros.map(f => (
+            <button
+              key={f.key}
+              onClick={() => setFiltro(f.key)}
+              className={`text-[11px] font-medium rounded-full px-2.5 py-1 transition-colors ${
+                filtro === f.key
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted-foreground/10"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {lista.length === 0 ? (
+        <div className="px-5 py-12 text-center">
+          <Bell className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">Nada pendente nesta categoria ✓</p>
+        </div>
+      ) : (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-px bg-border">
+          {lista.slice(0, 12).map(p => {
+            const meta = CAT_META[p.categoria];
+            return (
+              <Link
+                key={p.id}
+                to={p.link}
+                className="bg-card p-3.5 hover:bg-muted/40 transition-colors group flex gap-3"
+              >
+                <div className={`flex h-8 w-8 items-center justify-center rounded-lg flex-shrink-0 ${meta.tone}`}>
+                  {meta.icon}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground">{meta.label}</span>
+                    <span className={`h-1.5 w-1.5 rounded-full ${
+                      p.prioridade === "alta" ? "bg-destructive" : p.prioridade === "media" ? "bg-warning" : "bg-muted-foreground"
+                    }`} />
+                    <span className="text-[10px] text-muted-foreground ml-auto">
+                      {p.data ? new Date(p.data).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : ""}
+                    </span>
+                  </div>
+                  <p className="text-xs font-semibold leading-snug line-clamp-2">{p.titulo}</p>
+                  <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">{p.descricao}</p>
+                </div>
+                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary flex-shrink-0 self-center" />
+              </Link>
+            );
+          })}
+        </div>
+      )}
+
+      {lista.length > 12 && (
+        <div className="border-t px-5 py-2.5 text-center">
+          <span className="text-[11px] text-muted-foreground">+ {lista.length - 12} pendências adicionais</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
