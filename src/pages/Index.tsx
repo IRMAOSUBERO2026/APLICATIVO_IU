@@ -460,6 +460,7 @@ export default function Dashboard() {
                 </Link>
               ))}
             </div>
+          </div>
         </div>
 
         {/* ─── Avisos, Solicitações e Pendências ─── */}
