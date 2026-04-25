@@ -471,7 +471,14 @@ export default function EquipamentosProprios() {
                            </TableCell>
                            <TableCell><Badge variant="outline" className={STATUS_MANUT[m.status]?.class}>{STATUS_MANUT[m.status]?.label}</Badge></TableCell>
                            <TableCell>
-                  </Table>
+                              <Select value={m.status} onValueChange={v => updateManutStatus(m.id, v)}>
+                                <SelectTrigger className="h-8 w-32 text-xs"><SelectValue /></SelectTrigger>
+                                <SelectContent>{Object.entries(STATUS_MANUT).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}</SelectContent>
+                              </Select>
+                           </TableCell>
+                         </TableRow>
+                       ))}
+                    </TableBody>
                </ScrollableTable>
             </Card>
           </TabsContent>
