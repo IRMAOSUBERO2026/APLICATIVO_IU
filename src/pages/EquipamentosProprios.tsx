@@ -15,7 +15,7 @@ import { toast } from "@/hooks/use-toast";
 import {
   Wrench, Plus, Search, MapPin, ShoppingCart, Settings, History,
   Trash2, Edit, HardHat, Zap, Wind, Hammer, Box, Layers,
-  CheckCircle2, AlertTriangle, Clock, XCircle, Package, ArrowRightLeft, Camera
+  CheckCircle2, AlertTriangle, Clock, XCircle, Package, ArrowRightLeft, Camera, DollarSign
 } from "lucide-react";
 import { ScrollableTable } from "@/components/shared/ScrollableTable";
 
@@ -184,7 +184,8 @@ export default function EquipamentosProprios() {
     emUso: equipamentos.filter(e => e.status === "em_uso").length,
     disponiveis: equipamentos.filter(e => e.status === "disponivel").length,
     manutencao: equipamentos.filter(e => e.status === "manutencao").length,
-  }), [equipamentos]);
+    custoTotal: manutencoes.filter(m => m.status === "concluido" || m.status === "em_reparo").reduce((acc, m) => acc + (m.valor_aprovado || 0), 0)
+  }), [equipamentos, manutencoes]);
 
   const filteredEquip = useMemo(() => {
     return equipamentos.filter(e => {
@@ -346,6 +347,7 @@ export default function EquipamentosProprios() {
             { label: "Em Uso",       value: stats.emUso,       gradient: "from-blue-500/20 to-blue-600/10",    icon: <Clock className="h-5 w-5 text-blue-500" />,    textColor: "text-blue-600 dark:text-blue-400" },
             { label: "Disponíveis",  value: stats.disponiveis, gradient: "from-emerald-500/20 to-emerald-600/10", icon: <CheckCircle2 className="h-5 w-5 text-emerald-500" />, textColor: "text-emerald-600 dark:text-emerald-400" },
             { label: "Manutenção",   value: stats.manutencao,  gradient: "from-amber-500/20 to-amber-600/10",  icon: <AlertTriangle className="h-5 w-5 text-amber-500" />, textColor: "text-amber-600 dark:text-amber-400" },
+            { label: "Custo Manut. Total", value: `R$ ${stats.custoTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, gradient: "from-rose-500/10 to-rose-600/5", icon: <DollarSign className="h-5 w-5 text-rose-500" />, textColor: "text-rose-600" },
           ].map(k => (
             <Card key={k.label} className="overflow-hidden border border-border/60 shadow-sm">
               <CardContent className={`p-4 bg-gradient-to-br ${k.gradient}`}>
@@ -426,7 +428,14 @@ export default function EquipamentosProprios() {
                          </div>
                          <div className="min-w-0 flex-1">
                             <p className="font-bold text-sm truncate">{eq.descricao}</p>
-                            <p className="text-xs text-muted-foreground font-mono">{eq.codigo}</p>
+                            <div className="flex items-center justify-between mt-0.5">
+                               <p className="text-xs text-muted-foreground font-mono">{eq.codigo}</p>
+                               <p className="text-[10px] font-bold text-rose-500">
+                                 R$ {manutencoes.filter(m => m.equipamento_id === eq.id && (m.status === "concluido" || m.status === "em_reparo"))
+                                     .reduce((sum, m) => sum + (m.valor_aprovado || 0), 0)
+                                     .toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                               </p>
+                            </div>
                             <Badge variant="outline" className={`mt-2 text-[10px] h-5 ${st?.badgeClass}`}>{st?.label}</Badge>
                          </div>
                       </div>
@@ -447,22 +456,21 @@ export default function EquipamentosProprios() {
             <Card className="overflow-hidden">
                <ScrollableTable>
                   <Table>
-                    <TableHeader><TableRow className="bg-muted/50"><TableHead>Equipamento</TableHead><TableHead>Tipo</TableHead><TableHead>Status</TableHead><TableHead>Ação</TableHead></TableRow></TableHeader>
+                    <TableHeader><TableRow className="bg-muted/50"><TableHead>Equipamento</TableHead><TableHead>Tipo</TableHead><TableHead>Descrição/Falha</TableHead><TableHead>Valores (Orc/Aprov)</TableHead><TableHead>Status</TableHead><TableHead>Ação</TableHead></TableRow></TableHeader>
                     <TableBody>
                        {manutencoes.map(m => (
                          <TableRow key={m.id}>
                            <TableCell className="text-sm font-medium">{equipamentos.find(eq => eq.id === m.equipamento_id)?.descricao || "—"}</TableCell>
                            <TableCell><Badge variant="outline" className="capitalize text-xs">{m.tipo}</Badge></TableCell>
+                           <TableCell className="text-xs max-w-[150px] truncate">{m.descricao}</TableCell>
+                           <TableCell>
+                              <div className="flex flex-col gap-0.5">
+                                 <span className="text-[10px] text-muted-foreground">Orc: R$ {m.valor_orcamento?.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                                 <span className="text-[11px] font-bold text-emerald-600">Apr: R$ {m.valor_aprovado?.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                              </div>
+                           </TableCell>
                            <TableCell><Badge variant="outline" className={STATUS_MANUT[m.status]?.class}>{STATUS_MANUT[m.status]?.label}</Badge></TableCell>
                            <TableCell>
-                              <Select value={m.status} onValueChange={v => updateManutStatus(m.id, v)}>
-                                <SelectTrigger className="h-8 w-32 text-xs"><SelectValue /></SelectTrigger>
-                                <SelectContent>{Object.entries(STATUS_MANUT).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}</SelectContent>
-                              </Select>
-                           </TableCell>
-                         </TableRow>
-                       ))}
-                    </TableBody>
                   </Table>
                </ScrollableTable>
             </Card>
