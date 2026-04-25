@@ -336,7 +336,6 @@ export default function EquipamentosProprios() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" className="gap-2" onClick={() => setShowCompraForm(true)}><ShoppingCart className="h-4 w-4" /> Solicitar Compra</Button>
-            <Button variant="outline" className="gap-2" onClick={() => setShowManutForm(true)}><Settings className="h-4 w-4" /> Nova Manutenção</Button>
             <Button className="gap-2" onClick={() => { setEditingEquip(null); resetEquipForm(); setShowEquipForm(true); }}><Plus className="h-4 w-4" /> Novo Equipamento</Button>
           </div>
         </div>
@@ -432,7 +431,8 @@ export default function EquipamentosProprios() {
                          </div>
                       </div>
                       <div className="flex items-center gap-1.5 pt-3 border-t">
-                        <Button size="sm" variant="ghost" className="h-8 flex-1 gap-1 text-xs" onClick={() => openHistorico(eq)}><History className="h-3.5 w-3.5" /> Histórico</Button>
+                        <Button size="sm" variant="ghost" className="h-8 flex-1 gap-1 text-[10px] sm:text-xs" onClick={() => openHistorico(eq)}><History className="h-3.5 w-3.5" /> Hist.</Button>
+                        <Button size="sm" variant="ghost" className="h-8 flex-1 gap-1 text-[10px] sm:text-xs text-amber-600 hover:text-amber-700" onClick={() => quickMaintenance(eq)}><Wrench className="h-3.5 w-3.5" /> Manut.</Button>
                         <Button size="sm" variant="ghost" className="h-8 px-2" onClick={() => openEdit(eq)}><Edit className="h-3.5 w-3.5" /></Button>
                         <Button size="sm" variant="ghost" className="h-8 px-2 text-rose-500 hover:text-rose-600" onClick={() => deleteEquip(eq.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
                       </div>
