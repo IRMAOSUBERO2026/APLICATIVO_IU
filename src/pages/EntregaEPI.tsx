@@ -251,3 +251,7 @@ export default function EntregaEPI() {
             <FichasEPIPanel />
           </TabsContent>
         </Tabs>
+      </div>
+    </AppLayout>
+  );
+}
