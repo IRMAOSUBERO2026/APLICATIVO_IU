@@ -35,6 +35,7 @@ import Clientes from "./pages/Clientes";
 import Solicitacoes from "./pages/Solicitacoes";
 import NotFound from "./pages/NotFound";
 import { EmpresaObraProvider } from "./contexts/EmpresaObraContext";
+import { ScrollToTop } from "./components/layout/ScrollToTop";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +46,7 @@ const App = () => (
       <Sonner />
       <EmpresaObraProvider>
       <BrowserRouter>
+        <ScrollToTop />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/obras" element={<Obras />} />
