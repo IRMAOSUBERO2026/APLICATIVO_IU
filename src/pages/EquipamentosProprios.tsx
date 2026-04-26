@@ -363,7 +363,21 @@ export default function EquipamentosProprios() {
                <div><Label>Descricao da Falha</Label><Textarea value={formManut.descricao} onChange={e => setFormManut({...formManut, descricao: e.target.value})} /></div>
                <div><Label>Fornecedor sugerido</Label><Input value={formManut.fornecedor || ""} onChange={e => setFormManut({...formManut, fornecedor: e.target.value})} /></div>
             </div>
-            <DialogFooter><Button onClick={updateManutStatus} className="w-full">ENVIAR AGORA</Button></DialogFooter>
+            <DialogFooter><Button onClick={async () => {
+               if (!formManut.equipamento_id) return;
+               await supabase.from("manutencoes_equipamento").insert({
+                 equipamento_id: formManut.equipamento_id,
+                 tipo: formManut.tipo,
+                 descricao: formManut.descricao,
+                 fornecedor: formManut.fornecedor || null,
+                 valor_orcamento: formManut.valor_orcamento || 0,
+                 valor_aprovado: formManut.valor_aprovado || 0,
+                 observacoes: formManut.observacoes || null,
+                 empresa_id: selectedEquip?.empresa_id || equipamentos.find(e => e.id === formManut.equipamento_id)?.empresa_id || null,
+                 status: "pendente",
+               } as any);
+               setShowManutForm(false); loadData(); toast({ title: "Manutenção solicitada!" });
+            }} className="w-full">ENVIAR AGORA</Button></DialogFooter>
          </DialogContent>
       </Dialog>
 
