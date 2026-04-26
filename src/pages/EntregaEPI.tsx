@@ -1,12 +1,13 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Search, Package, AlertTriangle, Smartphone, Lock } from "lucide-react";
+import { Search, Package, AlertTriangle, Smartphone, Lock, FileSignature, History } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { isObraAtiva } from "@/lib/obraStatus";
-import { toast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import FichasEPIPanel from "@/components/epi/FichasEPIPanel";
 
 interface Entrega {
   id: string;
@@ -114,125 +115,142 @@ export default function EntregaEPI() {
           </div>
         </div>
 
-        {/* Alerta de estoque crítico */}
-        {epiCriticos.length > 0 && (
-          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <AlertTriangle className="h-4 w-4 text-destructive" />
-              <h3 className="text-sm font-semibold text-destructive">Estoque Crítico de EPI</h3>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {epiCriticos.map(item => (
-                <span key={item.id} className="rounded-full bg-destructive/10 px-3 py-1 text-xs font-medium text-destructive">
-                  {item.descricao}: {item.saldo}/{item.estoque_minimo}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
+        <Tabs defaultValue="entregas" className="w-full">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="entregas" className="gap-2">
+              <History className="h-4 w-4" /> Entregas & Estoque
+            </TabsTrigger>
+            <TabsTrigger value="fichas" className="gap-2">
+              <FileSignature className="h-4 w-4" /> Fichas (NR-6)
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Estoque EPI Grid */}
-        {produtos.length > 0 && (
-          <div className="grid gap-3 grid-cols-2 sm:grid-cols-4 lg:grid-cols-6">
-            {produtos.slice(0, 12).map(item => (
-              <div key={item.id} className={`rounded-lg border p-3 text-center ${item.estoque_minimo > 0 && item.saldo < item.estoque_minimo ? "border-destructive/30 bg-destructive/5" : "bg-card"}`}>
-                <Package className={`mx-auto h-5 w-5 mb-1 ${item.estoque_minimo > 0 && item.saldo < item.estoque_minimo ? "text-destructive" : "text-primary"}`} />
-                <p className="text-xs font-medium truncate">{item.descricao}</p>
-                <p className={`text-lg font-bold ${item.estoque_minimo > 0 && item.saldo < item.estoque_minimo ? "text-destructive" : ""}`}>{item.saldo}</p>
-                {item.estoque_minimo > 0 && <p className="text-[10px] text-muted-foreground">mín: {item.estoque_minimo}</p>}
+          <TabsContent value="entregas" className="space-y-6 pt-4">
+            {/* Alerta de estoque crítico */}
+            {epiCriticos.length > 0 && (
+              <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle className="h-4 w-4 text-destructive" />
+                  <h3 className="text-sm font-semibold text-destructive">Estoque Crítico de EPI</h3>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {epiCriticos.map(item => (
+                    <span key={item.id} className="rounded-full bg-destructive/10 px-3 py-1 text-xs font-medium text-destructive">
+                      {item.descricao}: {item.saldo}/{item.estoque_minimo}
+                    </span>
+                  ))}
+                </div>
               </div>
-            ))}
-          </div>
-        )}
-
-        {/* Search + Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Buscar funcionário, EPI ou obra..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-lg border bg-card py-2.5 pl-10 pr-4 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-          </div>
-          <select
-            value={filterObra}
-            onChange={(e) => setFilterObra(e.target.value)}
-            className="rounded-lg border bg-card px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-          >
-            <option value="todas">Todas as obras</option>
-            <optgroup label="Obras ativas">
-              {obrasAtivas.map(o => (
-                <option key={o.id} value={o.codigo}>{o.codigo} - {o.nome}</option>
-              ))}
-            </optgroup>
-            {obrasConcluidas.length > 0 && (
-              <optgroup label="Obras concluídas">
-                <option value="concluidas">📁 Ver todas concluídas</option>
-                {obrasConcluidas.map(o => (
-                  <option key={o.id} value={o.codigo}>🔒 {o.codigo} - {o.nome}</option>
-                ))}
-              </optgroup>
             )}
-          </select>
-        </div>
 
-        {/* Indicador de obra concluída */}
-        {filterObra !== "todas" && filterObra !== "concluidas" && obrasConcluidas.some(o => o.codigo === filterObra) && (
-          <div className="flex items-center gap-2 rounded-lg border border-muted bg-muted/30 px-4 py-3">
-            <Lock className="h-4 w-4 text-muted-foreground" />
-            <p className="text-sm text-muted-foreground">
-              <span className="font-medium">Obra concluída</span> — os dados são somente para consulta. Novos lançamentos não são permitidos.
-            </p>
-          </div>
-        )}
+            {/* Estoque EPI Grid */}
+            {produtos.length > 0 && (
+              <div className="grid gap-3 grid-cols-2 sm:grid-cols-4 lg:grid-cols-6">
+                {produtos.slice(0, 12).map(item => (
+                  <div key={item.id} className={`rounded-lg border p-3 text-center ${item.estoque_minimo > 0 && item.saldo < item.estoque_minimo ? "border-destructive/30 bg-destructive/5" : "bg-card"}`}>
+                    <Package className={`mx-auto h-5 w-5 mb-1 ${item.estoque_minimo > 0 && item.saldo < item.estoque_minimo ? "text-destructive" : "text-primary"}`} />
+                    <p className="text-xs font-medium truncate">{item.descricao}</p>
+                    <p className={`text-lg font-bold ${item.estoque_minimo > 0 && item.saldo < item.estoque_minimo ? "text-destructive" : ""}`}>{item.saldo}</p>
+                    {item.estoque_minimo > 0 && <p className="text-[10px] text-muted-foreground">mín: {item.estoque_minimo}</p>}
+                  </div>
+                ))}
+              </div>
+            )}
 
-        {/* Entregas table */}
-        <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/50">
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Data</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Funcionário</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">EPI</th>
-                  <th className="px-4 py-3 text-center font-medium text-muted-foreground">Qtd</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">Obra</th>
-                  <th className="px-4 py-3 text-left font-medium text-muted-foreground">CA</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
-                      {loading ? "Carregando..." : "Nenhuma entrega registrada. Use o botão 'Lançamento Rápido' para começar."}
-                    </td>
-                  </tr>
-                ) : (
-                  filtered.map(e => (
-                    <tr key={e.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3.5 text-muted-foreground">{format(new Date(e.data_entrega), "dd/MM/yyyy")}</td>
-                      <td className="px-4 py-3.5 font-medium">{e.funcionario?.nome || "—"}</td>
-                      <td className="px-4 py-3.5">{e.produto?.descricao || "—"}</td>
-                      <td className="px-4 py-3.5 text-center font-medium">{e.quantidade}</td>
-                      <td className="px-4 py-3.5">
-                        <span className="text-muted-foreground">{e.obra ? `${e.obra.codigo} - ${e.obra.nome}` : "—"}</span>
-                        {e.obra && !isObraAtiva(e.obra.status) && (
-                          <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1.5 border-muted-foreground/30 text-muted-foreground">
-                            Concluída
-                          </Badge>
-                        )}
-                      </td>
-                      <td className="px-4 py-3.5 text-xs text-muted-foreground">{e.ca_numero || "—"}</td>
-                    </tr>
-                  ))
+            {/* Search + Filters */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Buscar funcionário, EPI ou obra..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full rounded-lg border bg-card py-2.5 pl-10 pr-4 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+              <select
+                value={filterObra}
+                onChange={(e) => setFilterObra(e.target.value)}
+                className="rounded-lg border bg-card px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="todas">Todas as obras</option>
+                <optgroup label="Obras ativas">
+                  {obrasAtivas.map(o => (
+                    <option key={o.id} value={o.codigo}>{o.codigo} - {o.nome}</option>
+                  ))}
+                </optgroup>
+                {obrasConcluidas.length > 0 && (
+                  <optgroup label="Obras concluídas">
+                    <option value="concluidas">📁 Ver todas concluídas</option>
+                    {obrasConcluidas.map(o => (
+                      <option key={o.id} value={o.codigo}>🔒 {o.codigo} - {o.nome}</option>
+                    ))}
+                  </optgroup>
                 )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+              </select>
+            </div>
+
+            {/* Indicador de obra concluída */}
+            {filterObra !== "todas" && filterObra !== "concluidas" && obrasConcluidas.some(o => o.codigo === filterObra) && (
+              <div className="flex items-center gap-2 rounded-lg border border-muted bg-muted/30 px-4 py-3">
+                <Lock className="h-4 w-4 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium">Obra concluída</span> — os dados são somente para consulta. Novos lançamentos não são permitidos.
+                </p>
+              </div>
+            )}
+
+            {/* Entregas table */}
+            <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/50">
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Data</th>
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Funcionário</th>
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">EPI</th>
+                      <th className="px-4 py-3 text-center font-medium text-muted-foreground">Qtd</th>
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Obra</th>
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">CA</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="px-4 py-12 text-center text-muted-foreground">
+                          {loading ? "Carregando..." : "Nenhuma entrega registrada. Use o botão 'Lançamento Rápido' para começar."}
+                        </td>
+                      </tr>
+                    ) : (
+                      filtered.map(e => (
+                        <tr key={e.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                          <td className="px-4 py-3.5 text-muted-foreground">{format(new Date(e.data_entrega), "dd/MM/yyyy")}</td>
+                          <td className="px-4 py-3.5 font-medium">{e.funcionario?.nome || "—"}</td>
+                          <td className="px-4 py-3.5">{e.produto?.descricao || "—"}</td>
+                          <td className="px-4 py-3.5 text-center font-medium">{e.quantidade}</td>
+                          <td className="px-4 py-3.5">
+                            <span className="text-muted-foreground">{e.obra ? `${e.obra.codigo} - ${e.obra.nome}` : "—"}</span>
+                            {e.obra && !isObraAtiva(e.obra.status) && (
+                              <Badge variant="outline" className="ml-2 text-[10px] py-0 px-1.5 border-muted-foreground/30 text-muted-foreground">
+                                Concluída
+                              </Badge>
+                            )}
+                          </td>
+                          <td className="px-4 py-3.5 text-xs text-muted-foreground">{e.ca_numero || "—"}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="fichas" className="pt-4">
+            <FichasEPIPanel />
+          </TabsContent>
+        </Tabs>
       </div>
     </AppLayout>
   );
