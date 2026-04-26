@@ -1454,6 +1454,39 @@ export type Database = {
           },
         ]
       }
+      historico_alocacao_equipamento: {
+        Row: {
+          created_at: string
+          data_movimentacao: string
+          equipamento_id: string
+          id: string
+          obra_destino_id: string | null
+          obra_origem_id: string | null
+          observacoes: string | null
+          responsavel: string | null
+        }
+        Insert: {
+          created_at?: string
+          data_movimentacao?: string
+          equipamento_id: string
+          id?: string
+          obra_destino_id?: string | null
+          obra_origem_id?: string | null
+          observacoes?: string | null
+          responsavel?: string | null
+        }
+        Update: {
+          created_at?: string
+          data_movimentacao?: string
+          equipamento_id?: string
+          id?: string
+          obra_destino_id?: string | null
+          obra_origem_id?: string | null
+          observacoes?: string | null
+          responsavel?: string | null
+        }
+        Relationships: []
+      }
       itens_compra: {
         Row: {
           categoria: string | null
