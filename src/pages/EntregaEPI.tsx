@@ -1,12 +1,13 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Search, Package, AlertTriangle, Smartphone, Lock } from "lucide-react";
+import { Search, Package, AlertTriangle, Smartphone, Lock, FileSignature, History } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { isObraAtiva } from "@/lib/obraStatus";
-import { toast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import FichasEPIPanel from "@/components/epi/FichasEPIPanel";
 
 interface Entrega {
   id: string;
