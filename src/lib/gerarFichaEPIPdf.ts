@@ -40,20 +40,28 @@ function safeDate(d: any): string {
 }
 
 export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string): Promise<Blob> {
+  // 1. Buscar dados fundamentais
   const { data: func } = await supabase.from("funcionarios").select("*").eq("id", funcionarioId).single();
   const { data: empresa } = await supabase.from("empresas").select("*").eq("id", empresaId).single();
   
   if (!func || !empresa) throw new Error("Dados não encontrados");
 
-  const { data: entregas } = await supabase
+  // 2. Buscar Entregas com JOIN Explícito para evitar erros de resolução
+  const { data: entregas, error: entErr } = await supabase
     .from("entregas_epi")
     .select(`
-      id, data_entrega, quantidade, ca_numero, observacoes, produto_id, obra_id,
-      produtos (descricao, ca_numero),
-      obras (codigo, nome)
+      id, 
+      data_entrega, 
+      quantidade, 
+      ca_numero, 
+      observacoes,
+      produtos:produto_id (descricao, ca_numero),
+      obras:obra_id (codigo, nome)
     `)
     .eq("funcionario_id", funcionarioId)
     .order("data_entrega", { ascending: true });
+
+  if (entErr) console.error("Erro ao buscar entregas para PDF:", entErr);
 
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
@@ -67,10 +75,10 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
 
   let textX = 14;
   if (empresa.logo_url) {
-    const logo = await loadImageAsBase64(empresa.logo_url);
-    if (logo) {
-      try { doc.addImage(logo, "PNG", 14, 8, 28, 18); textX = 46; } catch { /* ignore */ }
-    }
+    try {
+      const logo = await loadImageAsBase64(empresa.logo_url);
+      if (logo) { doc.addImage(logo, "PNG", 14, 8, 28, 18); textX = 46; }
+    } catch (err) { console.warn("Logo failed to load", err); }
   }
 
   doc.setTextColor(secondary[0], secondary[1], secondary[2]);
@@ -108,14 +116,14 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
     e.ca_numero || e.produtos?.ca_numero || "—",
     String(e.quantidade),
     e.observacoes || "—",
-    e.obras ? `${e.obras.codigo}` : "—",
+    e.obras?.codigo || "—",
     "", 
   ]);
 
   autoTable(doc, {
     startY: y,
     head: [["#", "Data", "EPI / Equipamento", "Nº CA", "Qtd", "Motivo", "Obra", "Rubrica"]],
-    body: linhas.length ? linhas : [["—", "—", "Nenhuma entrega registrada", "—", "—", "—", "—", ""]],
+    body: linhas.length ? linhas : [["—", "—", "Nenhum histórico encontrado para este CPF", "—", "—", "—", "—", ""]],
     theme: "grid",
     headStyles: { fillColor: primary, textColor: 255, fontSize: 8, halign: "center" },
     bodyStyles: { fontSize: 8 },
@@ -130,7 +138,7 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
   doc.setFont("helvetica", "bold").setFontSize(9).setTextColor(primary[0], primary[1], primary[2]);
   doc.text("TERMO DE RESPONSABILIDADE – NR-6", 14, y);
   y += 6;
-  doc.setFont("helvetica", "normal").setFontSize(8.5).setTextColor(40, 40, 40);
+  doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(40, 40, 40);
   const termo = [
     "Declaro ter recebido da empresa, gratuitamente, os Equipamentos de Proteção Individual (EPIs) acima discriminados, em perfeitas condições de uso, comprometendo-me a:",
     "1. Usar os EPIs apenas para a finalidade a que se destinam, durante toda a jornada de trabalho.",
@@ -146,8 +154,8 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
     y += split.length * 4.2;
   });
 
-  y += 5;
-  doc.setFontSize(7).setTextColor(150, 150, 150);
+  y += 4;
+  doc.setFontSize(6.5).setTextColor(150, 150, 150);
   doc.text("Valores referenciais para reposição (em caso de extravio, perda ou não devolução): Camiseta R$ 25,00 | Calça R$ 60,00 | Bota R$ 50,00 | Cinto+Talabarte R$ 300,00 | Capacete R$ 30,00.", 14, y);
   y += 10;
 

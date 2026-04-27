@@ -370,11 +370,18 @@ export default function EntregaEPI() {
                                     <div className="space-y-2"><Label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Número do CA</Label><Input value={item.ca_numero} onChange={e => updateSelectedItem(item.produto_id, "ca_numero", e.target.value)} className="h-12 bg-white font-bold rounded-2xl border-transparent shadow-sm" /></div>
                                  </div>
                                  <div className="space-y-2">
-                                    <Label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Motivo / Tipo</Label>
+                                    <Label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Motivo da Entrega</Label>
                                     <Select value={item.observacoes} onValueChange={v => updateSelectedItem(item.produto_id, "observacoes", v)}>
                                        <SelectTrigger className="h-12 bg-white font-bold rounded-2xl border-transparent shadow-sm"><SelectValue /></SelectTrigger>
                                        <SelectContent className="rounded-2xl">
-                                          {["Primeira Entrega", "Reposição (Uso)", "Danificado", "Perda/Extravio", "Troca de Tamanho"].map(m => <SelectItem key={m} value={m} className="font-semibold">{m}</SelectItem>)}
+                                          {[
+                                            "ADMISSÃO / ENTRADA", 
+                                            "REPOSIÇÃO POR USO", 
+                                            "REPOSIÇÃO POR DESGASTE", 
+                                            "TROCA POR VENCIMENTO CA", 
+                                            "TROCA POR DANIFICADO", 
+                                            "EXTRAVIO / PERDA"
+                                          ].map(m => <SelectItem key={m} value={m} className="font-semibold">{m}</SelectItem>)}
                                        </SelectContent>
                                     </Select>
                                  </div>
