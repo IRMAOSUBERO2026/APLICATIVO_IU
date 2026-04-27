@@ -3,8 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { gerarFichaEPIEEnviarAssinatura } from "@/lib/gerarFichaEPI";
 import { gerarFichaEPIPdf } from "@/lib/gerarFichaEPIPdf";
-import { FileSignature, FileDown, Search, Loader2, Copy, ExternalLink, Users } from "lucide-react";
+import { FileSignature, FileDown, Search, Loader2, Copy, ExternalLink, Users, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
+import { Button } from "@/components/ui/button";
 
 interface FuncRow {
   id: string;
@@ -125,12 +126,17 @@ export default function FichasEPIPanel() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Users className="h-4 w-4 text-primary" />
-        <h2 className="text-lg font-semibold">Fichas de EPI por Funcionário</h2>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+           <Users className="h-4 w-4 text-primary" />
+           <h2 className="text-lg font-semibold text-slate-800">Fichas de EPI (NR-6)</h2>
+        </div>
+        <Button variant="outline" size="sm" onClick={load} disabled={loading} className="gap-2 h-8 text-[11px] font-bold border-slate-200">
+           <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} /> Sincronizar Fichas
+        </Button>
       </div>
-      <p className="text-xs text-muted-foreground">
-        A ficha consolida automaticamente todo o histórico de entregas (NR-6) e pode ser enviada para assinatura digital ou impressa para assinatura física com coluna de rubrica por item.
+      <p className="text-[11px] text-slate-500 bg-slate-50 p-4 rounded-xl border border-dashed border-slate-200">
+        A ficha consolida automaticamente todo o histórico de entregas. <b>Nota:</b> Se os botões estiverem desativados, o funcionário ainda não possui entregas registradas.
       </p>
 
       <div className="flex flex-col sm:flex-row gap-3">
