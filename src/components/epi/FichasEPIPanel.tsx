@@ -41,7 +41,7 @@ export default function FichasEPIPanel() {
     setLoading(true);
     const [funcRes, entRes, assRes, obrasRes] = await Promise.all([
       supabase.from("funcionarios").select("id, nome, cargo, empresa_id, obra_id").eq("status", "ativo").order("nome"),
-      supabase.from("entregas_epi").select("funcionario_id, data_entrega"),
+      supabase.from("entregas_epi").select("id, funcionario_id").order("data_entrega", { ascending: false }),
       supabase.from("assinaturas_digitais").select("funcionario_id, status, created_at, token_acesso").eq("documento_tipo", "ficha_epi").order("created_at", { ascending: false }),
       supabase.from("obras").select("id, nome, codigo").order("codigo"),
     ]);
