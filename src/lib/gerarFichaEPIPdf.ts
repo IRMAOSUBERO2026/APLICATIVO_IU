@@ -61,7 +61,7 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
 
   const { data: entregas } = await supabase
     .from("entregas_epi")
-    .select("id, data_entrega, quantidade, ca_numero, motivo, observacoes, produto_id, obra_id")
+    .select("id, data_entrega, quantidade, ca_numero, observacoes, produto_id, obra_id")
     .eq("funcionario_id", funcionarioId)
     .order("data_entrega", { ascending: true });
 
@@ -163,7 +163,7 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
       prod?.descricao || "EPI",
       e.ca_numero || prod?.ca_numero || "—",
       String(e.quantidade),
-      e.motivo || "—",
+      e.observacoes || "—",
       obra ? `${obra.codigo}` : "—",
       "", // RUBRICA (em branco para assinatura física)
     ];

@@ -81,7 +81,7 @@ export default function EntregaEPI() {
         descricao: produto.descricao, 
         quantidade: 1, 
         ca_numero: produto.ca_numero || "",
-        motivo: "Primeira entrega"
+        observacoes: "Primeira entrega"
       }]);
     }
   };
@@ -108,7 +108,7 @@ export default function EntregaEPI() {
         empresa_id: func?.empresa_id || "",
         quantidade: Number(item.quantidade),
         ca_numero: item.ca_numero || null,
-        motivo: item.motivo,
+        observacoes: item.observacoes,
         data_entrega: new Date().toISOString()
       }));
 
@@ -234,6 +234,9 @@ export default function EntregaEPI() {
                             <td className="px-5 py-4 text-xs text-slate-400">
                                {e.obras?.nome ? `${e.obras.codigo} - ${e.obras.nome}` : "Depósito Central"}
                             </td>
+                            <td className="px-5 py-4 text-left text-[11px] text-slate-400">
+                               {e.observacoes || "—"}
+                            </td>
                             <td className="px-5 py-4 text-center">
                                <Badge variant="outline" className="font-mono text-[9px] border-slate-200">{e.ca_numero || "N/A"}</Badge>
                             </td>
@@ -341,6 +344,7 @@ export default function EntregaEPI() {
                                     <div className="space-y-1"><Label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Quantidade</Label><Input type="number" value={item.quantidade} onChange={e => updateSelectedItem(item.produto_id, "quantidade", e.target.value)} className="h-10 bg-white font-bold rounded-xl" /></div>
                                     <div className="space-y-1"><Label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Nº CA Vigente</Label><Input value={item.ca_numero} onChange={e => updateSelectedItem(item.produto_id, "ca_numero", e.target.value)} className="h-10 bg-white font-bold rounded-xl" /></div>
                                  </div>
+                                 <div className="space-y-1"><Label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Observações / Motivo</Label><Input value={item.observacoes} onChange={e => updateSelectedItem(item.produto_id, "observacoes", e.target.value)} className="h-9 bg-white text-xs rounded-xl" /></div>
                               </CardContent>
                            </Card>
                         ))}

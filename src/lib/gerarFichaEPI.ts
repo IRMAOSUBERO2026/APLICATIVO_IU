@@ -55,9 +55,8 @@ export async function gerarFichaEPIEEnviarAssinatura(funcionarioId: string, empr
       nome: prod?.descricao || "EPI",
       qtd: Number(e.quantidade),
       ca_numero: e.ca_numero || prod?.ca_numero || "",
-      motivo: e.motivo || "Primeira entrega",
+      observacoes: e.observacoes || e.motivo || "Primeira entrega",
       obra: obra ? `${obra.codigo} - ${obra.nome}` : "",
-      observacoes: e.observacoes || "",
     };
   });
 
