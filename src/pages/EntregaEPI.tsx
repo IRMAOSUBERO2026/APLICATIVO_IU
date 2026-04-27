@@ -1,7 +1,8 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import { 
   Search, Package, AlertTriangle, Smartphone, Plus, 
-  FileSignature, History, CheckCircle2, User, HardHat 
+  FileSignature, History, CheckCircle2, User, HardHat,
+  Trash2, ShoppingCart
 } from "lucide-react";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,7 +16,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import FichasEPIPanel from "@/components/epi/FichasEPIPanel";
 import { ScrollableTable } from "@/components/shared/ScrollableTable";
 
@@ -24,40 +24,29 @@ export default function EntregaEPI() {
   const [produtos, setProdutos] = useState<any[]>([]);
   const [obras, setObras] = useState<any[]>([]);
   const [funcionarios, setFuncionarios] = useState<any[]>([]);
-  const [empresas, setEmpresas] = useState<any[]>([]);
   
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("entregas");
   const [showNewDelivery, setShowNewDelivery] = useState(false);
 
-  // Form de Entrega
-  const [form, setForm] = useState({ 
-    funcionario_id: "", 
-    produto_id: "", 
-    obra_id: "", 
-    quantidade: 1, 
-    ca_numero: "", 
-    observacoes: "", 
-    empresa_id: "",
-    motivo: "Primeira entrega"
-  });
+  // Multi-seleção
+  const [selectedItems, setSelectedItems] = useState<any[]>([]);
+  const [form, setForm] = useState({ funcionario_id: "", obra_id: "central" });
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [ent, prd, mov, obs, fun, emp] = await Promise.all([
+    const [ent, prd, mov, obs, fun] = await Promise.all([
       supabase.from("entregas_epi").select("*, funcionarios(nome), produtos(descricao), obras(nome, codigo)").order("data_entrega", { ascending: false }).limit(200),
       supabase.from("produtos").select("*").eq("ativo", true).eq("categoria", "EPI").order("descricao"),
       supabase.from("movimentacoes_estoque").select("produto_id, tipo, quantidade"),
       supabase.from("obras").select("id, nome, codigo").eq("status", "em_andamento"),
       supabase.from("funcionarios").select("id, nome, obra_id, empresa_id").eq("status", "ativo").order("nome"),
-      supabase.from("empresas").select("id, razao_social, nome_fantasia"),
     ]);
 
     if (ent.data) setEntregas(ent.data);
     if (obs.data) setObras(obs.data);
     if (fun.data) setFuncionarios(fun.data);
-    if (emp.data) setEmpresas(emp.data);
 
     if (prd.data && mov.data) {
       const calculated = prd.data.map(p => {
@@ -72,6 +61,62 @@ export default function EntregaEPI() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  const handleToggleItem = (produto: any) => {
+    const exists = selectedItems.find(i => i.produto_id === produto.id);
+    if (exists) {
+      setSelectedItems(selectedItems.filter(i => i.produto_id !== produto.id));
+    } else {
+      setSelectedItems([...selectedItems, { 
+        produto_id: produto.id, 
+        descricao: produto.descricao, 
+        quantidade: 1, 
+        ca_numero: produto.ca_numero || "",
+        motivo: "Primeira entrega"
+      }]);
+    }
+  };
+
+  const updateSelectedItem = (produtoId: string, field: string, value: any) => {
+    setSelectedItems(selectedItems.map(i => i.produto_id === produtoId ? { ...i, [field]: value } : i));
+  };
+
+  const handleSaveMultiDelivery = async () => {
+    if (!form.funcionario_id || selectedItems.length === 0) {
+       toast({ title: "Selecione o funcionário e ao menos um EPI", variant: "destructive" });
+       return;
+    }
+
+    const func = funcionarios.find(f => f.id === form.funcionario_id);
+    const useObraId = form.obra_id === "central" ? null : form.obra_id;
+
+    for (const item of selectedItems) {
+      await supabase.from("entregas_epi").insert({
+         funcionario_id: form.funcionario_id,
+         produto_id: item.produto_id,
+         obra_id: useObraId,
+         empresa_id: func?.empresa_id || "",
+         quantidade: Number(item.quantidade),
+         ca_numero: item.ca_numero || null,
+         motivo: item.motivo,
+         data_entrega: new Date().toISOString()
+      });
+
+      await supabase.from("movimentacoes_estoque").insert({
+         produto_id: item.produto_id,
+         tipo: "saida_epi",
+         quantidade: Number(item.quantidade),
+         obra_id: useObraId,
+         observacoes: `Entrega de EPI para ${func?.nome}`
+      });
+    }
+
+    toast({ title: `🛡️ ${selectedItems.length} EPI(s) entregue(s)!` });
+    setShowNewDelivery(false);
+    setSelectedItems([]);
+    setForm({ ...form, funcionario_id: "" });
+    loadData();
+  };
+
   const filteredEntregas = useMemo(() => {
     return entregas.filter(e => 
       !search || 
@@ -80,45 +125,6 @@ export default function EntregaEPI() {
       e.obras?.nome?.toLowerCase().includes(search.toLowerCase())
     );
   }, [entregas, search]);
-
-  const handleSaveDelivery = async () => {
-    if (!form.funcionario_id || !form.produto_id || !form.empresa_id) {
-       toast({ title: "Preencha os campos obrigatórios", variant: "destructive" });
-       return;
-    }
-
-    const { error: deliveryError } = await supabase.from("entregas_epi").insert({
-       funcionario_id: form.funcionario_id,
-       produto_id: form.produto_id,
-       obra_id: form.obra_id === "central" ? null : (form.obra_id || null),
-       empresa_id: form.empresa_id,
-       quantidade: Number(form.quantidade),
-       ca_numero: form.ca_numero || null,
-       motivo: form.motivo,
-       observacoes: form.observacoes || null,
-       data_entrega: new Date().toISOString()
-    });
-
-    if (deliveryError) {
-       toast({ title: "Erro ao registrar entrega", variant: "destructive" });
-       return;
-    }
-
-    // BAIXA NO ESTOQUE AUTOMÁTICA
-    const funcName = funcionarios.find(f => f.id === form.funcionario_id)?.nome || "";
-    await supabase.from("movimentacoes_estoque").insert({
-       produto_id: form.produto_id,
-       tipo: "saida_epi",
-       quantidade: Number(form.quantidade),
-       obra_id: form.obra_id === "central" ? null : (form.obra_id || null),
-       observacoes: `Entrega de EPI para ${funcName}`
-    });
-
-    toast({ title: "🛡️ EPI entregue e estoque atualizado!" });
-    setShowNewDelivery(false);
-    setForm({ funcionario_id: "", produto_id: "", obra_id: "", quantidade: 1, ca_numero: "", observacoes: "", empresa_id: "", motivo: "Primeira entrega" });
-    loadData();
-  };
 
   return (
     <AppLayout>
@@ -131,12 +137,12 @@ export default function EntregaEPI() {
               </div>
               <div>
                  <h1 className="text-2xl font-black text-slate-800 tracking-tight">Segurança (EPIs)</h1>
-                 <p className="text-sm text-muted-foreground flex items-center gap-2">Gestão de entregas e fichas NR-6 integradas ao estoque.</p>
+                 <p className="text-sm text-muted-foreground">Gestão de entregas múltiplas e estoque NR-6.</p>
               </div>
            </div>
            <div className="flex gap-2">
-              <Button onClick={() => setShowNewDelivery(true)} className="bg-amber-500 hover:bg-amber-600 text-white border-none gap-2 px-6">
-                 <Plus size={18} /> Nova Entrega
+              <Button onClick={() => { setSelectedItems([]); setShowNewDelivery(true); }} className="bg-amber-500 hover:bg-amber-600 text-white border-none gap-2 px-6 shadow-lg shadow-amber-500/20">
+                 <Plus size={18} /> Nova Entrega Múltipla
               </Button>
               <Button variant="outline" asChild className="gap-2">
                  <a href="/entrega-epi-mobile"><Smartphone size={18} /> Mobile</a>
@@ -144,36 +150,36 @@ export default function EntregaEPI() {
            </div>
         </div>
 
-        {/* DASHBOARD MINI */}
+        {/* KPIS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
            <Card className="bg-emerald-50/50 border-emerald-100 shadow-sm"><CardContent className="p-5 flex items-center gap-4 text-emerald-700">
               <CheckCircle2 size={24} /><div className="flex-1">
-                 <p className="text-[10px] font-bold uppercase opacity-70">Total Entregue (30d)</p>
+                 <p className="text-[10px] font-bold uppercase opacity-70">Entregues (30d)</p>
                  <p className="text-2xl font-black">{entregas.length}</p>
               </div></CardContent></Card>
            <Card className="bg-amber-50/50 border-amber-100 shadow-sm"><CardContent className="p-5 flex items-center gap-4 text-amber-700">
               <Package size={24} /><div className="flex-1">
-                 <p className="text-[10px] font-bold uppercase opacity-70">Itens em Alerta</p>
+                 <p className="text-[10px] font-bold uppercase opacity-70">Abaixo do Mínimo</p>
                  <p className="text-2xl font-black">{produtos.filter(p => p.saldo < p.estoque_minimo).length}</p>
               </div></CardContent></Card>
            <Card className="bg-blue-50/50 border-blue-100 shadow-sm"><CardContent className="p-5 flex items-center gap-4 text-blue-700">
               <User size={24} /><div className="flex-1">
-                 <p className="text-[10px] font-bold uppercase opacity-70">Colaboradores Ativos</p>
+                 <p className="text-[10px] font-bold uppercase opacity-70">Colaboradores</p>
                  <p className="text-2xl font-black">{funcionarios.length}</p>
               </div></CardContent></Card>
         </div>
 
         <Tabs value={tab} onValueChange={setTab} className="w-full">
           <TabsList className="bg-slate-100 p-1 mb-4 h-11 w-full max-w-sm rounded-xl">
-            <TabsTrigger value="entregas" className="flex-1 gap-2 rounded-lg data-[state=active]:bg-white"><History size={16} /> Entregas</TabsTrigger>
-            <TabsTrigger value="fichas" className="flex-1 gap-2 rounded-lg data-[state=active]:bg-white"><FileSignature size={16} /> Fichas NR-6</TabsTrigger>
+            <TabsTrigger value="entregas" className="flex-1 gap-2 rounded-lg data-[state=active]:bg-white font-bold text-xs"><History size={16} /> Histórico</TabsTrigger>
+            <TabsTrigger value="fichas" className="flex-1 gap-2 rounded-lg data-[state=active]:bg-white font-bold text-xs"><FileSignature size={16} /> Fichas NR-6</TabsTrigger>
           </TabsList>
 
           <TabsContent value="entregas" className="space-y-4">
-             <div className="flex flex-col sm:flex-row gap-3 bg-white p-3 rounded-xl border shadow-sm">
+             <div className="flex gap-3 bg-white p-3 rounded-xl border shadow-sm">
                 <div className="relative flex-1">
                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                   <Input placeholder="Buscar por funcionário, material ou obra..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 border-none bg-slate-50" />
+                   <Input placeholder="Localizar funcionário, material ou obra..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 border-none bg-slate-50" />
                 </div>
              </div>
 
@@ -184,7 +190,7 @@ export default function EntregaEPI() {
                        <tr>
                           <th className="px-5 py-3 text-left text-[10px] uppercase font-bold text-slate-400">Data</th>
                           <th className="px-5 py-3 text-left text-[10px] uppercase font-bold text-slate-400">Funcionário</th>
-                          <th className="px-5 py-3 text-left text-[10px] uppercase font-bold text-slate-400">EPI Entregue</th>
+                          <th className="px-5 py-3 text-left text-[10px] uppercase font-bold text-slate-400">EPI</th>
                           <th className="px-5 py-3 text-center text-[10px] uppercase font-bold text-slate-400">Qtd</th>
                           <th className="px-5 py-3 text-left text-[10px] uppercase font-bold text-slate-400">Obra / Alocação</th>
                           <th className="px-5 py-3 text-center text-[10px] uppercase font-bold text-slate-400">CA</th>
@@ -195,17 +201,16 @@ export default function EntregaEPI() {
                          <tr key={e.id} className="border-b last:border-0 hover:bg-slate-50 transition-colors">
                             <td className="px-5 py-4 text-xs font-medium text-slate-500">{format(new Date(e.data_entrega), "dd/MM/yyyy HH:mm")}</td>
                             <td className="px-5 py-4 font-bold text-slate-700">{e.funcionarios?.nome || "Excluído"}</td>
-                            <td className="px-5 py-4 text-slate-600">{e.produtos?.descricao || "—"}</td>
+                            <td className="px-5 py-4 text-slate-600 font-medium">{e.produtos?.descricao || "—"}</td>
                             <td className="px-5 py-4 text-center font-black text-amber-600 bg-amber-50/30">{e.quantidade}x</td>
-                            <td className="px-5 py-4">
-                               <span className="text-xs text-slate-500">{e.obras?.nome ? `${e.obras.codigo} - ${e.obras.nome}` : "Depósito Central"}</span>
+                            <td className="px-5 py-4 text-xs text-slate-400">
+                               {e.obras?.nome ? `${e.obras.codigo} - ${e.obras.nome}` : "Depósito Central"}
                             </td>
                             <td className="px-5 py-4 text-center">
-                               <Badge variant="outline" className="font-mono text-[10px] text-slate-400 border-slate-200">{e.ca_numero || "N/A"}</Badge>
+                               <Badge variant="outline" className="font-mono text-[9px] border-slate-200">{e.ca_numero || "N/A"}</Badge>
                             </td>
                          </tr>
                        ))}
-                       {filteredEntregas.length === 0 && <tr><td colSpan={6} className="p-12 text-center text-muted-foreground italic">Nenhum registro encontrado.</td></tr>}
                     </tbody>
                  </table>
                </div>
@@ -218,56 +223,112 @@ export default function EntregaEPI() {
         </Tabs>
       </div>
 
-      {/* MODAL: NOVA ENTREGA (DESKTOP) */}
+      {/* MODAL: CHECKOUT DE SEGURANÇA */}
       <Dialog open={showNewDelivery} onOpenChange={setShowNewDelivery}>
-         <DialogContent className="max-w-2xl">
-            <DialogHeader>
-               <DialogTitle className="flex items-center gap-2"><HardHat className="text-amber-500" /> Registrar Nova Entrega de EPI</DialogTitle>
-               <DialogDescription>A baixa no estoque do almoxarifado será automática.</DialogDescription>
+         <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0 overflow-hidden rounded-2xl">
+            <DialogHeader className="p-6 border-b bg-slate-50/50 flex flex-row items-center justify-between">
+               <div className="space-y-1">
+                  <DialogTitle className="text-2xl font-black flex items-center gap-2 italic text-slate-800 uppercase">
+                     <HardHat className="text-amber-500 h-8 w-8" /> 
+                     Checkout de Segurança (Multi-EPI)
+                  </DialogTitle>
+                  <DialogDescription>Monte o kit de segurança do colaborador escolhendo os itens abaixo.</DialogDescription>
+               </div>
             </DialogHeader>
-            <div className="grid grid-cols-2 gap-4 py-4">
-               <div className="col-span-2 space-y-1.5"><Label>Localizar Obra *</Label>
-                  <Select value={form.obra_id} onValueChange={v => setForm({...form, obra_id: v, funcionario_id: ""})}>
-                     <SelectTrigger className="bg-slate-50"><SelectValue placeholder="Selecione a obra..." /></SelectTrigger>
-                     <SelectContent>
-                        <SelectItem value="central">Depósito / Estoque Central</SelectItem>
-                        {obras.map(o => <SelectItem key={o.id} value={o.id}>{o.codigo} - {o.nome}</SelectItem>)}
-                     </SelectContent>
-                  </Select>
+            
+            <div className="flex-1 flex overflow-hidden">
+               {/* LADO ESQUERDO: CATÁLOGO */}
+               <div className="w-7/12 border-r bg-slate-50/30 p-6 overflow-y-auto space-y-6">
+                  <div className="grid grid-cols-2 gap-4">
+                     <div className="space-y-1.5"><Label className="text-slate-500 font-bold uppercase text-[10px]">1. Localizar Obra</Label>
+                        <Select value={form.obra_id} onValueChange={v => setForm({...form, obra_id: v, funcionario_id: ""})}>
+                           <SelectTrigger className="bg-white rounded-xl h-12 shadow-sm border-slate-200"><SelectValue placeholder="Selecione a obra..." /></SelectTrigger>
+                           <SelectContent><SelectItem value="central">📦 Depósito Central</SelectItem>{obras.map(o => <SelectItem key={o.id} value={o.id}>{o.codigo} - {o.nome}</SelectItem>)}</SelectContent>
+                        </Select>
+                     </div>
+                     <div className="space-y-1.5"><Label className="text-slate-500 font-bold uppercase text-[10px]">2. Escolher Colaborador</Label>
+                        <Select value={form.funcionario_id} onValueChange={v => setForm({...form, funcionario_id: v})}>
+                           <SelectTrigger className="bg-white rounded-xl h-12 shadow-sm border-slate-200"><SelectValue placeholder="Buscar funcionário..." /></SelectTrigger>
+                           <SelectContent>
+                              {funcionarios.filter(f => form.obra_id === "central" || f.obra_id === form.obra_id).map(f => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
+                           </SelectContent>
+                        </Select>
+                     </div>
+                  </div>
+
+                  <div className="space-y-4 pt-6 border-t border-slate-100">
+                     <Label className="text-amber-600 font-black uppercase text-[10px] tracking-widest">3. Clique para Adicionar Itens</Label>
+                     <div className="grid grid-cols-3 gap-3">
+                        {produtos.map(p => {
+                           const isSelected = selectedItems.find(i => i.produto_id === p.id);
+                           return (
+                              <button 
+                                key={p.id}
+                                onClick={() => handleToggleItem(p)}
+                                className={`group p-4 rounded-2xl border-2 text-left transition-all relative overflow-hidden flex flex-col items-center text-center ${
+                                  isSelected 
+                                  ? "border-amber-500 bg-amber-50 shadow-md scale-95" 
+                                  : "border-white bg-white hover:border-slate-200 shadow-sm"
+                                }`}
+                              >
+                                 <div className={`p-3 rounded-full mb-2 ${isSelected ? "bg-amber-500 text-white" : "bg-slate-100 text-slate-400 group-hover:bg-amber-100"}`}>
+                                    <Package size={20} />
+                                 </div>
+                                 <p className="text-[11px] font-black text-slate-700 leading-tight block mb-1 uppercase h-6 overflow-hidden">{p.descricao}</p>
+                                 <p className="text-[10px] font-bold">Saldo: <span className={p.saldo < 1 ? "text-rose-500" : "text-emerald-600"}>{p.saldo}</span></p>
+                                 {isSelected && (
+                                    <div className="absolute top-2 right-2 bg-amber-500 text-white rounded-full p-0.5 shadow-sm animate-in zoom-in"><CheckCircle2 size={14} /></div>
+                                 )}
+                              </button>
+                           );
+                        })}
+                     </div>
+                  </div>
                </div>
-               <div className="col-span-2 space-y-1.5"><Label>Colaborador Locado nesta Obra *</Label>
-                  <Select value={form.funcionario_id} onValueChange={v => {
-                      const f = funcionarios.find(fn => fn.id === v);
-                      setForm({...form, funcionario_id: v, empresa_id: f?.empresa_id || ""});
-                  }}>
-                     <SelectTrigger><SelectValue placeholder={form.obra_id ? "Selecione o funcionário..." : "Selecione a obra primeiro"} /></SelectTrigger>
-                     <SelectContent>
-                        {funcionarios
-                          .filter(f => !form.obra_id || form.obra_id === "central" || f.obra_id === form.obra_id)
-                          .map(f => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)
-                        }
-                     </SelectContent>
-                  </Select>
-               </div>
-               <div className="col-span-2 space-y-1.5"><Label>EPI para Entrega (Puxado do Estoque) *</Label>
-                  <Select value={form.produto_id} onValueChange={v => {
-                      const p = produtos.find(item => item.id === v);
-                      setForm({...form, produto_id: v, ca_numero: p?.ca_numero || ""});
-                  }}>
-                     <SelectTrigger className="bg-amber-50/50"><SelectValue placeholder="Buscar item no almoxarifado..." /></SelectTrigger>
-                     <SelectContent>{produtos.map(p => <SelectItem key={p.id} value={p.id}>{p.descricao} (Disponível: {p.saldo})</SelectItem>)}</SelectContent>
-                  </Select>
-               </div>
-               <div className="space-y-1.5"><Label>Quantidade</Label><Input type="number" value={form.quantidade} onChange={e => setForm({...form, quantidade: Number(e.target.value)})} /></div>
-               <div className="space-y-1.5"><Label>Nº do CA</Label><Input value={form.ca_numero} onChange={e => setForm({...form, ca_numero: e.target.value})} /></div>
-               <div className="col-span-2 space-y-1.5"><Label>Motivo (NR-6)</Label>
-                  <Select value={form.motivo} onValueChange={v => setForm({...form, motivo: v})}>
-                     <SelectTrigger><SelectValue /></SelectTrigger>
-                     <SelectContent>{["Primeira entrega", "Troca por desgaste", "Extravio/Perda", "Dano acidental"].map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
-                  </Select>
+
+               {/* LADO DIREITO: CARRINHO / CONFERÊNCIA */}
+               <div className="w-5/12 p-6 overflow-y-auto bg-white flex flex-col justify-between border-l border-slate-100">
+                  <div className="space-y-6">
+                     <div className="flex items-center justify-between pb-4 border-b">
+                        <div className="flex items-center gap-2"><ShoppingCart className="text-slate-400" size={20} /><p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Kit Montado</p></div>
+                        <Badge className="bg-slate-800 text-white rounded-full px-3">{selectedItems.length} itens</Badge>
+                     </div>
+
+                     <div className="space-y-3">
+                        {selectedItems.map(item => (
+                           <Card key={item.produto_id} className="border-slate-100 shadow-none bg-slate-50/50">
+                              <CardContent className="p-4 space-y-3">
+                                 <div className="flex justify-between items-start gap-2">
+                                    <p className="text-xs font-black text-slate-700 uppercase leading-snug">{item.descricao}</p>
+                                    <button onClick={() => setSelectedItems(selectedItems.filter(i => i.produto_id !== item.produto_id))} className="text-rose-300 hover:text-rose-600 transition-colors"><Trash2 size={18} /></button>
+                                 </div>
+                                 <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1"><Label className="text-[9px] font-bold text-slate-400 uppercase">Quantidade</Label><Input type="number" value={item.quantidade} onChange={e => updateSelectedItem(item.produto_id, "quantidade", e.target.value)} className="h-9 bg-white font-bold" /></div>
+                                    <div className="space-y-1"><Label className="text-[9px] font-bold text-slate-400 uppercase">Nº CA Vigente</Label><Input value={item.ca_numero} onChange={e => updateSelectedItem(item.produto_id, "ca_numero", e.target.value)} className="h-9 bg-white font-bold" /></div>
+                                 </div>
+                              </CardContent>
+                           </Card>
+                        ))}
+                        {selectedItems.length === 0 && (
+                           <div className="py-24 text-center text-slate-300 space-y-4">
+                              <ShoppingCart size={64} className="mx-auto opacity-10" />
+                              <p className="italic text-sm font-medium">Selecione os EPIs ao lado para<br/>iniciar o lançamento.</p>
+                           </div>
+                        )}
+                     </div>
+                  </div>
+
+                  <div className="pt-6 mt-6 border-t border-slate-100">
+                     <Button 
+                       onClick={handleSaveMultiDelivery}
+                       disabled={selectedItems.length === 0 || !form.funcionario_id}
+                       className="w-full h-16 bg-amber-500 hover:bg-amber-600 text-white font-black uppercase text-lg shadow-xl shadow-amber-500/30 gap-3 transition-all active:scale-95"
+                     >
+                        Confirmar Entrega Total <CheckCircle2 size={24} />
+                     </Button>
+                  </div>
                </div>
             </div>
-            <DialogFooter><Button onClick={handleSaveDelivery} className="w-full bg-amber-500 hover:bg-amber-600 text-white h-12">Finalizar Registro de Entrega</Button></DialogFooter>
          </DialogContent>
       </Dialog>
     </AppLayout>
