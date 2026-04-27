@@ -41,7 +41,10 @@ export function AppLayout({ children }: AppLayoutProps) {
           <ContextoSelector />
         </header>
 
-        <main className="flex-1 overflow-auto scrollbar-thin p-4 lg:p-6">
+        <main
+          id="app-main"
+          className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin p-4 lg:p-6"
+        >
           {children}
         </main>
       </div>

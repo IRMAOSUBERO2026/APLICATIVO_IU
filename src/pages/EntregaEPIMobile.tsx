@@ -10,13 +10,18 @@ interface Funcionario { id: string; nome: string; cargo: string; obra_id: string
 interface Obra { id: string; nome: string; codigo: string; }
 interface Produto { id: string; descricao: string; categoria: string | null; ca_numero: string | null; }
 
-const MOTIVOS_NR6 = [
+export const MOTIVOS_NR6 = [
+  "Entrada na empresa",
   "Primeira entrega",
   "Troca por desgaste",
-  "Perda / Extravio",
-  "Dano",
-  "Devolução",
   "Substituição periódica",
+  "Perda / Extravio",
+  "Dano / Avaria",
+  "Devolução",
+  "Reposição por contaminação",
+  "Mudança de função",
+  "Retorno de afastamento",
+  "Outro",
 ];
 
 interface ItemEntrega {
