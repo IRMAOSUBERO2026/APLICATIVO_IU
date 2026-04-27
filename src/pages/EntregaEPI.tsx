@@ -90,7 +90,7 @@ export default function EntregaEPI() {
     const { error: deliveryError } = await supabase.from("entregas_epi").insert({
        funcionario_id: form.funcionario_id,
        produto_id: form.produto_id,
-       obra_id: form.obra_id || null,
+       obra_id: form.obra_id === "central" ? null : (form.obra_id || null),
        empresa_id: form.empresa_id,
        quantidade: Number(form.quantidade),
        ca_numero: form.ca_numero || null,
@@ -110,7 +110,7 @@ export default function EntregaEPI() {
        produto_id: form.produto_id,
        tipo: "saida_epi",
        quantidade: Number(form.quantidade),
-       obra_id: form.obra_id || null,
+       obra_id: form.obra_id === "central" ? null : (form.obra_id || null),
        observacoes: `Entrega de EPI para ${funcName}`
     });
 
@@ -230,7 +230,7 @@ export default function EntregaEPI() {
                   <Select value={form.obra_id} onValueChange={v => setForm({...form, obra_id: v, funcionario_id: ""})}>
                      <SelectTrigger className="bg-slate-50"><SelectValue placeholder="Selecione a obra..." /></SelectTrigger>
                      <SelectContent>
-                        <SelectItem value="">Depósito / Estoque Central</SelectItem>
+                        <SelectItem value="central">Depósito / Estoque Central</SelectItem>
                         {obras.map(o => <SelectItem key={o.id} value={o.id}>{o.codigo} - {o.nome}</SelectItem>)}
                      </SelectContent>
                   </Select>
@@ -243,7 +243,7 @@ export default function EntregaEPI() {
                      <SelectTrigger><SelectValue placeholder={form.obra_id ? "Selecione o funcionário..." : "Selecione a obra primeiro"} /></SelectTrigger>
                      <SelectContent>
                         {funcionarios
-                          .filter(f => !form.obra_id || f.obra_id === form.obra_id)
+                          .filter(f => !form.obra_id || form.obra_id === "central" || f.obra_id === form.obra_id)
                           .map(f => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)
                         }
                      </SelectContent>

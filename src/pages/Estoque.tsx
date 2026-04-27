@@ -130,7 +130,7 @@ export default function Estoque() {
     if (!nm.produto_id || !nm.quantidade) return;
     const { error } = await supabase.from("movimentacoes_estoque").insert({
       ...nm, quantidade: Number(nm.quantidade), valor_unitario: Number(nm.valor_unitario) || null,
-      obra_id: nm.obra_id || null, data_movimentacao: new Date().toISOString()
+      obra_id: nm.obra_id === "central" ? null : (nm.obra_id || null), data_movimentacao: new Date().toISOString()
     });
     if (error) { toast({ title: "Erro", variant: "destructive" }); return; }
     toast({ title: "Registrado!" });
@@ -308,7 +308,9 @@ export default function Estoque() {
                   <Input type="number" placeholder="Qtd" value={nm.quantidade} onChange={e => setNm({...nm, quantidade: Number(e.target.value)})} />
                   <Input type="number" step="0.01" placeholder="Val Unit (R$)" value={nm.valor_unitario} onChange={e => setNm({...nm, valor_unitario: Number(e.target.value)})} />
                </div>
-               <Select value={nm.obra_id} onValueChange={v => setNm({...nm, obra_id: v})}><SelectTrigger className="bg-slate-50"><SelectValue placeholder="Onde?" /></SelectTrigger><SelectContent><SelectItem value="">Depósito Central</SelectItem>{obras.map(o => <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>)}</SelectContent></Select>
+               <Select value={nm.obra_id} onValueChange={v => setNm({...nm, obra_id: v})}>
+                  <SelectTrigger className="bg-slate-50"><SelectValue placeholder="Onde?" /></SelectTrigger>
+                  <SelectContent><SelectItem value="central">Depósito Central</SelectItem>{obras.map(o => <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>)}</SelectContent></Select>
                <Input placeholder="Ref / NF / OC" value={nm.documento} onChange={e => setNm({...nm, documento: e.target.value})} />
             </div>
             <DialogFooter><Button onClick={saveMovimentacao} className="w-full">Confirmar Registro</Button></DialogFooter>
