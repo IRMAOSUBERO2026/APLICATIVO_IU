@@ -36,25 +36,35 @@ export default function EntregaEPI() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
-    const [ent, prd, mov, obs, fun] = await Promise.all([
-      supabase.from("entregas_epi").select("*, funcionarios(nome), produtos(descricao), obras(nome, codigo)").order("data_entrega", { ascending: false }).limit(200),
-      supabase.from("produtos").select("*").eq("ativo", true).eq("categoria", "EPI").order("descricao"),
-      supabase.from("movimentacoes_estoque").select("produto_id, tipo, quantidade"),
-      supabase.from("obras").select("id, nome, codigo").eq("status", "em_andamento"),
-      supabase.from("funcionarios").select("id, nome, obra_id, empresa_id").eq("status", "ativo").order("nome"),
-    ]);
+    try {
+      const [ent, prd, mov, obs, fun] = await Promise.all([
+        supabase.from("entregas_epi").select("*, funcionarios(nome), produtos(descricao), obras(nome, codigo)").order("data_entrega", { ascending: false }).limit(200),
+        supabase.from("produtos").select("*").order("descricao"),
+        supabase.from("movimentacoes_estoque").select("produto_id, tipo, quantidade"),
+        supabase.from("obras").select("id, nome, codigo").eq("status", "em_andamento"),
+        supabase.from("funcionarios").select("id, nome, obra_id, empresa_id").eq("status", "ativo").order("nome"),
+      ]);
 
-    if (ent.data) setEntregas(ent.data);
-    if (obs.data) setObras(obs.data);
-    if (fun.data) setFuncionarios(fun.data);
+      if (ent.data) setEntregas(ent.data);
+      if (obs.data) setObras(obs.data);
+      if (fun.data) setFuncionarios(fun.data);
 
-    if (prd.data && mov.data) {
-      const calculated = prd.data.map(p => {
-        const entradas = (mov.data as any[]).filter(m => m.produto_id === p.id && m.tipo === "entrada").reduce((s, m) => s + Number(m.quantidade), 0);
-        const saidas = (mov.data as any[]).filter(m => m.produto_id === p.id && m.tipo !== "entrada").reduce((s, m) => s + Number(m.quantidade), 0);
-        return { ...p, saldo: entradas - saidas };
-      });
-      setProdutos(calculated);
+      if (prd.data && mov.data) {
+        // CORREÇÃO: Busca flexível por EPI (Categoria ou Descrição) e ignora status desativado
+        const episOnly = prd.data.filter(p => 
+          p.categoria?.toUpperCase() === "EPI" || 
+          p.descricao?.toUpperCase().includes("EPI")
+        );
+
+        const calculated = episOnly.map(p => {
+          const entradas = (mov.data as any[]).filter(m => m.produto_id === p.id && m.tipo === "entrada").reduce((s, m) => s + Number(m.quantidade), 0);
+          const saidas = (mov.data as any[]).filter(m => m.produto_id === p.id && m.tipo !== "entrada").reduce((s, m) => s + Number(m.quantidade), 0);
+          return { ...p, saldo: entradas - saidas };
+        });
+        setProdutos(calculated);
+      }
+    } catch (err) {
+      console.error("Erro ao carregar dados:", err);
     }
     setLoading(false);
   }, []);
@@ -137,7 +147,7 @@ export default function EntregaEPI() {
               </div>
               <div>
                  <h1 className="text-2xl font-black text-slate-800 tracking-tight">Segurança (EPIs)</h1>
-                 <p className="text-sm text-muted-foreground">Gestão de entregas múltiplas e estoque NR-6.</p>
+                 <p className="text-sm text-muted-foreground font-medium">Gestão de entregas múltiplas e estoque NR-6.</p>
               </div>
            </div>
            <div className="flex gap-2">
@@ -170,30 +180,30 @@ export default function EntregaEPI() {
         </div>
 
         <Tabs value={tab} onValueChange={setTab} className="w-full">
-          <TabsList className="bg-slate-100 p-1 mb-4 h-11 w-full max-w-sm rounded-xl">
+          <TabsList className="bg-slate-100 p-1 mb-4 h-11 w-full max-w-sm rounded-xl border">
             <TabsTrigger value="entregas" className="flex-1 gap-2 rounded-lg data-[state=active]:bg-white font-bold text-xs"><History size={16} /> Histórico</TabsTrigger>
             <TabsTrigger value="fichas" className="flex-1 gap-2 rounded-lg data-[state=active]:bg-white font-bold text-xs"><FileSignature size={16} /> Fichas NR-6</TabsTrigger>
           </TabsList>
 
           <TabsContent value="entregas" className="space-y-4">
-             <div className="flex gap-3 bg-white p-3 rounded-xl border shadow-sm">
+             <div className="flex gap-3 bg-white p-4 rounded-2xl border shadow-sm">
                 <div className="relative flex-1">
                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                   <Input placeholder="Localizar funcionário, material ou obra..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 border-none bg-slate-50" />
+                   <Input placeholder="Localizar funcionário, material ou obra..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 border-none bg-slate-50 h-10" />
                 </div>
              </div>
 
              <ScrollableTable>
-               <div className="rounded-xl border bg-white overflow-hidden shadow-sm">
+               <div className="rounded-2xl border bg-white overflow-hidden shadow-sm">
                  <table className="w-full text-sm">
                     <thead className="bg-slate-50 border-b">
                        <tr>
-                          <th className="px-5 py-3 text-left text-[10px] uppercase font-bold text-slate-400">Data</th>
-                          <th className="px-5 py-3 text-left text-[10px] uppercase font-bold text-slate-400">Funcionário</th>
-                          <th className="px-5 py-3 text-left text-[10px] uppercase font-bold text-slate-400">EPI</th>
-                          <th className="px-5 py-3 text-center text-[10px] uppercase font-bold text-slate-400">Qtd</th>
-                          <th className="px-5 py-3 text-left text-[10px] uppercase font-bold text-slate-400">Obra / Alocação</th>
-                          <th className="px-5 py-3 text-center text-[10px] uppercase font-bold text-slate-400">CA</th>
+                          <th className="px-5 py-4 text-left text-[10px] uppercase font-bold text-slate-400">Data</th>
+                          <th className="px-5 py-4 text-left text-[10px] uppercase font-bold text-slate-400">Funcionário</th>
+                          <th className="px-5 py-4 text-left text-[10px] uppercase font-bold text-slate-400">EPI</th>
+                          <th className="px-5 py-4 text-center text-[10px] uppercase font-bold text-slate-400">Qtd</th>
+                          <th className="px-5 py-4 text-left text-[10px] uppercase font-bold text-slate-400">Obra / Alocação</th>
+                          <th className="px-5 py-4 text-center text-[10px] uppercase font-bold text-slate-400">CA</th>
                        </tr>
                     </thead>
                     <tbody>
@@ -202,7 +212,9 @@ export default function EntregaEPI() {
                             <td className="px-5 py-4 text-xs font-medium text-slate-500">{format(new Date(e.data_entrega), "dd/MM/yyyy HH:mm")}</td>
                             <td className="px-5 py-4 font-bold text-slate-700">{e.funcionarios?.nome || "Excluído"}</td>
                             <td className="px-5 py-4 text-slate-600 font-medium">{e.produtos?.descricao || "—"}</td>
-                            <td className="px-5 py-4 text-center font-black text-amber-600 bg-amber-50/30">{e.quantidade}x</td>
+                            <td className="px-5 py-4 text-center">
+                               <span className="px-2 py-1 rounded-lg font-black text-amber-600 bg-amber-50 border border-amber-100">{e.quantidade}x</span>
+                            </td>
                             <td className="px-5 py-4 text-xs text-slate-400">
                                {e.obras?.nome ? `${e.obras.codigo} - ${e.obras.nome}` : "Depósito Central"}
                             </td>
@@ -225,14 +237,14 @@ export default function EntregaEPI() {
 
       {/* MODAL: CHECKOUT DE SEGURANÇA */}
       <Dialog open={showNewDelivery} onOpenChange={setShowNewDelivery}>
-         <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0 overflow-hidden rounded-2xl">
+         <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0 overflow-hidden rounded-3xl">
             <DialogHeader className="p-6 border-b bg-slate-50/50 flex flex-row items-center justify-between">
                <div className="space-y-1">
                   <DialogTitle className="text-2xl font-black flex items-center gap-2 italic text-slate-800 uppercase">
                      <HardHat className="text-amber-500 h-8 w-8" /> 
                      Checkout de Segurança (Multi-EPI)
                   </DialogTitle>
-                  <DialogDescription>Monte o kit de segurança do colaborador escolhendo os itens abaixo.</DialogDescription>
+                  <DialogDescription>Selecione os dados do colaborador e clique nos EPIs para entregar.</DialogDescription>
                </div>
             </DialogHeader>
             
@@ -240,16 +252,16 @@ export default function EntregaEPI() {
                {/* LADO ESQUERDO: CATÁLOGO */}
                <div className="w-7/12 border-r bg-slate-50/30 p-6 overflow-y-auto space-y-6">
                   <div className="grid grid-cols-2 gap-4">
-                     <div className="space-y-1.5"><Label className="text-slate-500 font-bold uppercase text-[10px]">1. Localizar Obra</Label>
+                     <div className="space-y-1.5"><Label className="text-slate-500 font-bold uppercase text-[10px] ml-1">1. Localizar Obra</Label>
                         <Select value={form.obra_id} onValueChange={v => setForm({...form, obra_id: v, funcionario_id: ""})}>
-                           <SelectTrigger className="bg-white rounded-xl h-12 shadow-sm border-slate-200"><SelectValue placeholder="Selecione a obra..." /></SelectTrigger>
-                           <SelectContent><SelectItem value="central">📦 Depósito Central</SelectItem>{obras.map(o => <SelectItem key={o.id} value={o.id}>{o.codigo} - {o.nome}</SelectItem>)}</SelectContent>
+                           <SelectTrigger className="bg-white rounded-2xl h-12 shadow-sm border-slate-200"><SelectValue placeholder="Selecione a obra..." /></SelectTrigger>
+                           <SelectContent className="rounded-xl"><SelectItem value="central">📦 Depósito Central</SelectItem>{obras.map(o => <SelectItem key={o.id} value={o.id}>{o.codigo} - {o.nome}</SelectItem>)}</SelectContent>
                         </Select>
                      </div>
-                     <div className="space-y-1.5"><Label className="text-slate-500 font-bold uppercase text-[10px]">2. Escolher Colaborador</Label>
+                     <div className="space-y-1.5"><Label className="text-slate-500 font-bold uppercase text-[10px] ml-1">2. Quem está recebendo?</Label>
                         <Select value={form.funcionario_id} onValueChange={v => setForm({...form, funcionario_id: v})}>
-                           <SelectTrigger className="bg-white rounded-xl h-12 shadow-sm border-slate-200"><SelectValue placeholder="Buscar funcionário..." /></SelectTrigger>
-                           <SelectContent>
+                           <SelectTrigger className="bg-white rounded-2xl h-12 shadow-sm border-slate-200"><SelectValue placeholder="Buscar funcionário..." /></SelectTrigger>
+                           <SelectContent className="rounded-xl">
                               {funcionarios.filter(f => form.obra_id === "central" || f.obra_id === form.obra_id).map(f => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
                            </SelectContent>
                         </Select>
@@ -257,7 +269,7 @@ export default function EntregaEPI() {
                   </div>
 
                   <div className="space-y-4 pt-6 border-t border-slate-100">
-                     <Label className="text-amber-600 font-black uppercase text-[10px] tracking-widest">3. Clique para Adicionar Itens</Label>
+                     <Label className="text-amber-600 font-black uppercase text-[10px] tracking-widest ml-1">3. Itens disponíveis no Almoxarifado</Label>
                      <div className="grid grid-cols-3 gap-3">
                         {produtos.map(p => {
                            const isSelected = selectedItems.find(i => i.produto_id === p.id);
@@ -271,17 +283,24 @@ export default function EntregaEPI() {
                                   : "border-white bg-white hover:border-slate-200 shadow-sm"
                                 }`}
                               >
-                                 <div className={`p-3 rounded-full mb-2 ${isSelected ? "bg-amber-500 text-white" : "bg-slate-100 text-slate-400 group-hover:bg-amber-100"}`}>
+                                 <div className={`p-3 rounded-full mb-2 ${isSelected ? "bg-amber-500 text-white shadow-lg shadow-amber-500/30" : "bg-slate-100 text-slate-400 group-hover:bg-amber-100"}`}>
                                     <Package size={20} />
                                  </div>
-                                 <p className="text-[11px] font-black text-slate-700 leading-tight block mb-1 uppercase h-6 overflow-hidden">{p.descricao}</p>
-                                 <p className="text-[10px] font-bold">Saldo: <span className={p.saldo < 1 ? "text-rose-500" : "text-emerald-600"}>{p.saldo}</span></p>
+                                 <p className="text-[11px] font-bold text-slate-700 leading-tight block mb-1 uppercase h-9 overflow-hidden">{p.descricao}</p>
+                                 <p className="text-[10px] font-bold opacity-60">Saldo: <span className={p.saldo < 1 ? "text-rose-500" : "text-emerald-600"}>{p.saldo}</span></p>
                                  {isSelected && (
                                     <div className="absolute top-2 right-2 bg-amber-500 text-white rounded-full p-0.5 shadow-sm animate-in zoom-in"><CheckCircle2 size={14} /></div>
                                  )}
                               </button>
                            );
                         })}
+                        {produtos.length === 0 && (
+                           <div className="col-span-3 py-12 text-center bg-white rounded-3xl border border-dashed text-slate-400">
+                              <AlertTriangle size={32} className="mx-auto mb-2 opacity-30" />
+                              <p className="text-xs font-bold uppercase tracking-widest">Nenhum EPI encontrado</p>
+                              <p className="text-[10px]">Cadastre itens com categoria "EPI" no estoque.</p>
+                           </div>
+                        )}
                      </div>
                   </div>
                </div>
@@ -290,28 +309,30 @@ export default function EntregaEPI() {
                <div className="w-5/12 p-6 overflow-y-auto bg-white flex flex-col justify-between border-l border-slate-100">
                   <div className="space-y-6">
                      <div className="flex items-center justify-between pb-4 border-b">
-                        <div className="flex items-center gap-2"><ShoppingCart className="text-slate-400" size={20} /><p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Kit Montado</p></div>
-                        <Badge className="bg-slate-800 text-white rounded-full px-3">{selectedItems.length} itens</Badge>
+                        <div className="flex items-center gap-2"><ShoppingCart className="text-slate-400" size={20} /><p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Resumo do Kit</p></div>
+                        <Badge className="bg-slate-800 text-white rounded-full px-4 h-6">{selectedItems.length} itens</Badge>
                      </div>
 
                      <div className="space-y-3">
                         {selectedItems.map(item => (
-                           <Card key={item.produto_id} className="border-slate-100 shadow-none bg-slate-50/50">
+                           <Card key={item.produto_id} className="border-slate-100 shadow-none bg-slate-50/50 rounded-2xl">
                               <CardContent className="p-4 space-y-3">
                                  <div className="flex justify-between items-start gap-2">
                                     <p className="text-xs font-black text-slate-700 uppercase leading-snug">{item.descricao}</p>
                                     <button onClick={() => setSelectedItems(selectedItems.filter(i => i.produto_id !== item.produto_id))} className="text-rose-300 hover:text-rose-600 transition-colors"><Trash2 size={18} /></button>
                                  </div>
                                  <div className="grid grid-cols-2 gap-3">
-                                    <div className="space-y-1"><Label className="text-[9px] font-bold text-slate-400 uppercase">Quantidade</Label><Input type="number" value={item.quantidade} onChange={e => updateSelectedItem(item.produto_id, "quantidade", e.target.value)} className="h-9 bg-white font-bold" /></div>
-                                    <div className="space-y-1"><Label className="text-[9px] font-bold text-slate-400 uppercase">Nº CA Vigente</Label><Input value={item.ca_numero} onChange={e => updateSelectedItem(item.produto_id, "ca_numero", e.target.value)} className="h-9 bg-white font-bold" /></div>
+                                    <div className="space-y-1"><Label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Quantidade</Label><Input type="number" value={item.quantidade} onChange={e => updateSelectedItem(item.produto_id, "quantidade", e.target.value)} className="h-10 bg-white font-bold rounded-xl" /></div>
+                                    <div className="space-y-1"><Label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Nº CA Vigente</Label><Input value={item.ca_numero} onChange={e => updateSelectedItem(item.produto_id, "ca_numero", e.target.value)} className="h-10 bg-white font-bold rounded-xl" /></div>
                                  </div>
                               </CardContent>
                            </Card>
                         ))}
                         {selectedItems.length === 0 && (
                            <div className="py-24 text-center text-slate-300 space-y-4">
-                              <ShoppingCart size={64} className="mx-auto opacity-10" />
+                              <div className="bg-slate-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto border-2 border-dashed border-slate-200">
+                                 <ShoppingCart size={40} className="opacity-20" />
+                              </div>
                               <p className="italic text-sm font-medium">Selecione os EPIs ao lado para<br/>iniciar o lançamento.</p>
                            </div>
                         )}
@@ -322,9 +343,9 @@ export default function EntregaEPI() {
                      <Button 
                        onClick={handleSaveMultiDelivery}
                        disabled={selectedItems.length === 0 || !form.funcionario_id}
-                       className="w-full h-16 bg-amber-500 hover:bg-amber-600 text-white font-black uppercase text-lg shadow-xl shadow-amber-500/30 gap-3 transition-all active:scale-95"
+                       className="w-full h-16 bg-emerald-500 hover:bg-emerald-600 text-white font-black uppercase text-lg shadow-xl shadow-emerald-500/30 gap-3 transition-all active:scale-95 rounded-2xl"
                      >
-                        Confirmar Entrega Total <CheckCircle2 size={24} />
+                        Confirmar e Entregar <CheckCircle2 size={24} />
                      </Button>
                   </div>
                </div>
