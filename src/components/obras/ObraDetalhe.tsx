@@ -20,8 +20,10 @@ import {
   ArrowLeft, Edit, HardHat, FolderOpen,
   Plus, Trash2, FileText, TrendingUp,
   DollarSign, Clock, Save, Users, ClipboardList, Download,
-  MapPin, Building2, Calendar, MoreHorizontal
+  MapPin, Building2, Calendar, MoreHorizontal, Upload, FileUp
 } from "lucide-react";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -145,13 +147,13 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
   // CRUD Item
   const openNewItem = (isAditivo: boolean) => {
     setEditingItem(null);
-    setItemForm({ item_numero: "", descricao: "", unidade: "un", quantidade: 0, valor_unitario: 0, is_aditivo: isAditivo, aditivo_numero: isAditivo ? (itensAditivo.length > 0 ? Math.max(...itensAditivo.map(i => i.aditivo_numero || 0)) : 1) : 0, observacoes: "", categoria: "servico" });
+    setItemForm({ item_numero: "", descricao: "", unidade: "un", quantidade: 0, valor_unitario: 0, is_aditivo: isAditivo, aditivo_numero: isAditivo ? (itensAditivo.length > 0 ? Math.max(...itensAditivo.map(i => i.aditivo_numero || 0)) + 1 : 1) : 0, observacoes: "", categoria: "servico", quantidade_acumulada_inicial: 0 });
     setShowItemDialog(true);
   };
 
   const openEditItem = (item: ContratoItem) => {
     setEditingItem(item);
-    setItemForm({ item_numero: item.item_numero, descricao: item.descricao, unidade: item.unidade, quantidade: item.quantidade, valor_unitario: item.valor_unitario, is_aditivo: item.is_aditivo, aditivo_numero: item.aditivo_numero || 0, observacoes: item.observacoes || "", categoria: item.categoria || "servico" });
+    setItemForm({ item_numero: item.item_numero, descricao: item.descricao, unidade: item.unidade, quantidade: item.quantidade, valor_unitario: item.valor_unitario, is_aditivo: item.is_aditivo, aditivo_numero: item.aditivo_numero || 0, observacoes: item.observacoes || "", categoria: item.categoria || "servico", quantidade_acumulada_inicial: item.quantidade_acumulada_inicial || 0 });
     setShowItemDialog(true);
   };
 
@@ -188,6 +190,57 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
     await supabase.from("medicao_reajustes").delete().eq("id", id);
     toast({ title: "Reajuste removido" });
     loadAll();
+  };
+
+  // Excel Import/Export
+  const handleDownloadTemplate = () => {
+    const headers = [["Item", "Descrição", "Unidade", "Quantidade Total", "Preço Unitário", "Acumulado Inicial (Ant. Sistema)"]];
+    const ws = XLSX.utils.aoa_to_sheet(headers);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Modelo Contrato");
+    const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    saveAs(new Blob([buf]), `modelo_contrato_${currentObra.codigo}.xlsx`);
+    toast({ title: "Modelo baixado!" });
+  };
+
+  const handleImportExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const data = evt.target?.result;
+        const workbook = XLSX.read(data, { type: "binary" });
+        const wsName = workbook.SheetNames[0];
+        const ws = workbook.Sheets[wsName];
+        const rows = XLSX.utils.sheet_to_json(ws) as any[];
+
+        const payloads = rows.map(r => ({
+          obra_id: currentObra.id,
+          empresa_id: currentObra.empresa_id,
+          item_numero: String(r["Item"] || ""),
+          descricao: String(r["Descrição"] || ""),
+          unidade: String(r["Unidade"] || "un"),
+          quantidade: Number(r["Quantidade Total"] || 0),
+          valor_unitario: Number(r["Preço Unitário"] || 0),
+          quantidade_acumulada_inicial: Number(r["Acumulado Inicial (Ant. Sistema)"] || 0),
+          valor_total: Number(r["Quantidade Total"] || 0) * Number(r["Preço Unitário"] || 0),
+          is_aditivo: false
+        })).filter(p => p.descricao && p.item_numero);
+
+        if (payloads.length === 0) throw new Error("Documento vazio ou inválido.");
+
+        const { error } = await supabase.from("medicao_contrato_itens").insert(payloads);
+        if (error) throw error;
+
+        toast({ title: "Sucesso!", description: `${payloads.length} itens importados.` });
+        loadAll();
+      } catch (err: any) {
+        toast({ title: "Erro na importação", description: err.message, variant: "destructive" });
+      }
+    };
+    reader.readAsBinaryString(file);
   };
 
   // PDF: Proposta
@@ -272,7 +325,18 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">{title} ({items.length} itens)</h3>
-        <Button size="sm" variant="outline" onClick={() => openNewItem(isAditivo)}><Plus className="h-3.5 w-3.5 mr-1" /> Adicionar</Button>
+        <div className="flex gap-2">
+          {!isAditivo && (
+            <>
+              <Button size="sm" variant="outline" onClick={handleDownloadTemplate} className="h-8 text-xs gap-1.5"><Download className="h-3.5 w-3.5" /> Modelo</Button>
+              <div className="relative">
+                <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5"><Upload className="h-3.5 w-3.5" /> Importar</Button>
+                <input type="file" accept=".xlsx, .xls" onChange={handleImportExcel} className="absolute inset-0 opacity-0 cursor-pointer" />
+              </div>
+            </>
+          )}
+          <Button size="sm" variant="outline" onClick={() => openNewItem(isAditivo)} className="h-8 text-xs"><Plus className="h-3.5 w-3.5 mr-1" /> Adicionar</Button>
+        </div>
       </div>
       {items.length === 0 ? (
         <div className="py-8 text-center text-sm text-muted-foreground border rounded-lg bg-muted/30">
@@ -598,8 +662,20 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
                 <SelectContent>{["un", "m²", "m³", "m", "kg", "t", "vb", "mês", "h", "l"].map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div><Label>Quantidade</Label><Input type="number" value={itemForm.quantidade || ""} onChange={e => setItemForm(f => ({ ...f, quantidade: Number(e.target.value) }))} /></div>
-            <div><Label>Valor Unitário</Label><Input type="number" step="0.01" value={itemForm.valor_unitario || ""} onChange={e => setItemForm(f => ({ ...f, valor_unitario: Number(e.target.value) }))} /></div>
+            <div><Label>Quantidade *</Label><Input type="number" value={itemForm.quantidade || ""} onChange={e => setItemForm(f => ({ ...f, quantidade: Number(e.target.value) }))} /></div>
+            <div><Label>Valor Unitário *</Label><Input type="number" step="0.01" value={itemForm.valor_unitario || ""} onChange={e => setItemForm(f => ({ ...f, valor_unitario: Number(e.target.value) }))} /></div>
+            <div className="col-span-2 p-3 bg-amber-50 rounded-lg border border-amber-100">
+              <Label className="text-[10px] font-bold uppercase text-amber-600 mb-1.5 block tracking-widest">Acumulado Anterior ao Sistema</Label>
+              <Input 
+                type="number" 
+                step="0.01" 
+                value={itemForm.quantidade_acumulada_inicial || ""} 
+                onChange={e => setItemForm(f => ({ ...f, quantidade_acumulada_inicial: Number(e.target.value) }))} 
+                className="bg-white border-amber-200"
+                placeholder="Ex: 500.00"
+              />
+              <p className="text-[10px] text-amber-600/70 mt-1.5 font-medium">Quantidades já medidas fora do sistema antes da implantação.</p>
+            </div>
             {itemForm.quantidade > 0 && itemForm.valor_unitario > 0 && (
               <div className="flex items-center">
                 <div className="rounded-lg bg-primary/5 border border-primary/20 px-3 py-2 text-sm w-full text-center">
