@@ -47,15 +47,18 @@ export async function gerarFichaEPIEEnviarAssinatura(funcionarioId: string, empr
 
   // 5. Montar payload estruturado da ficha
   const itens = (entregas || []).map(e => {
-    const prod = prodMap.get(e.produto_id);
-    const obra = e.obra_id ? obraMap.get(e.obra_id) : null;
+    const prodIdStr = String(e.produto_id);
+    const obraIdStr = e.obra_id ? String(e.obra_id) : null;
+    const prod = prodMap.get(prodIdStr);
+    const obra = obraIdStr ? obraMap.get(obraIdStr) : null;
+
     return {
       entrega_id: e.id,
       data: e.data_entrega,
-      nome: prodMap.get(String(e.produto_id))?.descricao || "EPI / Equipamento",
+      nome: prod?.descricao || "EPI / Equipamento",
       qtd: Number(e.quantidade),
       ca_numero: e.ca_numero || prod?.ca_numero || "",
-      observacoes: e.observacoes || e.motivo || "Primeira entrega",
+      observacoes: e.observacoes || (e as any).motivo || "Primeira entrega",
       obra: obra ? `${obra.codigo} - ${obra.nome}` : "",
     };
   });
@@ -96,7 +99,13 @@ export async function gerarFichaEPIEEnviarAssinatura(funcionarioId: string, empr
   };
 
   // 6. Gerar token único de acesso (7 dias de validade)
-  const token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+  const generateToken = () => {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let t = '';
+    for (let i = 0; i < 48; i++) t += chars.charAt(Math.floor(Math.random() * chars.length));
+    return t;
+  };
+  const token = generateToken();
   const expiracao = new Date();
   expiracao.setDate(expiracao.getDate() + 7);
 
