@@ -159,16 +159,17 @@ export default function EquipamentosProprios() {
 
   async function handleTransfer() {
     if (!selectedEquip) return;
+    const finalObraId = transferObraId === "estoque" ? null : (transferObraId || null);
     await supabase.from("historico_alocacao_equipamento").insert({
       equipamento_id: selectedEquip.id,
       obra_origem_id: selectedEquip.obra_id || null,
-      obra_destino_id: transferObraId || null,
+      obra_destino_id: finalObraId,
       responsavel: transferResponsavel,
       observacoes: "Transferencia via painel"
     });
     await supabase.from("equipamentos_proprios").update({ 
-      obra_id: transferObraId || null, 
-      status: transferObraId ? "em_uso" : "disponivel" 
+      obra_id: finalObraId, 
+      status: finalObraId ? "em_uso" : "disponivel" 
     }).eq("id", selectedEquip.id);
     setShowTransferForm(false); loadData(); toast({ title: "Transferido!" });
   }
@@ -236,7 +237,7 @@ export default function EquipamentosProprios() {
                            <p className="text-sm font-bold truncate">{eq.descricao}</p>
                            <p className="text-[10px] text-muted-foreground font-mono">{eq.codigo}</p>
                            <div className="flex gap-2 mt-2">
-                              <Button size="sm" variant="ghost" className="h-7 px-2 text-[10px] gap-1" onClick={() => { setSelectedEquip(eq); setTransferObraId(eq.obra_id || ""); setShowTransferForm(true); }}><ArrowRightLeft size={12} /> Transf.</Button>
+                              <Button size="sm" variant="ghost" className="h-7 px-2 text-[10px] gap-1" onClick={() => { setSelectedEquip(eq); setTransferObraId(eq.obra_id || "estoque"); setShowTransferForm(true); }}><ArrowRightLeft size={12} /> Transf.</Button>
                               <Button size="sm" variant="ghost" className="h-7 px-2 text-[10px] gap-1 text-amber-600" onClick={() => quickMaintenance(eq)}><Wrench size={12} /> Oficina</Button>
                            </div>
                         </div>
@@ -333,7 +334,7 @@ export default function EquipamentosProprios() {
             <DialogHeader><DialogTitle className="flex items-center gap-2"><ArrowRightLeft size={20} /> Transferir</DialogTitle></DialogHeader>
             <div className="space-y-4 py-4">
                <div className="p-3 bg-muted rounded-lg"><p className="text-xs font-bold text-muted-foreground uppercase">Equipamento</p><p className="font-black text-sm">{selectedEquip?.codigo} - {selectedEquip?.descricao}</p></div>
-               <div><Label>Obra Destino</Label><Select value={transferObraId} onValueChange={setTransferObraId}><SelectTrigger><SelectValue placeholder="Estoque Principal" /></SelectTrigger><SelectContent><SelectItem value="">Estoque Principal</SelectItem>{obras.map(o => <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>)}</SelectContent></Select></div>
+               <div><Label>Obra Destino</Label><Select value={transferObraId} onValueChange={setTransferObraId}><SelectTrigger><SelectValue placeholder="Estoque Principal" /></SelectTrigger><SelectContent><SelectItem value="estoque">Estoque Principal</SelectItem>{obras.map(o => <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>)}</SelectContent></Select></div>
                <div><Label>Responsavel pela Movimentacao</Label><Input value={transferResponsavel} onChange={e => setTransferResponsavel(e.target.value)} /></div>
             </div>
             <DialogFooter><Button onClick={handleTransfer} className="w-full">Confirmar Transferencia</Button></DialogFooter>
