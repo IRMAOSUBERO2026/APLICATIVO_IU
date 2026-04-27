@@ -108,7 +108,8 @@ export default function EntregaEPI() {
         empresa_id: func?.empresa_id || "",
         quantidade: Number(item.quantidade),
         ca_numero: item.ca_numero || null,
-        observacoes: item.observacoes,
+        motivo: item.observacoes, // Salva o motivo selecionado
+        observacoes: `Entrega via sistema - ${item.observacoes}`,
         data_entrega: new Date().toISOString()
       }));
 

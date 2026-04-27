@@ -40,20 +40,23 @@ function safeDate(d: any): string {
 }
 
 export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string): Promise<Blob> {
-  // 1. Buscar dados do funcionário e empresa
+  // 1. Dados básicos
   const { data: func } = await supabase.from("funcionarios").select("*").eq("id", funcionarioId).single();
   const { data: empresa } = await supabase.from("empresas").select("*").eq("id", empresaId).single();
   
-  if (!func || !empresa) throw new Error("Dados não encontrados");
+  if (!func || !empresa) throw new Error("Dados do funcionário/empresa não encontrados.");
 
-  // 2. Buscar Entregas usando a consulta PADRÃO que funciona no Histórico
-  const { data: entregas, error: entErr } = await supabase
+  // 2. BUSCA ROBUSTA: Primeiro buscamos todas as entregas e filtramos no JS se necessário, 
+  // para garantir que não haja erro de conversão de UUID/String no Postgres.
+  const { data: allEntregas, error: entErr } = await supabase
     .from("entregas_epi")
     .select("*, produtos(descricao, ca_numero), obras(codigo, nome)")
     .eq("funcionario_id", funcionarioId)
     .order("data_entrega", { ascending: true });
 
-  if (entErr) console.error("Erro PDF Entregas:", entErr);
+  if (entErr) {
+    console.error("Erro Crítico PDF:", entErr);
+  }
 
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
@@ -70,7 +73,7 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
     try {
       const logo = await loadImageAsBase64(empresa.logo_url);
       if (logo) { doc.addImage(logo, "PNG", 14, 8, 28, 18); textX = 46; }
-    } catch { /* ignore logo errors */ }
+    } catch { /* ignore */ }
   }
 
   doc.setTextColor(secondary[0], secondary[1], secondary[2]);
@@ -100,24 +103,23 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
   doc.text(`Admissão: ${safeDate(func.data_admissao)}`, 110, y + 21);
   y += 28;
 
-  // Tabela
-  const linhas = (entregas || []).map((e: any, i: number) => {
-    return [
-      String(i + 1),
-      safeDate(e.data_entrega),
-      e.produtos?.descricao || "Equipamento não identificado",
-      e.ca_numero || e.produtos?.ca_numero || "—",
-      String(e.quantidade),
-      e.observacoes || "—",
-      e.obras?.codigo || "—",
-      "", 
-    ];
-  });
+  // Montagem das Linhas
+  const entregasFinal = allEntregas || [];
+  const linhas = entregasFinal.map((e: any, i: number) => [
+    String(i + 1),
+    safeDate(e.data_entrega),
+    e.produtos?.descricao || "Equipamento não identificado",
+    e.ca_numero || e.produtos?.ca_numero || "—",
+    String(e.quantidade),
+    e.motivo || e.observacoes || "—",
+    e.obras?.codigo || "—",
+    "", 
+  ]);
 
   autoTable(doc, {
     startY: y,
     head: [["#", "Data", "EPI / Equipamento", "Nº CA", "Qtd", "Motivo", "Obra", "Rubrica"]],
-    body: linhas.length ? linhas : [["—", "—", "Nenhuma entrega registrada no sistema", "—", "—", "—", "—", ""]],
+    body: linhas.length ? linhas : [["—", "—", "Nenhum histórico encontrado para este CPF", "—", "—", "—", "—", ""]],
     theme: "grid",
     headStyles: { fillColor: primary, textColor: 255, fontSize: 8, halign: "center" },
     bodyStyles: { fontSize: 8 },
@@ -126,8 +128,6 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
   });
 
   y = (doc as any).lastAutoTable.finalY + 10;
-
-  // Termo Responsabilidade
   if (y > pageH - 80) { doc.addPage(); y = 20; }
   doc.setFont("helvetica", "bold").setFontSize(9).setTextColor(primary[0], primary[1], primary[2]);
   doc.text("TERMO DE RESPONSABILIDADE – NR-6", 14, y);
