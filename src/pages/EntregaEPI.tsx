@@ -2,7 +2,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { 
   Search, Package, AlertTriangle, Smartphone, Plus, 
   FileSignature, History, CheckCircle2, User, HardHat,
-  Trash2, ShoppingCart
+  Trash2, ShoppingCart, RefreshCw, ClipboardCheck
 } from "lucide-react";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -81,7 +81,7 @@ export default function EntregaEPI() {
         descricao: produto.descricao, 
         quantidade: 1, 
         ca_numero: produto.ca_numero || "",
-        observacoes: "Primeira entrega"
+        observacoes: "Primeira Entrega"
       }]);
     }
   };
@@ -118,10 +118,10 @@ export default function EntregaEPI() {
       // 2. Preparar inserções em lote para movimentações de estoque
       const movementRows = selectedItems.map(item => ({
         produto_id: item.produto_id,
-        tipo: "saida_epi",
+        tipo: "saida", // Corrigido para 'saida' (aceito pelo banco)
         quantidade: Number(item.quantidade),
         obra_id: useObraId,
-        observacoes: `Entrega de EPI para ${func?.nome}`
+        observacoes: `Entrega EPI: ${item.observacoes} - ${func?.nome}`
       }));
 
       const { error: movErr } = await supabase.from("movimentacoes_estoque").insert(movementRows);
@@ -344,7 +344,21 @@ export default function EntregaEPI() {
                                     <div className="space-y-1"><Label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Quantidade</Label><Input type="number" value={item.quantidade} onChange={e => updateSelectedItem(item.produto_id, "quantidade", e.target.value)} className="h-10 bg-white font-bold rounded-xl" /></div>
                                     <div className="space-y-1"><Label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Nº CA Vigente</Label><Input value={item.ca_numero} onChange={e => updateSelectedItem(item.produto_id, "ca_numero", e.target.value)} className="h-10 bg-white font-bold rounded-xl" /></div>
                                  </div>
-                                 <div className="space-y-1"><Label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Observações / Motivo</Label><Input value={item.observacoes} onChange={e => updateSelectedItem(item.produto_id, "observacoes", e.target.value)} className="h-9 bg-white text-xs rounded-xl" /></div>
+                                 <div className="space-y-1">
+                                    <Label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Motivo / Justificativa</Label>
+                                    <Select value={item.observacoes} onValueChange={v => updateSelectedItem(item.produto_id, "observacoes", v)}>
+                                       <SelectTrigger className="h-9 bg-white text-xs rounded-xl shadow-sm">
+                                          <SelectValue />
+                                       </SelectTrigger>
+                                       <SelectContent className="rounded-xl font-medium">
+                                          <SelectItem value="Primeira Entrega">🛡️ Primeira Entrega</SelectItem>
+                                          <SelectItem value="Reposição (Uso)">♻️ Reposição (Uso)</SelectItem>
+                                          <SelectItem value="Danificado">⚠️ Danificado</SelectItem>
+                                          <SelectItem value="Perda/Extravio">🔍 Perda/Extravio</SelectItem>
+                                          <SelectItem value="Troca de Tamanho">📏 Troca de Tamanho</SelectItem>
+                                       </SelectContent>
+                                    </Select>
+                                 </div>
                               </CardContent>
                            </Card>
                         ))}
