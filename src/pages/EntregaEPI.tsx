@@ -97,34 +97,50 @@ export default function EntregaEPI() {
     }
 
     const func = funcionarios.find(f => f.id === form.funcionario_id);
-    const useObraId = form.obra_id === "central" ? null : form.obra_id;
+    const useObraId = form.obra_id === "central" ? null : (form.obra_id || null);
 
-    for (const item of selectedItems) {
-      await supabase.from("entregas_epi").insert({
-         funcionario_id: form.funcionario_id,
-         produto_id: item.produto_id,
-         obra_id: useObraId,
-         empresa_id: func?.empresa_id || "",
-         quantidade: Number(item.quantidade),
-         ca_numero: item.ca_numero || null,
-         motivo: item.motivo,
-         data_entrega: new Date().toISOString()
-      });
+    try {
+      // 1. Preparar inserções em lote para entregas
+      const deliveryRows = selectedItems.map(item => ({
+        funcionario_id: form.funcionario_id,
+        produto_id: item.produto_id,
+        obra_id: useObraId,
+        empresa_id: func?.empresa_id || "",
+        quantidade: Number(item.quantidade),
+        ca_numero: item.ca_numero || null,
+        motivo: item.motivo,
+        data_entrega: new Date().toISOString()
+      }));
 
-      await supabase.from("movimentacoes_estoque").insert({
-         produto_id: item.produto_id,
-         tipo: "saida_epi",
-         quantidade: Number(item.quantidade),
-         obra_id: useObraId,
-         observacoes: `Entrega de EPI para ${func?.nome}`
+      const { error: delErr } = await supabase.from("entregas_epi").insert(deliveryRows);
+      if (delErr) throw delErr;
+
+      // 2. Preparar inserções em lote para movimentações de estoque
+      const movementRows = selectedItems.map(item => ({
+        produto_id: item.produto_id,
+        tipo: "saida_epi",
+        quantidade: Number(item.quantidade),
+        obra_id: useObraId,
+        observacoes: `Entrega de EPI para ${func?.nome}`
+      }));
+
+      const { error: movErr } = await supabase.from("movimentacoes_estoque").insert(movementRows);
+      if (movErr) throw movErr;
+
+      toast({ title: `🛡️ ${selectedItems.length} EPI(s) entregue(s) com sucesso!` });
+      setShowNewDelivery(false);
+      setSelectedItems([]);
+      setForm({ ...form, funcionario_id: "" });
+      loadData();
+
+    } catch (err: any) {
+      console.error("Erro ao salvar entrega:", err);
+      toast({ 
+        title: "Erro ao salvar entrega", 
+        description: err.message || "Verifique os dados e tente novamente",
+        variant: "destructive" 
       });
     }
-
-    toast({ title: `🛡️ ${selectedItems.length} EPI(s) entregue(s)!` });
-    setShowNewDelivery(false);
-    setSelectedItems([]);
-    setForm({ ...form, funcionario_id: "" });
-    loadData();
   };
 
   const filteredEntregas = useMemo(() => {
