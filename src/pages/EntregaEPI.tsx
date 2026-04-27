@@ -2,7 +2,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { 
   Search, Package, AlertTriangle, Smartphone, Plus, 
   FileSignature, History, CheckCircle2, User, HardHat,
-  Trash2, ShoppingCart, RefreshCw, Clipboard
+  Trash2, ShoppingCart, RefreshCw, Clipboard, Edit
 } from "lucide-react";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,6 +33,9 @@ export default function EntregaEPI() {
   // Multi-seleção
   const [selectedItems, setSelectedItems] = useState<any[]>([]);
   const [form, setForm] = useState({ funcionario_id: "", obra_id: "central" });
+  
+  const [editingDelivery, setEditingDelivery] = useState<any>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -50,7 +53,6 @@ export default function EntregaEPI() {
       if (fun.data) setFuncionarios(fun.data);
 
       if (prd.data && mov.data) {
-        // CORREÇÃO: Busca flexível por EPI (Categoria ou Descrição) e ignora status desativado
         const episOnly = prd.data.filter(p => 
           p.categoria?.toUpperCase() === "EPI" || 
           p.descricao?.toUpperCase().includes("EPI")
@@ -100,7 +102,6 @@ export default function EntregaEPI() {
     const useObraId = form.obra_id === "central" ? null : (form.obra_id || null);
 
     try {
-      // 1. Preparar inserções em lote para entregas
       const deliveryRows = selectedItems.map(item => ({
         funcionario_id: form.funcionario_id,
         produto_id: item.produto_id,
@@ -115,10 +116,9 @@ export default function EntregaEPI() {
       const { error: delErr } = await supabase.from("entregas_epi").insert(deliveryRows);
       if (delErr) throw delErr;
 
-      // 2. Preparar inserções em lote para movimentações de estoque
       const movementRows = selectedItems.map(item => ({
         produto_id: item.produto_id,
-        tipo: "saida", // Corrigido para 'saida' (aceito pelo banco)
+        tipo: "saida",
         quantidade: Number(item.quantidade),
         obra_id: useObraId,
         observacoes: `Entrega EPI: ${item.observacoes} - ${func?.nome}`
@@ -143,15 +143,35 @@ export default function EntregaEPI() {
     }
   };
 
+  const handleUpdateDelivery = async () => {
+    if (!editingDelivery) return;
+    try {
+      const { error } = await supabase
+        .from("entregas_epi")
+        .update({
+          quantidade: Number(editingDelivery.quantidade),
+          ca_numero: editingDelivery.ca_numero,
+          observacoes: editingDelivery.observacoes,
+          data_entrega: editingDelivery.data_entrega
+        })
+        .eq("id", editingDelivery.id);
+
+      if (error) throw error;
+      toast({ title: "Entrega atualizada com sucesso!" });
+      setShowEditDialog(false);
+      loadData();
+    } catch (err: any) {
+      toast({ title: "Erro ao atualizar", description: err.message, variant: "destructive" });
+    }
+  };
+
   const handleDeleteDelivery = async (delivery: any) => {
     if (!confirm(`Deseja excluir a entrega de ${delivery.produtos?.descricao} para ${delivery.funcionarios?.nome}? O estoque será estornado.`)) return;
 
     try {
-      // 1. Excluir a entrega
       const { error: delErr } = await supabase.from("entregas_epi").delete().eq("id", delivery.id);
       if (delErr) throw delErr;
 
-      // 2. Tentar estornar o estoque (inserir uma entrada compensatória)
       await supabase.from("movimentacoes_estoque").insert({
         produto_id: delivery.produto_id,
         tipo: "entrada",
@@ -266,7 +286,15 @@ export default function EntregaEPI() {
                             <td className="px-5 py-4 text-center">
                                <Badge variant="outline" className="font-mono text-[9px] border-slate-200">{e.ca_numero || "N/A"}</Badge>
                             </td>
-                            <td className="px-5 py-4 text-right">
+                            <td className="px-5 py-4 text-right flex items-center justify-end gap-1">
+                               <Button 
+                                 variant="ghost" 
+                                 size="icon" 
+                                 onClick={() => { setEditingDelivery({...e}); setShowEditDialog(true); }}
+                                 className="h-8 w-8 text-slate-300 hover:text-amber-500 hover:bg-amber-50 opacity-0 group-hover:opacity-100 transition-all"
+                               >
+                                  <Edit size={14} />
+                               </Button>
                                <Button 
                                  variant="ghost" 
                                  size="icon" 
@@ -290,7 +318,6 @@ export default function EntregaEPI() {
         </Tabs>
       </div>
 
-      {/* MODAL: CHECKOUT DE SEGURANÇA */}
       <Dialog open={showNewDelivery} onOpenChange={setShowNewDelivery}>
          <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0 overflow-hidden rounded-3xl">
             <DialogHeader className="p-6 border-b bg-slate-50/50 flex flex-row items-center justify-between">
@@ -304,7 +331,6 @@ export default function EntregaEPI() {
             </DialogHeader>
             
             <div className="flex-1 flex overflow-hidden">
-               {/* LADO ESQUERDO: CATÁLOGO */}
                <div className="w-7/12 border-r bg-slate-50/30 p-6 overflow-y-auto space-y-6">
                   <div className="grid grid-cols-2 gap-4">
                      <div className="space-y-1.5"><Label className="text-slate-500 font-bold uppercase text-[10px] ml-1">1. Localizar Obra</Label>
@@ -349,18 +375,10 @@ export default function EntregaEPI() {
                               </button>
                            );
                         })}
-                        {produtos.length === 0 && (
-                           <div className="col-span-3 py-12 text-center bg-white rounded-3xl border border-dashed text-slate-400">
-                              <AlertTriangle size={32} className="mx-auto mb-2 opacity-30" />
-                              <p className="text-xs font-bold uppercase tracking-widest">Nenhum EPI encontrado</p>
-                              <p className="text-[10px]">Cadastre itens com categoria "EPI" no estoque.</p>
-                           </div>
-                        )}
                      </div>
                   </div>
                </div>
 
-               {/* LADO DIREITO: CARRINHO / CONFERÊNCIA */}
                <div className="w-5/12 p-6 overflow-y-auto bg-white flex flex-col justify-between border-l border-slate-100">
                   <div className="space-y-6">
                      <div className="flex items-center justify-between pb-4 border-b">
@@ -398,14 +416,6 @@ export default function EntregaEPI() {
                               </CardContent>
                            </Card>
                         ))}
-                        {selectedItems.length === 0 && (
-                           <div className="py-24 text-center text-slate-300 space-y-4">
-                              <div className="bg-slate-50 w-24 h-24 rounded-full flex items-center justify-center mx-auto border-2 border-dashed border-slate-200">
-                                 <ShoppingCart size={40} className="opacity-20" />
-                              </div>
-                              <p className="italic text-sm font-medium">Selecione os EPIs ao lado para<br/>iniciar o lançamento.</p>
-                           </div>
-                        )}
                      </div>
                   </div>
 
@@ -420,6 +430,31 @@ export default function EntregaEPI() {
                   </div>
                </div>
             </div>
+         </DialogContent>
+      </Dialog>
+
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+         <DialogContent className="max-w-md rounded-2xl">
+            <DialogHeader><DialogTitle>Editar Lançamento de EPI</DialogTitle></DialogHeader>
+            {editingDelivery && (
+               <div className="space-y-4 py-4">
+                  <div className="p-3 bg-slate-50 rounded-xl border border-dashed text-xs space-y-1">
+                     <p className="font-bold text-slate-600 uppercase">{editingDelivery.produtos?.descricao}</p>
+                     <p className="text-slate-400">Funcionário: {editingDelivery.funcionarios?.nome}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                     <div className="space-y-1.5"><Label className="text-[10px] font-bold uppercase">Quantidade</Label><Input type="number" value={editingDelivery.quantidade} onChange={e => setEditingDelivery({...editingDelivery, quantidade: e.target.value})} /></div>
+                     <div className="space-y-1.5"><Label className="text-[10px] font-bold uppercase">CA Vigente</Label><Input value={editingDelivery.ca_numero || ""} onChange={e => setEditingDelivery({...editingDelivery, ca_numero: e.target.value})} /></div>
+                  </div>
+                  <div className="space-y-1.5"><Label className="text-[10px] font-bold uppercase">Motivo / Observação</Label>
+                     <Input value={editingDelivery.observacoes || ""} onChange={e => setEditingDelivery({...editingDelivery, observacoes: e.target.value})} />
+                  </div>
+                  <div className="space-y-1.5"><Label className="text-[10px] font-bold uppercase">Data da Entrega</Label>
+                     <Input type="datetime-local" value={editingDelivery.data_entrega ? new Date(new Date(editingDelivery.data_entrega).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16) : ""} onChange={e => setEditingDelivery({...editingDelivery, data_entrega: new Date(e.target.value).toISOString()})} />
+                  </div>
+               </div>
+            )}
+            <DialogFooter><Button onClick={handleUpdateDelivery} className="w-full bg-slate-800">Salvar Alterações</Button></DialogFooter>
          </DialogContent>
       </Dialog>
     </AppLayout>

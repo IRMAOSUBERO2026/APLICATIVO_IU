@@ -61,23 +61,13 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
 
   const { data: entregas } = await supabase
     .from("entregas_epi")
-    .select("id, data_entrega, quantidade, ca_numero, observacoes, produto_id, obra_id")
+    .select(`
+      id, data_entrega, quantidade, ca_numero, observacoes, produto_id, obra_id,
+      produtos (descricao, ca_numero),
+      obras (codigo, nome)
+    `)
     .eq("funcionario_id", funcionarioId)
     .order("data_entrega", { ascending: true });
-
-  const produtoIds = [...new Set((entregas || []).map(e => e.produto_id))];
-  const obraIds = [...new Set((entregas || []).map(e => e.obra_id).filter(Boolean) as string[])];
-
-  const [prodRes, obraRes] = await Promise.all([
-    produtoIds.length
-      ? supabase.from("produtos").select("id, descricao, ca_numero").in("id", produtoIds)
-      : Promise.resolve({ data: [] as any[] }),
-    obraIds.length
-      ? supabase.from("obras").select("id, codigo, nome").in("id", obraIds)
-      : Promise.resolve({ data: [] as any[] }),
-  ]);
-  const prodMap = new Map((prodRes.data || []).map((p: any) => [String(p.id), p]));
-  const obraMap = new Map((obraRes.data || []).map((o: any) => [String(o.id), o]));
 
   // 2. Montar PDF
   const doc = new jsPDF({ unit: "mm", format: "a4" });
@@ -154,17 +144,15 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
   y += 26;
 
   // Tabela de itens com coluna RUBRICA
-  const linhas = (entregas || []).map((e, i) => {
-    const prod = prodMap.get(String(e.produto_id));
-    const obra = e.obra_id ? obraMap.get(String(e.obra_id)) : null;
+  const linhas = (entregas || []).map((e: any, i) => {
     return [
       String(i + 1),
       safeDate(e.data_entrega),
-      prod?.descricao || "EPI / Equipamento",
-      e.ca_numero || prod?.ca_numero || "—",
+      e.produtos?.descricao || "EPI / Equipamento",
+      e.ca_numero || e.produtos?.ca_numero || "—",
       String(e.quantidade),
       e.observacoes || "—",
-      obra ? `${obra.codigo}` : "—",
+      e.obras ? `${e.obras.codigo}` : "—",
       "", // RUBRICA
     ];
   });
@@ -195,35 +183,12 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
     margin: { left: 14, right: 14 },
   });
 
-  y = (doc as any).lastAutoTable.finalY + 6;
-
-  // Termo de responsabilidade
-  if (y > pageH - 70) { doc.addPage(); y = 20; }
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
-  doc.setTextColor(primary[0], primary[1], primary[2]);
-  doc.text("VALORES PARA REPOSIÇÃO (TERMO DE CIÊNCIA)", 14, y);
-  y += 5;
-
-  autoTable(doc, {
-    startY: y,
-    head: [["Item de Uniforme / EPI", "Valor Unitário (Reposição)"]],
-    body: [
-      ["Camiseta / Camisa Uniforme", "R$ 25,00"],
-      ["Calça Profissional Brim", "R$ 60,00"],
-      ["Bota de Segurança (Ocupacional)", "R$ 50,00"],
-      ["Cinto de Segurança + Talabarte", "R$ 300,00"],
-      ["Capacete com Carneira", "R$ 30,00"],
-    ],
-    theme: "striped",
-    headStyles: { fillColor: [100, 100, 100], textColor: 255, fontSize: 8 },
-    bodyStyles: { fontSize: 8 },
-    margin: { left: 14, right: 14 },
-    tableWidth: 100,
-  });
-
-  y = (doc as any).lastAutoTable.finalY + 8;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  doc.setTextColor(140, 140, 140);
+  const textoCustos = "Valores de referência para reposição (em caso de extrativo, perda ou não devolução): Camiseta R$ 25,00 | Calça R$ 60,00 | Bota R$ 50,0,0 | Cinto+Talabarte R$ 300,00 | Capacete R$ 30,00.";
+  doc.text(textoCustos, 14, y);
+  y += 6;
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);

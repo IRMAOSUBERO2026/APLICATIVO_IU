@@ -25,41 +25,25 @@ export async function gerarFichaEPIEEnviarAssinatura(funcionarioId: string, empr
   // 3. Buscar histórico completo de entregas de EPI do funcionário
   const { data: entregas, error: entrErr } = await supabase
     .from("entregas_epi")
-    .select("id, data_entrega, quantidade, ca_numero, motivo, observacoes, produto_id, obra_id")
+    .select(`
+      id, data_entrega, quantidade, ca_numero, observacoes, produto_id, obra_id,
+      produtos (descricao, ca_numero),
+      obras (codigo, nome)
+    `)
     .eq("funcionario_id", funcionarioId)
     .order("data_entrega", { ascending: true });
   if (entrErr) throw entrErr;
 
-  // 4. Resolver nomes de produtos e obras
-  const produtoIds = [...new Set((entregas || []).map(e => e.produto_id))];
-  const obraIds = [...new Set((entregas || []).map(e => e.obra_id).filter(Boolean) as string[])];
-
-  const [prodRes, obraRes] = await Promise.all([
-    produtoIds.length
-      ? supabase.from("produtos").select("id, descricao, ca_numero").in("id", produtoIds)
-      : Promise.resolve({ data: [] as any[] }),
-    obraIds.length
-      ? supabase.from("obras").select("id, codigo, nome").in("id", obraIds)
-      : Promise.resolve({ data: [] as any[] }),
-  ]);
-  const prodMap = new Map((prodRes.data || []).map((p: any) => [String(p.id), p]));
-  const obraMap = new Map((obraRes.data || []).map((o: any) => [String(o.id), o]));
-
   // 5. Montar payload estruturado da ficha
-  const itens = (entregas || []).map(e => {
-    const prodIdStr = String(e.produto_id);
-    const obraIdStr = e.obra_id ? String(e.obra_id) : null;
-    const prod = prodMap.get(prodIdStr);
-    const obra = obraIdStr ? obraMap.get(obraIdStr) : null;
-
+  const itens = (entregas || []).map((e: any) => {
     return {
       entrega_id: e.id,
       data: e.data_entrega,
-      nome: prod?.descricao || "EPI / Equipamento",
+      nome: e.produtos?.descricao || "EPI / Equipamento",
       qtd: Number(e.quantidade),
-      ca_numero: e.ca_numero || prod?.ca_numero || "",
-      observacoes: e.observacoes || (e as any).motivo || "Primeira entrega",
-      obra: obra ? `${obra.codigo} - ${obra.nome}` : "",
+      ca_numero: e.ca_numero || e.produtos?.ca_numero || "",
+      observacoes: e.observacoes || "Primeira entrega",
+      obra: e.obras ? `${e.obras.codigo} - ${e.obras.nome}` : "",
     };
   });
 
