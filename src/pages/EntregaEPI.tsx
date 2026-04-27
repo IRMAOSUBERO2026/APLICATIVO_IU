@@ -30,7 +30,6 @@ export default function EntregaEPI() {
   const [tab, setTab] = useState("entregas");
   const [showNewDelivery, setShowNewDelivery] = useState(false);
 
-  // Multi-seleção
   const [selectedItems, setSelectedItems] = useState<any[]>([]);
   const [form, setForm] = useState({ funcionario_id: "", obra_id: "central" });
   
@@ -135,11 +134,7 @@ export default function EntregaEPI() {
 
     } catch (err: any) {
       console.error("Erro ao salvar entrega:", err);
-      toast({ 
-        title: "Erro ao salvar entrega", 
-        description: err.message || "Verifique os dados e tente novamente",
-        variant: "destructive" 
-      });
+      toast({ title: "Erro ao salvar entrega", description: err.message, variant: "destructive" });
     }
   };
 
@@ -167,7 +162,6 @@ export default function EntregaEPI() {
 
   const handleDeleteDelivery = async (delivery: any) => {
     if (!confirm(`Deseja excluir a entrega de ${delivery.produtos?.descricao} para ${delivery.funcionarios?.nome}? O estoque será estornado.`)) return;
-
     try {
       const { error: delErr } = await supabase.from("entregas_epi").delete().eq("id", delivery.id);
       if (delErr) throw delErr;
@@ -207,102 +201,88 @@ export default function EntregaEPI() {
               </div>
               <div>
                  <h1 className="text-2xl font-black text-slate-800 tracking-tight">Segurança (EPIs)</h1>
-                 <p className="text-sm text-muted-foreground font-medium">Gestão de entregas múltiplas e estoque NR-6.</p>
+                 <p className="text-sm text-muted-foreground font-medium uppercase tracking-widest text-[10px]">Gestão de fichas e estoque NR-6.</p>
               </div>
            </div>
            <div className="flex gap-2">
-              <Button onClick={() => { setSelectedItems([]); setShowNewDelivery(true); }} className="bg-amber-500 hover:bg-amber-600 text-white border-none gap-2 px-6 shadow-lg shadow-amber-500/20">
-                 <Plus size={18} /> Nova Entrega Múltipla
+              <Button onClick={() => { setSelectedItems([]); setShowNewDelivery(true); }} className="bg-amber-500 hover:bg-amber-600 text-white border-none h-12 gap-3 px-8 shadow-xl shadow-amber-500/20 rounded-xl font-bold">
+                 <Plus size={20} /> Nova Entrega
               </Button>
-              <Button variant="outline" asChild className="gap-2">
-                 <a href="/entrega-epi-mobile"><Smartphone size={18} /> Mobile</a>
+              <Button variant="outline" asChild className="h-12 rounded-xl border-slate-200">
+                 <a href="/entrega-epi-mobile" className="gap-2"><Smartphone size={18} /> Mobile</a>
               </Button>
            </div>
         </div>
 
         {/* KPIS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-           <Card className="bg-emerald-50/50 border-emerald-100 shadow-sm"><CardContent className="p-5 flex items-center gap-4 text-emerald-700">
-              <CheckCircle2 size={24} /><div className="flex-1">
-                 <p className="text-[10px] font-bold uppercase opacity-70">Entregues (30d)</p>
-                 <p className="text-2xl font-black">{entregas.length}</p>
+           <Card className="bg-white border-slate-100 shadow-sm rounded-2xl overflow-hidden hover:border-emerald-200 transition-colors"><CardContent className="p-6 flex items-center gap-5">
+              <div className="p-4 bg-emerald-50 text-emerald-600 rounded-2xl"><CheckCircle2 size={28} /></div>
+              <div>
+                 <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Entregas Recentes</p>
+                 <p className="text-3xl font-black text-slate-800">{entregas.length}</p>
               </div></CardContent></Card>
-           <Card className="bg-amber-50/50 border-amber-100 shadow-sm"><CardContent className="p-5 flex items-center gap-4 text-amber-700">
-              <Package size={24} /><div className="flex-1">
-                 <p className="text-[10px] font-bold uppercase opacity-70">Abaixo do Mínimo</p>
-                 <p className="text-2xl font-black">{produtos.filter(p => p.saldo < p.estoque_minimo).length}</p>
+           <Card className="bg-white border-slate-100 shadow-sm rounded-2xl overflow-hidden hover:border-amber-200 transition-colors"><CardContent className="p-6 flex items-center gap-5">
+              <div className="p-4 bg-amber-50 text-amber-600 rounded-2xl"><Package size={28} /></div>
+              <div>
+                 <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Abaixo do Mínimo</p>
+                 <p className="text-3xl font-black text-slate-800">{produtos.filter(p => p.saldo < p.estoque_minimo).length}</p>
               </div></CardContent></Card>
-           <Card className="bg-blue-50/50 border-blue-100 shadow-sm"><CardContent className="p-5 flex items-center gap-4 text-blue-700">
-              <User size={24} /><div className="flex-1">
-                 <p className="text-[10px] font-bold uppercase opacity-70">Colaboradores</p>
-                 <p className="text-2xl font-black">{funcionarios.length}</p>
+           <Card className="bg-white border-slate-100 shadow-sm rounded-2xl overflow-hidden hover:border-blue-200 transition-colors"><CardContent className="p-6 flex items-center gap-5">
+              <div className="p-4 bg-blue-50 text-blue-600 rounded-2xl"><User size={28} /></div>
+              <div>
+                 <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Colaboradores</p>
+                 <p className="text-3xl font-black text-slate-800">{funcionarios.length}</p>
               </div></CardContent></Card>
         </div>
 
         <Tabs value={tab} onValueChange={setTab} className="w-full">
-          <TabsList className="bg-slate-100 p-1 mb-4 h-11 w-full max-w-sm rounded-xl border">
-            <TabsTrigger value="entregas" className="flex-1 gap-2 rounded-lg data-[state=active]:bg-white font-bold text-xs"><History size={16} /> Histórico</TabsTrigger>
-            <TabsTrigger value="fichas" className="flex-1 gap-2 rounded-lg data-[state=active]:bg-white font-bold text-xs"><FileSignature size={16} /> Fichas NR-6</TabsTrigger>
+          <TabsList className="bg-slate-100/50 p-1 mb-6 h-12 w-full max-w-md rounded-2xl border border-slate-200/50">
+            <TabsTrigger value="entregas" className="flex-1 gap-2 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm font-bold text-xs uppercase tracking-wider"><History size={16} /> Histórico</TabsTrigger>
+            <TabsTrigger value="fichas" className="flex-1 gap-2 rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm font-bold text-xs uppercase tracking-wider"><FileSignature size={16} /> Fichas Digitais</TabsTrigger>
           </TabsList>
 
           <TabsContent value="entregas" className="space-y-4">
-             <div className="flex gap-3 bg-white p-4 rounded-2xl border shadow-sm">
+             <div className="bg-white p-2 rounded-2xl border shadow-sm flex items-center gap-2">
                 <div className="relative flex-1">
-                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                   <Input placeholder="Localizar funcionário, material ou obra..." value={search} onChange={e => setSearch(e.target.value)} className="pl-10 border-none bg-slate-50 h-10" />
+                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                   <Input placeholder="Localizar por nome, material ou obra..." value={search} onChange={e => setSearch(e.target.value)} className="pl-12 border-none bg-transparent h-12 font-medium" />
                 </div>
              </div>
 
              <ScrollableTable>
-               <div className="rounded-2xl border bg-white overflow-hidden shadow-sm">
+               <div className="rounded-3xl border border-slate-100 bg-white overflow-hidden shadow-sm">
                  <table className="w-full text-sm">
-                    <thead className="bg-slate-50 border-b">
+                    <thead className="bg-slate-50 border-b border-slate-100">
                        <tr>
-                          <th className="px-5 py-4 text-left text-[10px] uppercase font-bold text-slate-400">Data</th>
-                          <th className="px-5 py-4 text-left text-[10px] uppercase font-bold text-slate-400">Funcionário</th>
-                          <th className="px-5 py-4 text-left text-[10px] uppercase font-bold text-slate-400">EPI</th>
-                          <th className="px-5 py-4 text-center text-[10px] uppercase font-bold text-slate-400">Qtd</th>
-                          <th className="px-5 py-4 text-left text-[10px] uppercase font-bold text-slate-400">Obra / Alocação</th>
-                          <th className="px-5 py-4 text-left text-[10px] uppercase font-bold text-slate-400">Motivo</th>
-                          <th className="px-5 py-4 text-center text-[10px] uppercase font-bold text-slate-400">CA</th>
-                          <th className="px-5 py-4 text-right text-[10px] uppercase font-bold text-slate-400"></th>
+                          <th className="px-6 py-5 text-left text-[10px] uppercase font-black text-slate-400 tracking-widest">📅 Data / Hora</th>
+                          <th className="px-6 py-5 text-left text-[10px] uppercase font-black text-slate-400 tracking-widest">👤 Funcionário</th>
+                          <th className="px-6 py-5 text-left text-[10px] uppercase font-black text-slate-400 tracking-widest">🛡️ Equipamento (EPI)</th>
+                          <th className="px-6 py-5 text-center text-[10px] uppercase font-black text-slate-400 tracking-widest">Qtd</th>
+                          <th className="px-6 py-5 text-left text-[10px] uppercase font-black text-slate-400 tracking-widest">📍 Obra</th>
+                          <th className="px-6 py-5 text-right text-[10px] uppercase font-black text-slate-400 tracking-widest">Ações</th>
                        </tr>
                     </thead>
                     <tbody>
                        {filteredEntregas.map(e => (
-                         <tr key={e.id} className="border-b last:border-0 hover:bg-slate-50 transition-colors group">
-                            <td className="px-5 py-4 text-xs font-medium text-slate-500">{format(new Date(e.data_entrega), "dd/MM/yyyy HH:mm")}</td>
-                            <td className="px-5 py-4 font-bold text-slate-700">{e.funcionarios?.nome || "Excluído"}</td>
-                            <td className="px-5 py-4 text-slate-600 font-medium">{e.produtos?.descricao || "—"}</td>
-                            <td className="px-5 py-4 text-center">
-                               <span className="px-2 py-1 rounded-lg font-black text-amber-600 bg-amber-50 border border-amber-100">{e.quantidade}x</span>
+                         <tr key={e.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors group">
+                            <td className="px-6 py-5 text-xs font-semibold text-slate-400">{format(new Date(e.data_entrega), "dd/MM/yyyy HH:mm")}</td>
+                            <td className="px-6 py-5 font-bold text-slate-800">{e.funcionarios?.nome || "Excluído"}</td>
+                            <td className="px-6 py-5 text-slate-600">
+                               <div className="flex flex-col">
+                                  <span className="font-semibold">{e.produtos?.descricao}</span>
+                                  <span className="text-[10px] text-slate-400 uppercase font-bold tracking-tighter">CA: {e.ca_numero || "—"} • {e.observacoes}</span>
+                               </div>
                             </td>
-                            <td className="px-5 py-4 text-xs text-slate-400">
-                               {e.obras?.nome ? `${e.obras.codigo} - ${e.obras.nome}` : "Depósito Central"}
+                            <td className="px-6 py-5 text-center">
+                               <span className="px-3 py-1.5 rounded-xl font-black text-amber-600 bg-amber-50 border border-amber-100 text-xs">{e.quantidade}x</span>
                             </td>
-                            <td className="px-5 py-4 text-left text-[11px] text-slate-400 italic">
-                               {e.observacoes || "—"}
+                            <td className="px-6 py-5">
+                               <Badge variant="outline" className="bg-slate-50 text-slate-500 border-slate-200 text-[10px] uppercase px-2 font-bold">{e.obras?.codigo || "CENTRAL"}</Badge>
                             </td>
-                            <td className="px-5 py-4 text-center">
-                               <Badge variant="outline" className="font-mono text-[9px] border-slate-200">{e.ca_numero || "N/A"}</Badge>
-                            </td>
-                            <td className="px-5 py-4 text-right flex items-center justify-end gap-1">
-                               <Button 
-                                 variant="ghost" 
-                                 size="icon" 
-                                 onClick={() => { setEditingDelivery({...e}); setShowEditDialog(true); }}
-                                 className="h-8 w-8 text-slate-300 hover:text-amber-500 hover:bg-amber-50 opacity-0 group-hover:opacity-100 transition-all"
-                               >
-                                  <Edit size={14} />
-                               </Button>
-                               <Button 
-                                 variant="ghost" 
-                                 size="icon" 
-                                 onClick={() => handleDeleteDelivery(e)}
-                                 className="h-8 w-8 text-slate-300 hover:text-rose-500 hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-all"
-                               >
-                                  <Trash2 size={14} />
-                               </Button>
+                            <td className="px-6 py-5 text-right flex items-center justify-end gap-1">
+                               <Button variant="ghost" size="icon" onClick={() => { setEditingDelivery({...e}); setShowEditDialog(true); }} className="h-9 w-9 text-slate-300 hover:text-amber-500 hover:bg-amber-50 opacity-0 group-hover:opacity-100 transition-all rounded-xl"><Edit size={16} /></Button>
+                               <Button variant="ghost" size="icon" onClick={() => handleDeleteDelivery(e)} className="h-9 w-9 text-slate-300 hover:text-rose-500 hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-all rounded-xl"><Trash2 size={16} /></Button>
                             </td>
                          </tr>
                        ))}
@@ -319,113 +299,95 @@ export default function EntregaEPI() {
       </div>
 
       <Dialog open={showNewDelivery} onOpenChange={setShowNewDelivery}>
-         <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0 overflow-hidden rounded-3xl">
-            <DialogHeader className="p-6 border-b bg-slate-50/50 flex flex-row items-center justify-between">
+         <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0 overflow-hidden rounded-[2.5rem] border-none shadow-2xl">
+            <DialogHeader className="p-8 border-b bg-white flex flex-row items-center justify-between">
                <div className="space-y-1">
-                  <DialogTitle className="text-2xl font-black flex items-center gap-2 italic text-slate-800 uppercase">
-                     <HardHat className="text-amber-500 h-8 w-8" /> 
-                     Checkout de Segurança (Multi-EPI)
+                  <DialogTitle className="text-2xl font-black flex items-center gap-3 text-slate-800 uppercase tracking-tight italic">
+                     <div className="p-2 bg-amber-500 text-white rounded-xl shadow-lg shadow-amber-500/30"><HardHat size={24} /></div>
+                     Checkout de Segurança
                   </DialogTitle>
-                  <DialogDescription>Selecione os dados do colaborador e clique nos EPIs para entregar.</DialogDescription>
+                  <p className="text-slate-400 font-medium text-sm">Selecione os itens e confirme o recebimento do colaborador.</p>
                </div>
             </DialogHeader>
             
             <div className="flex-1 flex overflow-hidden">
-               <div className="w-7/12 border-r bg-slate-50/30 p-6 overflow-y-auto space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
-                     <div className="space-y-1.5"><Label className="text-slate-500 font-bold uppercase text-[10px] ml-1">1. Localizar Obra</Label>
+               <div className="w-7/12 border-r bg-slate-50/50 p-8 overflow-y-auto space-y-8">
+                  <div className="grid grid-cols-2 gap-6">
+                     <div className="space-y-2"><Label className="text-slate-400 font-black uppercase text-[9px] tracking-widest ml-1">📍 Destino / Obra</Label>
                         <Select value={form.obra_id} onValueChange={v => setForm({...form, obra_id: v, funcionario_id: ""})}>
-                           <SelectTrigger className="bg-white rounded-2xl h-12 shadow-sm border-slate-200"><SelectValue placeholder="Selecione a obra..." /></SelectTrigger>
-                           <SelectContent className="rounded-xl"><SelectItem value="central">📦 Depósito Central</SelectItem>{obras.map(o => <SelectItem key={o.id} value={o.id}>{o.codigo} - {o.nome}</SelectItem>)}</SelectContent>
+                           <SelectTrigger className="bg-white rounded-2xl h-14 shadow-sm border-slate-100 focus:ring-amber-500"><SelectValue placeholder="Selecione a obra..." /></SelectTrigger>
+                           <SelectContent className="rounded-2xl"><SelectItem value="central">📦 Depósito Central (Sede)</SelectItem>{obras.map(o => <SelectItem key={o.id} value={o.id}>{o.codigo} - {o.nome}</SelectItem>)}</SelectContent>
                         </Select>
                      </div>
-                     <div className="space-y-1.5"><Label className="text-slate-500 font-bold uppercase text-[10px] ml-1">2. Quem está recebendo?</Label>
+                     <div className="space-y-2"><Label className="text-slate-400 font-black uppercase text-[9px] tracking-widest ml-1">👤 Colaborador Beneficiado</Label>
                         <Select value={form.funcionario_id} onValueChange={v => setForm({...form, funcionario_id: v})}>
-                           <SelectTrigger className="bg-white rounded-2xl h-12 shadow-sm border-slate-200"><SelectValue placeholder="Buscar funcionário..." /></SelectTrigger>
-                           <SelectContent className="rounded-xl">
+                           <SelectTrigger className="bg-white rounded-2xl h-14 shadow-sm border-slate-100 focus:ring-amber-500"><SelectValue placeholder="Buscar funcionário..." /></SelectTrigger>
+                           <SelectContent className="rounded-2xl">
                               {funcionarios.filter(f => form.obra_id === "central" || f.obra_id === form.obra_id).map(f => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
                            </SelectContent>
                         </Select>
                      </div>
                   </div>
 
-                  <div className="space-y-4 pt-6 border-t border-slate-100">
-                     <Label className="text-amber-600 font-black uppercase text-[10px] tracking-widest ml-1">3. Itens disponíveis no Almoxarifado</Label>
-                     <div className="grid grid-cols-3 gap-3">
-                        {produtos.map(p => {
-                           const isSelected = selectedItems.find(i => i.produto_id === p.id);
-                           return (
-                              <button 
-                                key={p.id}
-                                onClick={() => handleToggleItem(p)}
-                                className={`group p-4 rounded-2xl border-2 text-left transition-all relative overflow-hidden flex flex-col items-center text-center ${
-                                  isSelected 
-                                  ? "border-amber-500 bg-amber-50 shadow-md scale-95" 
-                                  : "border-white bg-white hover:border-slate-200 shadow-sm"
-                                }`}
-                              >
-                                 <div className={`p-3 rounded-full mb-2 ${isSelected ? "bg-amber-500 text-white shadow-lg shadow-amber-500/30" : "bg-slate-100 text-slate-400 group-hover:bg-amber-100"}`}>
-                                    <Package size={20} />
-                                 </div>
-                                 <p className="text-[11px] font-bold text-slate-700 leading-tight block mb-1 uppercase h-9 overflow-hidden">{p.descricao}</p>
-                                 <p className="text-[10px] font-bold opacity-60">Saldo: <span className={p.saldo < 1 ? "text-rose-500" : "text-emerald-600"}>{p.saldo}</span></p>
-                                 {isSelected && (
-                                    <div className="absolute top-2 right-2 bg-amber-500 text-white rounded-full p-0.5 shadow-sm animate-in zoom-in"><CheckCircle2 size={14} /></div>
-                                 )}
-                              </button>
-                           );
-                        })}
-                     </div>
+                  <div className="grid grid-cols-3 gap-4">
+                     {produtos.map(p => {
+                        const isSelected = selectedItems.find(i => i.produto_id === p.id);
+                        return (
+                           <button key={p.id} onClick={() => handleToggleItem(p)} className={`group p-6 rounded-3xl border-2 transition-all relative overflow-hidden flex flex-col items-center text-center gap-3 ${
+                             isSelected ? "border-amber-500 bg-amber-50 shadow-lg scale-95" : "border-white bg-white hover:border-slate-200 shadow-sm hover:shadow-md"
+                           }`}>
+                              <div className={`p-4 rounded-2xl transition-all ${isSelected ? "bg-amber-500 text-white" : "bg-slate-50 text-slate-300 group-hover:text-amber-500"}`}>
+                                 <Package size={24} />
+                              </div>
+                              <div className="space-y-1">
+                                 <p className="text-[11px] font-black text-slate-700 uppercase leading-tight h-8 overflow-hidden">{p.descricao}</p>
+                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Estoque: <span className={p.saldo < 1 ? "text-rose-500" : "text-emerald-600"}>{p.saldo} un</span></p>
+                              </div>
+                              {isSelected && <div className="absolute top-3 right-3 bg-amber-500 text-white rounded-full p-1"><CheckCircle2 size={12} /></div>}
+                           </button>
+                        );
+                     })}
                   </div>
                </div>
 
-               <div className="w-5/12 p-6 overflow-y-auto bg-white flex flex-col justify-between border-l border-slate-100">
+               <div className="w-5/12 p-8 overflow-y-auto bg-white flex flex-col justify-between">
                   <div className="space-y-6">
-                     <div className="flex items-center justify-between pb-4 border-b">
-                        <div className="flex items-center gap-2"><ShoppingCart className="text-slate-400" size={20} /><p className="text-sm font-bold text-slate-500 uppercase tracking-widest">Resumo do Kit</p></div>
-                        <Badge className="bg-slate-800 text-white rounded-full px-4 h-6">{selectedItems.length} itens</Badge>
+                     <div className="flex items-center justify-between pb-6 border-b border-slate-100">
+                        <div className="flex items-center gap-3"><ShoppingCart className="text-slate-300" size={24} /><p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Itens para Entrega</p></div>
+                        <Badge className="bg-slate-900 px-4 h-7 rounded-full text-[10px] font-black uppercase text-white tracking-widest leading-none">{selectedItems.length} un</Badge>
                      </div>
 
                      <div className="space-y-3">
                         {selectedItems.map(item => (
-                           <Card key={item.produto_id} className="border-slate-100 shadow-none bg-slate-50/50 rounded-2xl">
-                              <CardContent className="p-4 space-y-3">
-                                 <div className="flex justify-between items-start gap-2">
-                                    <p className="text-xs font-black text-slate-700 uppercase leading-snug">{item.descricao}</p>
-                                    <button onClick={() => setSelectedItems(selectedItems.filter(i => i.produto_id !== item.produto_id))} className="text-rose-300 hover:text-rose-600 transition-colors"><Trash2 size={18} /></button>
+                           <Card key={item.produto_id} className="border-slate-100 shadow-none bg-slate-50/50 rounded-3xl overflow-hidden">
+                              <CardContent className="p-5 space-y-4">
+                                 <div className="flex justify-between items-start gap-4">
+                                    <p className="text-[11px] font-black text-slate-800 uppercase leading-snug">{item.descricao}</p>
+                                    <button onClick={() => setSelectedItems(selectedItems.filter(i => i.produto_id !== item.produto_id))} className="text-slate-300 hover:text-rose-500 transition-colors"><Trash2 size={20} /></button>
                                  </div>
-                                 <div className="grid grid-cols-2 gap-3">
-                                    <div className="space-y-1"><Label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Quantidade</Label><Input type="number" value={item.quantidade} onChange={e => updateSelectedItem(item.produto_id, "quantidade", e.target.value)} className="h-10 bg-white font-bold rounded-xl" /></div>
-                                    <div className="space-y-1"><Label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Nº CA Vigente</Label><Input value={item.ca_numero} onChange={e => updateSelectedItem(item.produto_id, "ca_numero", e.target.value)} className="h-10 bg-white font-bold rounded-xl" /></div>
+                                 <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2"><Label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Quantidade</Label><Input type="number" value={item.quantidade} onChange={e => updateSelectedItem(item.produto_id, "quantidade", e.target.value)} className="h-12 bg-white font-bold rounded-2xl border-transparent shadow-sm" /></div>
+                                    <div className="space-y-2"><Label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Número do CA</Label><Input value={item.ca_numero} onChange={e => updateSelectedItem(item.produto_id, "ca_numero", e.target.value)} className="h-12 bg-white font-bold rounded-2xl border-transparent shadow-sm" /></div>
                                  </div>
-                                 <div className="space-y-1">
-                                    <Label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Motivo / Justificativa</Label>
+                                 <div className="space-y-2">
+                                    <Label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Motivo / Tipo</Label>
                                     <Select value={item.observacoes} onValueChange={v => updateSelectedItem(item.produto_id, "observacoes", v)}>
-                                       <SelectTrigger className="h-9 bg-white text-xs rounded-xl shadow-sm">
-                                          <SelectValue />
-                                       </SelectTrigger>
-                                       <SelectContent className="rounded-xl font-medium">
-                                          <SelectItem value="Primeira Entrega">Primeira Entrega</SelectItem>
-                                          <SelectItem value="Reposição (Uso)">Reposição (Uso)</SelectItem>
-                                          <SelectItem value="Danificado">Danificado</SelectItem>
-                                          <SelectItem value="Perda/Extravio">Perda/Extravio</SelectItem>
-                                          <SelectItem value="Troca de Tamanho">Troca de Tamanho</SelectItem>
+                                       <SelectTrigger className="h-12 bg-white font-bold rounded-2xl border-transparent shadow-sm"><SelectValue /></SelectTrigger>
+                                       <SelectContent className="rounded-2xl">
+                                          {["Primeira Entrega", "Reposição (Uso)", "Danificado", "Perda/Extravio", "Troca de Tamanho"].map(m => <SelectItem key={m} value={m} className="font-semibold">{m}</SelectItem>)}
                                        </SelectContent>
                                     </Select>
                                  </div>
                               </CardContent>
                            </Card>
                         ))}
+                        {selectedItems.length === 0 && <div className="py-24 text-center opacity-30 grayscale"><ShoppingCart size={48} className="mx-auto mb-4" /><p className="text-xs font-black uppercase tracking-widest">Nenhum item selecionado</p></div>}
                      </div>
                   </div>
 
-                  <div className="pt-6 mt-6 border-t border-slate-100">
-                     <Button 
-                       onClick={handleSaveMultiDelivery}
-                       disabled={selectedItems.length === 0 || !form.funcionario_id}
-                       className="w-full h-16 bg-emerald-500 hover:bg-emerald-600 text-white font-black uppercase text-lg shadow-xl shadow-emerald-500/30 gap-3 transition-all active:scale-95 rounded-2xl"
-                     >
-                        Confirmar e Entregar <CheckCircle2 size={24} />
+                  <div className="pt-8 border-t border-slate-50">
+                     <Button onClick={handleSaveMultiDelivery} disabled={selectedItems.length === 0 || !form.funcionario_id} className="w-full h-20 bg-emerald-500 hover:bg-emerald-600 text-white font-black uppercase text-xl shadow-2xl shadow-emerald-500/30 gap-4 transition-all active:scale-[0.98] rounded-[2rem]">
+                        Confirmar Recebimento <CheckCircle2 size={32} />
                      </Button>
                   </div>
                </div>
@@ -434,27 +396,23 @@ export default function EntregaEPI() {
       </Dialog>
 
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-         <DialogContent className="max-w-md rounded-2xl">
-            <DialogHeader><DialogTitle>Editar Lançamento de EPI</DialogTitle></DialogHeader>
+         <DialogContent className="max-w-md rounded-3xl border-none shadow-2xl">
+            <DialogHeader><DialogTitle className="text-xl font-black uppercase tracking-tight italic flex items-center gap-2"><Edit className="text-amber-500" /> Editar Registro</DialogTitle></DialogHeader>
             {editingDelivery && (
-               <div className="space-y-4 py-4">
-                  <div className="p-3 bg-slate-50 rounded-xl border border-dashed text-xs space-y-1">
-                     <p className="font-bold text-slate-600 uppercase">{editingDelivery.produtos?.descricao}</p>
-                     <p className="text-slate-400">Funcionário: {editingDelivery.funcionarios?.nome}</p>
+               <div className="space-y-5 py-6">
+                  <div className="p-5 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                     <p className="text-xs font-black text-slate-800 uppercase mb-1">{editingDelivery.produtos?.descricao}</p>
+                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1"><User size={12} /> {editingDelivery.funcionarios?.nome}</p>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                     <div className="space-y-1.5"><Label className="text-[10px] font-bold uppercase">Quantidade</Label><Input type="number" value={editingDelivery.quantidade} onChange={e => setEditingDelivery({...editingDelivery, quantidade: e.target.value})} /></div>
-                     <div className="space-y-1.5"><Label className="text-[10px] font-bold uppercase">CA Vigente</Label><Input value={editingDelivery.ca_numero || ""} onChange={e => setEditingDelivery({...editingDelivery, ca_numero: e.target.value})} /></div>
+                     <div className="space-y-2"><Label className="text-[9px] font-black uppercase tracking-widest ml-1 text-slate-400">Quantidade</Label><Input type="number" value={editingDelivery.quantidade} onChange={e => setEditingDelivery({...editingDelivery, quantidade: e.target.value})} className="h-12 rounded-2xl" /></div>
+                     <div className="space-y-2"><Label className="text-[9px] font-black uppercase tracking-widest ml-1 text-slate-400">CA Vigente</Label><Input value={editingDelivery.ca_numero || ""} onChange={e => setEditingDelivery({...editingDelivery, ca_numero: e.target.value})} className="h-12 rounded-2xl" /></div>
                   </div>
-                  <div className="space-y-1.5"><Label className="text-[10px] font-bold uppercase">Motivo / Observação</Label>
-                     <Input value={editingDelivery.observacoes || ""} onChange={e => setEditingDelivery({...editingDelivery, observacoes: e.target.value})} />
-                  </div>
-                  <div className="space-y-1.5"><Label className="text-[10px] font-bold uppercase">Data da Entrega</Label>
-                     <Input type="datetime-local" value={editingDelivery.data_entrega ? new Date(new Date(editingDelivery.data_entrega).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16) : ""} onChange={e => setEditingDelivery({...editingDelivery, data_entrega: new Date(e.target.value).toISOString()})} />
-                  </div>
+                  <div className="space-y-2"><Label className="text-[9px] font-black uppercase tracking-widest ml-1 text-slate-400">Justificativa</Label><Input value={editingDelivery.observacoes || ""} onChange={e => setEditingDelivery({...editingDelivery, observacoes: e.target.value})} className="h-12 rounded-2xl" /></div>
+                  <div className="space-y-2"><Label className="text-[9px] font-black uppercase tracking-widest ml-1 text-slate-400">Data e Hora</Label><Input type="datetime-local" value={editingDelivery.data_entrega ? new Date(new Date(editingDelivery.data_entrega).getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16) : ""} onChange={e => setEditingDelivery({...editingDelivery, data_entrega: new Date(e.target.value).toISOString()})} className="h-12 rounded-2xl" /></div>
                </div>
             )}
-            <DialogFooter><Button onClick={handleUpdateDelivery} className="w-full bg-slate-800">Salvar Alterações</Button></DialogFooter>
+            <DialogFooter><Button onClick={handleUpdateDelivery} className="w-full h-14 bg-slate-900 text-white font-black uppercase tracking-widest rounded-2xl active:scale-95 transition-all shadow-xl shadow-slate-900/20">Atualizar Agora</Button></DialogFooter>
          </DialogContent>
       </Dialog>
     </AppLayout>
