@@ -40,23 +40,36 @@ function safeDate(d: any): string {
 }
 
 export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string): Promise<Blob> {
-  // 1. Dados básicos
+  console.log("PDF: Iniciando geração para", funcionarioId);
+
+  // 1. Buscar Dados Mestre
   const { data: func } = await supabase.from("funcionarios").select("*").eq("id", funcionarioId).single();
   const { data: empresa } = await supabase.from("empresas").select("*").eq("id", empresaId).single();
   
-  if (!func || !empresa) throw new Error("Dados do funcionário/empresa não encontrados.");
+  if (!func || !empresa) throw new Error("Dados base não localizados no sistema.");
 
-  // 2. BUSCA ROBUSTA: Primeiro buscamos todas as entregas e filtramos no JS se necessário, 
-  // para garantir que não haja erro de conversão de UUID/String no Postgres.
-  const { data: allEntregas, error: entErr } = await supabase
+  // 2. BUSCA ULTRA RESILIENTE (Explicit Left Joins)
+  // Usamos a sintaxe !left para garantir que a entrega apareça mesmo que o produto falhe no join
+  const { data: entregas, error: entErr } = await supabase
     .from("entregas_epi")
-    .select("*, produtos(descricao, ca_numero), obras(codigo, nome)")
+    .select(`
+      id,
+      data_entrega,
+      quantidade,
+      ca_numero,
+      motivo,
+      observacoes,
+      produto:produtos!left (descricao, ca_numero),
+      obra:obras!left (codigo, nome)
+    `)
     .eq("funcionario_id", funcionarioId)
     .order("data_entrega", { ascending: true });
 
   if (entErr) {
-    console.error("Erro Crítico PDF:", entErr);
+    console.error("Erro Crítico Supabase PDF:", entErr);
   }
+
+  console.log(`PDF: ${entregas?.length || 0} entregas localizadas.`);
 
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
@@ -104,22 +117,27 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
   y += 28;
 
   // Montagem das Linhas
-  const entregasFinal = allEntregas || [];
-  const linhas = entregasFinal.map((e: any, i: number) => [
-    String(i + 1),
-    safeDate(e.data_entrega),
-    e.produtos?.descricao || "Equipamento não identificado",
-    e.ca_numero || e.produtos?.ca_numero || "—",
-    String(e.quantidade),
-    e.motivo || e.observacoes || "—",
-    e.obras?.codigo || "—",
-    "", 
-  ]);
+  const linhas = (entregas || []).map((e: any, i: number) => {
+    // Resolvemos os dados com fallbacks seguros
+    const desc = e.produto?.descricao || "Equipamento / EPI";
+    const ca = e.ca_numero || e.produto?.ca_numero || "—";
+    const motivoStr = e.motivo || e.observacoes || "—";
+    return [
+      String(i + 1),
+      safeDate(e.data_entrega),
+      desc,
+      ca,
+      String(e.quantidade),
+      motivoStr,
+      e.obra?.codigo || "—",
+      "", 
+    ];
+  });
 
   autoTable(doc, {
     startY: y,
     head: [["#", "Data", "EPI / Equipamento", "Nº CA", "Qtd", "Motivo", "Obra", "Rubrica"]],
-    body: linhas.length ? linhas : [["—", "—", "Nenhum histórico encontrado para este CPF", "—", "—", "—", "—", ""]],
+    body: linhas.length ? linhas : [["—", "—", "Nenhuma entrega registrada para este colaborador", "—", "—", "—", "—", ""]],
     theme: "grid",
     headStyles: { fillColor: primary, textColor: 255, fontSize: 8, halign: "center" },
     bodyStyles: { fontSize: 8 },
