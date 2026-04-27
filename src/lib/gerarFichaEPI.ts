@@ -2,50 +2,33 @@ import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Gera/atualiza uma Ficha de EPI (NR-6) e cria solicitação de assinatura digital.
- * A ficha consolida TODO o histórico de entregas do funcionário + dados da empresa
- * + termo de responsabilidade NR-6.
  */
 export async function gerarFichaEPIEEnviarAssinatura(funcionarioId: string, empresaId: string) {
-  // 1. Buscar dados completos do funcionário
-  const { data: func, error: funcErr } = await supabase
-    .from("funcionarios")
-    .select("id, nome, cpf, rg, cargo, data_admissao, foto_url")
-    .eq("id", funcionarioId)
-    .single();
-  if (funcErr || !func) throw new Error("Funcionário não encontrado");
+  // 1. Buscar dados fundamentais
+  const { data: func } = await supabase.from("funcionarios").select("*").eq("id", funcionarioId).single();
+  const { data: empresa } = await supabase.from("empresas").select("*").eq("id", empresaId).single();
+  
+  if (!func || !empresa) throw new Error("Dados não encontrados");
 
-  // 2. Buscar dados completos da empresa
-  const { data: empresa, error: empErr } = await supabase
-    .from("empresas")
-    .select("id, razao_social, nome_fantasia, cnpj, endereco, cidade, uf, cep, telefone, email, logo_url")
-    .eq("id", empresaId)
-    .single();
-  if (empErr || !empresa) throw new Error("Empresa não encontrada");
-
-  // 3. Buscar histórico completo de entregas de EPI do funcionário
+  // 2. Buscar Entregas usando a consulta PADRÃO consistente
   const { data: entregas, error: entrErr } = await supabase
     .from("entregas_epi")
-    .select(`
-      id, data_entrega, quantidade, ca_numero, observacoes, produto_id, obra_id,
-      produtos (descricao, ca_numero),
-      obras (codigo, nome)
-    `)
+    .select("*, produtos(descricao, ca_numero), obras(codigo, nome)")
     .eq("funcionario_id", funcionarioId)
     .order("data_entrega", { ascending: true });
+
   if (entrErr) throw entrErr;
 
-  // 5. Montar payload estruturado da ficha
-  const itens = (entregas || []).map((e: any) => {
-    return {
-      entrega_id: e.id,
-      data: e.data_entrega,
-      nome: e.produtos?.descricao || "EPI / Equipamento",
-      qtd: Number(e.quantidade),
-      ca_numero: e.ca_numero || e.produtos?.ca_numero || "",
-      observacoes: e.observacoes || "Primeira entrega",
-      obra: e.obras ? `${e.obras.codigo} - ${e.obras.nome}` : "",
-    };
-  });
+  // 3. Montar payload estruturado da ficha
+  const itens = (entregas || []).map((e: any) => ({
+    entrega_id: e.id,
+    data: e.data_entrega,
+    nome: e.produtos?.descricao || "Equipamento não identificado",
+    qtd: Number(e.quantidade),
+    ca_numero: e.ca_numero || e.produtos?.ca_numero || "",
+    observacoes: e.observacoes || "Entrega registrada",
+    obra: e.obras ? `${e.obras.codigo} - ${e.obras.nome}` : "",
+  }));
 
   const payload = {
     versao: "NR-6/2024",
@@ -82,7 +65,7 @@ export async function gerarFichaEPIEEnviarAssinatura(funcionarioId: string, empr
     geradaEm: new Date().toISOString(),
   };
 
-  // 6. Gerar token único de acesso (7 dias de validade)
+  // 4. Gerar token único de acesso
   const generateToken = () => {
     const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
     let t = '';

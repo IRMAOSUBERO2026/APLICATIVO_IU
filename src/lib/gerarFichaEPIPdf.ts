@@ -40,28 +40,20 @@ function safeDate(d: any): string {
 }
 
 export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string): Promise<Blob> {
-  // 1. Buscar dados fundamentais
+  // 1. Buscar dados do funcionário e empresa
   const { data: func } = await supabase.from("funcionarios").select("*").eq("id", funcionarioId).single();
   const { data: empresa } = await supabase.from("empresas").select("*").eq("id", empresaId).single();
   
   if (!func || !empresa) throw new Error("Dados não encontrados");
 
-  // 2. Buscar Entregas com JOIN Explícito para evitar erros de resolução
+  // 2. Buscar Entregas usando a consulta PADRÃO que funciona no Histórico
   const { data: entregas, error: entErr } = await supabase
     .from("entregas_epi")
-    .select(`
-      id, 
-      data_entrega, 
-      quantidade, 
-      ca_numero, 
-      observacoes,
-      produtos:produto_id (descricao, ca_numero),
-      obras:obra_id (codigo, nome)
-    `)
+    .select("*, produtos(descricao, ca_numero), obras(codigo, nome)")
     .eq("funcionario_id", funcionarioId)
     .order("data_entrega", { ascending: true });
 
-  if (entErr) console.error("Erro ao buscar entregas para PDF:", entErr);
+  if (entErr) console.error("Erro PDF Entregas:", entErr);
 
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
@@ -78,7 +70,7 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
     try {
       const logo = await loadImageAsBase64(empresa.logo_url);
       if (logo) { doc.addImage(logo, "PNG", 14, 8, 28, 18); textX = 46; }
-    } catch (err) { console.warn("Logo failed to load", err); }
+    } catch { /* ignore logo errors */ }
   }
 
   doc.setTextColor(secondary[0], secondary[1], secondary[2]);
@@ -109,21 +101,23 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
   y += 28;
 
   // Tabela
-  const linhas = (entregas || []).map((e: any, i) => [
-    String(i + 1),
-    safeDate(e.data_entrega),
-    e.produtos?.descricao || "EPI / Equipamento",
-    e.ca_numero || e.produtos?.ca_numero || "—",
-    String(e.quantidade),
-    e.observacoes || "—",
-    e.obras?.codigo || "—",
-    "", 
-  ]);
+  const linhas = (entregas || []).map((e: any, i: number) => {
+    return [
+      String(i + 1),
+      safeDate(e.data_entrega),
+      e.produtos?.descricao || "Equipamento não identificado",
+      e.ca_numero || e.produtos?.ca_numero || "—",
+      String(e.quantidade),
+      e.observacoes || "—",
+      e.obras?.codigo || "—",
+      "", 
+    ];
+  });
 
   autoTable(doc, {
     startY: y,
     head: [["#", "Data", "EPI / Equipamento", "Nº CA", "Qtd", "Motivo", "Obra", "Rubrica"]],
-    body: linhas.length ? linhas : [["—", "—", "Nenhum histórico encontrado para este CPF", "—", "—", "—", "—", ""]],
+    body: linhas.length ? linhas : [["—", "—", "Nenhuma entrega registrada no sistema", "—", "—", "—", "—", ""]],
     theme: "grid",
     headStyles: { fillColor: primary, textColor: 255, fontSize: 8, halign: "center" },
     bodyStyles: { fontSize: 8 },
