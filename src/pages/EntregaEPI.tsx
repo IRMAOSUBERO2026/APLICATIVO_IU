@@ -2,7 +2,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { 
   Search, Package, AlertTriangle, Smartphone, Plus, 
   FileSignature, History, CheckCircle2, User, HardHat,
-  Trash2, ShoppingCart, RefreshCw, ClipboardCheck
+  Trash2, ShoppingCart, RefreshCw, Clipboard
 } from "lucide-react";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -351,11 +351,11 @@ export default function EntregaEPI() {
                                           <SelectValue />
                                        </SelectTrigger>
                                        <SelectContent className="rounded-xl font-medium">
-                                          <SelectItem value="Primeira Entrega">🛡️ Primeira Entrega</SelectItem>
-                                          <SelectItem value="Reposição (Uso)">♻️ Reposição (Uso)</SelectItem>
-                                          <SelectItem value="Danificado">⚠️ Danificado</SelectItem>
-                                          <SelectItem value="Perda/Extravio">🔍 Perda/Extravio</SelectItem>
-                                          <SelectItem value="Troca de Tamanho">📏 Troca de Tamanho</SelectItem>
+                                          <SelectItem value="Primeira Entrega">Primeira Entrega</SelectItem>
+                                          <SelectItem value="Reposição (Uso)">Reposição (Uso)</SelectItem>
+                                          <SelectItem value="Danificado">Danificado</SelectItem>
+                                          <SelectItem value="Perda/Extravio">Perda/Extravio</SelectItem>
+                                          <SelectItem value="Troca de Tamanho">Troca de Tamanho</SelectItem>
                                        </SelectContent>
                                     </Select>
                                  </div>
