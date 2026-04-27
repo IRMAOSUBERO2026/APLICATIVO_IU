@@ -226,39 +226,46 @@ export default function EntregaEPI() {
                <DialogDescription>A baixa no estoque do almoxarifado será automática.</DialogDescription>
             </DialogHeader>
             <div className="grid grid-cols-2 gap-4 py-4">
-               <div className="col-span-2 space-y-1.5"><Label>Empresa do Colaborador *</Label>
-                  <Select value={form.empresa_id} onValueChange={v => setForm({...form, empresa_id: v})}>
-                     <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                     <SelectContent>{empresas.map(e => <SelectItem key={e.id} value={e.id}>{e.nome_fantasia || e.razao_social}</SelectItem>)}</SelectContent>
+               <div className="col-span-2 space-y-1.5"><Label>Localizar Obra *</Label>
+                  <Select value={form.obra_id} onValueChange={v => setForm({...form, obra_id: v, funcionario_id: ""})}>
+                     <SelectTrigger className="bg-slate-50"><SelectValue placeholder="Selecione a obra..." /></SelectTrigger>
+                     <SelectContent>
+                        <SelectItem value="">Depósito / Estoque Central</SelectItem>
+                        {obras.map(o => <SelectItem key={o.id} value={o.id}>{o.codigo} - {o.nome}</SelectItem>)}
+                     </SelectContent>
                   </Select>
                </div>
-               <div className="space-y-1.5"><Label>Funcionário *</Label>
+               <div className="col-span-2 space-y-1.5"><Label>Colaborador Locado nesta Obra *</Label>
                   <Select value={form.funcionario_id} onValueChange={v => {
                       const f = funcionarios.find(fn => fn.id === v);
-                      setForm({...form, funcionario_id: v, obra_id: f?.obra_id || "", empresa_id: f?.empresa_id || form.empresa_id });
+                      setForm({...form, funcionario_id: v, empresa_id: f?.empresa_id || ""});
                   }}>
-                     <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                     <SelectContent>{funcionarios.filter(f => !form.empresa_id || f.empresa_id === form.empresa_id).map(f => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}</SelectContent>
+                     <SelectTrigger><SelectValue placeholder={form.obra_id ? "Selecione o funcionário..." : "Selecione a obra primeiro"} /></SelectTrigger>
+                     <SelectContent>
+                        {funcionarios
+                          .filter(f => !form.obra_id || f.obra_id === form.obra_id)
+                          .map(f => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)
+                        }
+                     </SelectContent>
                   </Select>
                </div>
-               <div className="space-y-1.5"><Label>Produto (EPI) *</Label>
+               <div className="col-span-2 space-y-1.5"><Label>EPI para Entrega (Puxado do Estoque) *</Label>
                   <Select value={form.produto_id} onValueChange={v => {
                       const p = produtos.find(item => item.id === v);
                       setForm({...form, produto_id: v, ca_numero: p?.ca_numero || ""});
                   }}>
-                     <SelectTrigger><SelectValue placeholder="Buscar item no estoque..." /></SelectTrigger>
-                     <SelectContent>{produtos.map(p => <SelectItem key={p.id} value={p.id}>{p.descricao} (Estoque: {p.saldo})</SelectItem>)}</SelectContent>
+                     <SelectTrigger className="bg-amber-50/50"><SelectValue placeholder="Buscar item no almoxarifado..." /></SelectTrigger>
+                     <SelectContent>{produtos.map(p => <SelectItem key={p.id} value={p.id}>{p.descricao} (Disponível: {p.saldo})</SelectItem>)}</SelectContent>
                   </Select>
                </div>
-               <div className="space-y-1.5"><Label>Quantidade Entrega</Label><Input type="number" value={form.quantidade} onChange={e => setForm({...form, quantidade: Number(e.target.value)})} /></div>
-               <div className="space-y-1.5"><Label>Certificado de Aprovação (CA)</Label><Input value={form.ca_numero} onChange={e => setForm({...form, ca_numero: e.target.value})} /></div>
-               <div className="col-span-2 space-y-1.5"><Label>Motivo da Entrega</Label>
+               <div className="space-y-1.5"><Label>Quantidade</Label><Input type="number" value={form.quantidade} onChange={e => setForm({...form, quantidade: Number(e.target.value)})} /></div>
+               <div className="space-y-1.5"><Label>Nº do CA</Label><Input value={form.ca_numero} onChange={e => setForm({...form, ca_numero: e.target.value})} /></div>
+               <div className="col-span-2 space-y-1.5"><Label>Motivo (NR-6)</Label>
                   <Select value={form.motivo} onValueChange={v => setForm({...form, motivo: v})}>
                      <SelectTrigger><SelectValue /></SelectTrigger>
-                     <SelectContent>{["Entrada na empresa", "Troca por desgaste", "Extravio/Perda", "Novo EPI", "Dano acidental"].map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+                     <SelectContent>{["Primeira entrega", "Troca por desgaste", "Extravio/Perda", "Dano acidental"].map(m => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
                   </Select>
                </div>
-               <div className="col-span-2 space-y-1.5"><Label>Observações Adicionais</Label><Textarea value={form.observacoes} onChange={e => setForm({...form, observacoes: e.target.value})} placeholder="Pode citar o motivo da troca..." /></div>
             </div>
             <DialogFooter><Button onClick={handleSaveDelivery} className="w-full bg-amber-500 hover:bg-amber-600 text-white h-12">Finalizar Registro de Entrega</Button></DialogFooter>
          </DialogContent>
