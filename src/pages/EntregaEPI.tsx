@@ -143,6 +143,30 @@ export default function EntregaEPI() {
     }
   };
 
+  const handleDeleteDelivery = async (delivery: any) => {
+    if (!confirm(`Deseja excluir a entrega de ${delivery.produtos?.descricao} para ${delivery.funcionarios?.nome}? O estoque será estornado.`)) return;
+
+    try {
+      // 1. Excluir a entrega
+      const { error: delErr } = await supabase.from("entregas_epi").delete().eq("id", delivery.id);
+      if (delErr) throw delErr;
+
+      // 2. Tentar estornar o estoque (inserir uma entrada compensatória)
+      await supabase.from("movimentacoes_estoque").insert({
+        produto_id: delivery.produto_id,
+        tipo: "entrada",
+        quantidade: delivery.quantidade,
+        obra_id: delivery.obra_id,
+        observacoes: `ESTORNO: Exclusão de entrega para ${delivery.funcionarios?.nome}`
+      });
+
+      toast({ title: "Entrega excluída e estoque estornado!" });
+      loadData();
+    } catch (err: any) {
+      toast({ title: "Erro ao excluir", description: err.message, variant: "destructive" });
+    }
+  };
+
   const filteredEntregas = useMemo(() => {
     return entregas.filter(e => 
       !search || 
@@ -219,12 +243,14 @@ export default function EntregaEPI() {
                           <th className="px-5 py-4 text-left text-[10px] uppercase font-bold text-slate-400">EPI</th>
                           <th className="px-5 py-4 text-center text-[10px] uppercase font-bold text-slate-400">Qtd</th>
                           <th className="px-5 py-4 text-left text-[10px] uppercase font-bold text-slate-400">Obra / Alocação</th>
+                          <th className="px-5 py-4 text-left text-[10px] uppercase font-bold text-slate-400">Motivo</th>
                           <th className="px-5 py-4 text-center text-[10px] uppercase font-bold text-slate-400">CA</th>
+                          <th className="px-5 py-4 text-right text-[10px] uppercase font-bold text-slate-400"></th>
                        </tr>
                     </thead>
                     <tbody>
                        {filteredEntregas.map(e => (
-                         <tr key={e.id} className="border-b last:border-0 hover:bg-slate-50 transition-colors">
+                         <tr key={e.id} className="border-b last:border-0 hover:bg-slate-50 transition-colors group">
                             <td className="px-5 py-4 text-xs font-medium text-slate-500">{format(new Date(e.data_entrega), "dd/MM/yyyy HH:mm")}</td>
                             <td className="px-5 py-4 font-bold text-slate-700">{e.funcionarios?.nome || "Excluído"}</td>
                             <td className="px-5 py-4 text-slate-600 font-medium">{e.produtos?.descricao || "—"}</td>
@@ -234,11 +260,21 @@ export default function EntregaEPI() {
                             <td className="px-5 py-4 text-xs text-slate-400">
                                {e.obras?.nome ? `${e.obras.codigo} - ${e.obras.nome}` : "Depósito Central"}
                             </td>
-                            <td className="px-5 py-4 text-left text-[11px] text-slate-400">
+                            <td className="px-5 py-4 text-left text-[11px] text-slate-400 italic">
                                {e.observacoes || "—"}
                             </td>
                             <td className="px-5 py-4 text-center">
                                <Badge variant="outline" className="font-mono text-[9px] border-slate-200">{e.ca_numero || "N/A"}</Badge>
+                            </td>
+                            <td className="px-5 py-4 text-right">
+                               <Button 
+                                 variant="ghost" 
+                                 size="icon" 
+                                 onClick={() => handleDeleteDelivery(e)}
+                                 className="h-8 w-8 text-slate-300 hover:text-rose-500 hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-all"
+                               >
+                                  <Trash2 size={14} />
+                               </Button>
                             </td>
                          </tr>
                        ))}

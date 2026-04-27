@@ -42,8 +42,8 @@ export async function gerarFichaEPIEEnviarAssinatura(funcionarioId: string, empr
       ? supabase.from("obras").select("id, codigo, nome").in("id", obraIds)
       : Promise.resolve({ data: [] as any[] }),
   ]);
-  const prodMap = new Map((prodRes.data || []).map((p: any) => [p.id, p]));
-  const obraMap = new Map((obraRes.data || []).map((o: any) => [o.id, o]));
+  const prodMap = new Map((prodRes.data || []).map((p: any) => [String(p.id), p]));
+  const obraMap = new Map((obraRes.data || []).map((o: any) => [String(o.id), o]));
 
   // 5. Montar payload estruturado da ficha
   const itens = (entregas || []).map(e => {
@@ -52,7 +52,7 @@ export async function gerarFichaEPIEEnviarAssinatura(funcionarioId: string, empr
     return {
       entrega_id: e.id,
       data: e.data_entrega,
-      nome: prod?.descricao || "EPI",
+      nome: prodMap.get(String(e.produto_id))?.descricao || "EPI / Equipamento",
       qtd: Number(e.quantidade),
       ca_numero: e.ca_numero || prod?.ca_numero || "",
       observacoes: e.observacoes || e.motivo || "Primeira entrega",
