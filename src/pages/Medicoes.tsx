@@ -458,9 +458,10 @@ export default function Medicoes() {
           <div className="md:col-span-4 bg-white p-4 rounded-3xl border shadow-sm">
             <Label className="px-1 text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest">Obra Alvo</Label>
             <Select value={selectedObraId} onValueChange={setSelectedObraId}>
-              <SelectTrigger className="border-none shadow-none font-black text-xl text-slate-800 bg-slate-50 h-14 rounded-2xl px-6"><SelectValue placeholder="Selecione a obra..." /></SelectTrigger>
-              <SelectContent className="rounded-2xl shadow-2xl border-none">
-                {obras.map(o => <SelectItem key={o.id} value={o.id} className="font-bold">{o.codigo} - {o.nome}</SelectItem>)}
+              <SelectTrigger className="border-none shadow-none font-black text-xl text-slate-800 bg-slate-50 h-14 rounded-2xl px-6"><SelectValue placeholder={obras.length === 0 ? "Carregando obras..." : "Selecione a obra..."} /></SelectTrigger>
+              <SelectContent className="rounded-2xl shadow-2xl border-none max-h-[400px]">
+                {obras.length === 0 && <div className="p-4 text-xs text-slate-400">Nenhuma obra cadastrada</div>}
+                {obras.map(o => <SelectItem key={o.id} value={o.id} className="font-bold">{o.codigo} — {o.nome}{o.construtora ? ` (${o.construtora})` : ""}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
