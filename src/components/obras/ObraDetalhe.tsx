@@ -42,6 +42,8 @@ interface ContratoItem {
   unidade: string; quantidade: number; valor_unitario: number; valor_total: number;
   is_aditivo: boolean; aditivo_numero?: number; aditivo_data?: string; observacoes?: string;
   categoria?: string;
+  quantidade_acumulada_inicial: number;
+  condicoes_medicao: any[];
 }
 interface Reajuste {
   id: string; obra_id: string; data_aplicacao: string; percentual: number;

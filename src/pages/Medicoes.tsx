@@ -23,7 +23,9 @@ interface ContratoItem {
   id: string; obra_id: string; empresa_id: string; item_numero: string; descricao: string;
   unidade: string; quantidade: number; valor_unitario: number; valor_total: number;
   is_aditivo: boolean; aditivo_numero?: number; aditivo_data?: string; observacoes?: string;
-  categoria?: string; quantidade_acumulada_inicial: number; condicoes_medicao: any[];
+  categoria?: string;
+  quantidade_acumulada_inicial: number;
+  condicoes_medicao: any[];
 }
 interface Medicao {
   id: string; obra_id: string; numero: number; periodo_inicio: string; periodo_fim: string;
@@ -80,10 +82,12 @@ export default function Medicoes() {
     ]);
     
     if (c.data) setContratoItens(c.data as any[]);
-    if (m.data) {
+    if (m.data && m.data.length > 0) {
        setMedicoes(m.data as Medicao[]);
        // Carrega todos os itens de todas as medições para calcular acumulado
-       const { data: allItems } = await supabase.from("medicao_boletim_itens").select("*").in("medicao_id", m.data.map(med => med.id));
+       const medIds = m.data.map(med => med.id);
+       const { data: allItems } = await supabase.from("medicao_boletim_itens").select("*").in("medicao_id", medIds);
+       
        const bMap: Record<string, BoletimItem[]> = {};
        if (allItems) {
           allItems.forEach((bi: any) => {
@@ -92,6 +96,9 @@ export default function Medicoes() {
           });
        }
        setBoletimItens(bMap);
+    } else {
+       setMedicoes([]);
+       setBoletimItens({});
     }
   };
 
