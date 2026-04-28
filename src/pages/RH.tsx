@@ -50,7 +50,8 @@ function calcExperiencia(admissao: string): string | null {
 export default function RH() {
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<TabKey>("lista");
-  const [sortBy, setSortBy] = useState<"nome" | "admissao" | "obra" | "status">("nome");
+  const [sortBy, setSortBy] = useState<"nome" | "admissao" | "obra" | "status" | "registro">("nome");
+  const [editingExamFunc, setEditingExamFunc] = useState<any>(null);
   const [filterObra, setFilterObra] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -85,7 +86,9 @@ export default function RH() {
 
   useEffect(() => {
     loadDbFuncionarios();
-    supabase.from("obras").select("id, nome, codigo").eq("status", "em_andamento")
+    supabase.from("obras").select("id, nome, codigo, status")
+      .in("status", ["em_andamento", "em_execucao", "ativa", "ativo"])
+      .order("codigo")
       .then(({ data }) => { if (data) setObras(data); });
     supabase.from("empresas").select("id, razao_social, nome_fantasia, cnpj")
       .then(({ data }) => { if (data) setEmpresas(data); });
@@ -138,9 +141,28 @@ export default function RH() {
       case "admissao": return (a.data_admissao || "").localeCompare(b.data_admissao || "");
       case "obra": return (a.obraNome || "").localeCompare(b.obraNome || "");
       case "status": return (a.status || "").localeCompare(b.status || "");
+      case "registro": {
+        const na = parseInt(String(a.numero_registro || "").replace(/\D/g, ""), 10);
+        const nb = parseInt(String(b.numero_registro || "").replace(/\D/g, ""), 10);
+        if (isNaN(na) && isNaN(nb)) return 0;
+        if (isNaN(na)) return 1;
+        if (isNaN(nb)) return -1;
+        return na - nb;
+      }
       default: return 0;
     }
   });
+
+  const saveExames = async (funcId: string, data: { data_aso?: string | null; data_nr6?: string | null; data_nr12?: string | null; data_nr18?: string | null; data_nr35?: string | null }) => {
+    const { error } = await supabase.from("funcionarios").update(data).eq("id", funcId);
+    if (error) {
+      toast({ title: "Erro ao salvar exames", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Exames/Treinamentos atualizados" });
+      setEditingExamFunc(null);
+      loadDbFuncionarios();
+    }
+  };
 
   const examesVencendo = funcionarios.filter(f =>
     getExamStatus(f.aso, 1) !== "ok" || getExamStatus(f.nr6, 1) !== "ok" ||
@@ -307,10 +329,15 @@ export default function RH() {
           <ExamesModule />
         ) : tab === "exames_tab" ? (
           <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+            <div className="px-4 py-3 border-b bg-muted/30 flex items-center justify-between">
+              <h3 className="text-sm font-semibold">Exames e Treinamentos ({sorted.length} funcionários)</h3>
+              <p className="text-xs text-muted-foreground">Clique em <Pencil className="inline h-3 w-3" /> para editar as datas</p>
+            </div>
             <ScrollableTable>
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50">
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Nº Reg</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Nome</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Empresa</th>
                     <th className="px-4 py-3 text-center font-medium text-muted-foreground">ASO</th>
@@ -318,20 +345,33 @@ export default function RH() {
                     <th className="px-4 py-3 text-center font-medium text-muted-foreground">NR12</th>
                     <th className="px-4 py-3 text-center font-medium text-muted-foreground">NR18</th>
                     <th className="px-4 py-3 text-center font-medium text-muted-foreground">NR35</th>
+                    <th className="px-4 py-3 text-center font-medium text-muted-foreground">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {funcionarios.map((f) => (
-                    <tr key={f.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3.5"><div className="flex items-center gap-3"><FuncionarioAvatar nome={f.nome} foto={f.foto} size="sm" /><span className="font-medium">{f.nome}</span></div></td>
-                      <td className="px-4 py-3.5 text-xs text-muted-foreground">{f.empresa}</td>
-                      <td className="px-4 py-3.5 text-center"><ExamBadge date={f.aso} validityYears={1} label="ASO" /></td>
-                      <td className="px-4 py-3.5 text-center"><ExamBadge date={f.nr6} validityYears={1} label="NR6" /></td>
-                      <td className="px-4 py-3.5 text-center"><ExamBadge date={f.nr12} validityYears={2} label="NR12" /></td>
-                      <td className="px-4 py-3.5 text-center"><ExamBadge date={f.nr18} validityYears={2} label="NR18" /></td>
-                      <td className="px-4 py-3.5 text-center"><ExamBadge date={f.nr35} validityYears={2} label="NR35" /></td>
-                    </tr>
-                  ))}
+                  {sorted.map((f) => {
+                    const empInfo = getEmpresaInfo(f.empresa_id);
+                    return (
+                      <tr key={f.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-3.5 text-xs font-mono text-muted-foreground">{f.numero_registro || "—"}</td>
+                        <td className="px-4 py-3.5"><div className="flex items-center gap-3"><FuncionarioAvatar nome={f.nome} foto={f.foto_url} size="sm" /><span className="font-medium">{f.nome}</span></div></td>
+                        <td className="px-4 py-3.5 text-xs text-muted-foreground">{empInfo.nome}</td>
+                        <td className="px-4 py-3.5 text-center">{f.data_aso ? <ExamBadge date={f.data_aso} validityYears={1} label="ASO" /> : <span className="text-[10px] text-muted-foreground">—</span>}</td>
+                        <td className="px-4 py-3.5 text-center">{f.data_nr6 ? <ExamBadge date={f.data_nr6} validityYears={1} label="NR6" /> : <span className="text-[10px] text-muted-foreground">—</span>}</td>
+                        <td className="px-4 py-3.5 text-center">{f.data_nr12 ? <ExamBadge date={f.data_nr12} validityYears={2} label="NR12" /> : <span className="text-[10px] text-muted-foreground">—</span>}</td>
+                        <td className="px-4 py-3.5 text-center">{f.data_nr18 ? <ExamBadge date={f.data_nr18} validityYears={2} label="NR18" /> : <span className="text-[10px] text-muted-foreground">—</span>}</td>
+                        <td className="px-4 py-3.5 text-center">{f.data_nr35 ? <ExamBadge date={f.data_nr35} validityYears={2} label="NR35" /> : <span className="text-[10px] text-muted-foreground">—</span>}</td>
+                        <td className="px-4 py-3.5 text-center">
+                          <button onClick={() => setEditingExamFunc(f)} className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors" title="Editar Exames/Treinamentos">
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {sorted.length === 0 && (
+                    <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">Nenhum funcionário encontrado</td></tr>
+                  )}
                 </tbody>
               </table>
             </ScrollableTable>
@@ -354,6 +394,7 @@ export default function RH() {
               </select>
               <select value={sortBy} onChange={e => setSortBy(e.target.value as any)} className="rounded-lg border bg-card px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
                 <option value="nome">Ordenar por Nome</option>
+                <option value="registro">Ordenar por Nº Reg.</option>
                 <option value="admissao">Ordenar por Admissão</option>
                 <option value="obra">Ordenar por Obra</option>
                 <option value="status">Ordenar por Status</option>
@@ -408,20 +449,31 @@ export default function RH() {
                       const empInfo = getEmpresaInfo(f.empresa_id);
                       return (
                         <tr key={f.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                          {/* Nº Registro */}
+                          {/* Nº Registro - limpo, edita ao clicar no lápis */}
                           <td className="px-3 py-2.5">
-                            <div className="flex items-center gap-1">
-                              <input
-                                type="text"
-                                value={editingRegistro[f.id] ?? f.numero_registro ?? ""}
-                                onChange={e => setEditingRegistro(prev => ({ ...prev, [f.id]: e.target.value }))}
-                                placeholder="—"
-                                className="w-20 rounded border bg-background px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
-                              />
-                              {editingRegistro[f.id] !== undefined && editingRegistro[f.id] !== (f.numero_registro ?? "") && (
-                                <button onClick={() => saveRegistro(f.id)} className="p-0.5 text-primary hover:text-primary/80"><Save className="h-3 w-3" /></button>
-                              )}
-                            </div>
+                            {editingRegistro[f.id] !== undefined ? (
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="text"
+                                  autoFocus
+                                  value={editingRegistro[f.id]}
+                                  onChange={e => setEditingRegistro(prev => ({ ...prev, [f.id]: e.target.value }))}
+                                  onKeyDown={e => { if (e.key === "Enter") saveRegistro(f.id); if (e.key === "Escape") setEditingRegistro(prev => { const n = { ...prev }; delete n[f.id]; return n; }); }}
+                                  placeholder="Nº"
+                                  className="w-16 rounded border bg-background px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                                />
+                                <button onClick={() => saveRegistro(f.id)} className="p-0.5 text-primary hover:text-primary/80" title="Salvar"><Save className="h-3 w-3" /></button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setEditingRegistro(prev => ({ ...prev, [f.id]: f.numero_registro ?? "" }))}
+                                className="group inline-flex items-center gap-1.5 text-xs font-mono text-foreground hover:text-primary transition-colors"
+                                title="Clique para editar"
+                              >
+                                <span className="min-w-[2.5rem] text-left">{f.numero_registro || <span className="text-muted-foreground">—</span>}</span>
+                                <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-60 transition-opacity" />
+                              </button>
+                            )}
                           </td>
                           {/* Nome */}
                           <td className="px-3 py-2.5 font-medium">{f.nome}</td>
@@ -442,13 +494,17 @@ export default function RH() {
                           <td className="px-3 py-2.5 text-xs text-muted-foreground">
                             {f.data_admissao ? format(parseISO(f.data_admissao), "dd/MM/yyyy") : "—"}
                           </td>
-                          {/* Status */}
+                          {/* Status - select que aceita o valor atual mesmo que diferente */}
                           <td className="px-3 py-2.5">
                             <select
-                              value={f.status}
+                              value={(f.status || "").toLowerCase()}
                               onChange={e => saveStatus(f.id, e.target.value)}
-                              className={`rounded-full px-2 py-0.5 text-xs font-medium border-0 cursor-pointer ${getStatusColor(f.status)}`}
+                              className={`rounded-full px-2 py-1 text-xs font-medium border cursor-pointer outline-none focus:ring-2 focus:ring-ring ${getStatusColor(f.status)}`}
                             >
+                              {/* opção fallback se o status atual não estiver no enum */}
+                              {f.status && !STATUS_OPTIONS.map(s => s.toLowerCase()).includes((f.status || "").toLowerCase()) && (
+                                <option value={(f.status || "").toLowerCase()}>{f.status}</option>
+                              )}
                               {STATUS_OPTIONS.map(s => <option key={s} value={s.toLowerCase()}>{s}</option>)}
                             </select>
                           </td>
@@ -547,6 +603,64 @@ export default function RH() {
                 </Button>
               </div>
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Editar Exames/Treinamentos */}
+      <Dialog open={!!editingExamFunc} onOpenChange={(o) => !o && setEditingExamFunc(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Stethoscope className="h-5 w-5 text-primary" /> Exames e Treinamentos
+            </DialogTitle>
+          </DialogHeader>
+          {editingExamFunc && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const fd = new FormData(e.currentTarget);
+                saveExames(editingExamFunc.id, {
+                  data_aso: (fd.get("data_aso") as string) || null,
+                  data_nr6: (fd.get("data_nr6") as string) || null,
+                  data_nr12: (fd.get("data_nr12") as string) || null,
+                  data_nr18: (fd.get("data_nr18") as string) || null,
+                  data_nr35: (fd.get("data_nr35") as string) || null,
+                });
+              }}
+              className="space-y-4"
+            >
+              <div className="rounded-lg border bg-muted/30 p-3">
+                <p className="font-medium">{editingExamFunc.nome}</p>
+                <p className="text-xs text-muted-foreground">{editingExamFunc.cargo} • Nº Reg: {editingExamFunc.numero_registro || "—"}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium mb-1 block">ASO (validade 1 ano)</label>
+                  <Input type="date" name="data_aso" defaultValue={editingExamFunc.data_aso || ""} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">NR6 (validade 1 ano)</label>
+                  <Input type="date" name="data_nr6" defaultValue={editingExamFunc.data_nr6 || ""} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">NR12 (validade 2 anos)</label>
+                  <Input type="date" name="data_nr12" defaultValue={editingExamFunc.data_nr12 || ""} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">NR18 (validade 2 anos)</label>
+                  <Input type="date" name="data_nr18" defaultValue={editingExamFunc.data_nr18 || ""} />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs font-medium mb-1 block">NR35 (validade 2 anos)</label>
+                  <Input type="date" name="data_nr35" defaultValue={editingExamFunc.data_nr35 || ""} />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button type="button" variant="outline" onClick={() => setEditingExamFunc(null)}>Cancelar</Button>
+                <Button type="submit"><Save className="h-4 w-4 mr-1" /> Salvar</Button>
+              </div>
+            </form>
           )}
         </DialogContent>
       </Dialog>
