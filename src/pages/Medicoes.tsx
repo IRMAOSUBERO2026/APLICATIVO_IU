@@ -31,6 +31,11 @@ interface ContratoItem {
   id: string; item_numero: string; descricao: string; unidade: string;
   quantidade: number; valor_unitario: number; valor_total: number;
   quantidade_acumulada_inicial?: number;
+  is_aditivo?: boolean; aditivo_numero?: number; aditivo_data?: string;
+  categoria?: string;
+}
+interface Reajuste {
+  id: string; data_aplicacao: string; percentual: number; tipo: string; motivo?: string;
 }
 interface Medicao {
   id: string; obra_id: string; empresa_id: string; numero: number;
