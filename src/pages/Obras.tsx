@@ -27,7 +27,12 @@ interface Obra {
   data_inicio?: string; data_previsao_fim?: string; data_fim?: string; observacoes?: string;
   tipo_obra?: string; engenheiro_responsavel?: string; cliente?: string;
   horario_padrao?: any;
+  percentual_retencao_padrao?: number;
+  impostos_padrao?: Array<{ imposto: string; aliquota: number }>;
+  observacoes_fiscais?: string;
 }
+
+const IMPOSTOS_DISPONIVEIS = ["ISS", "IRRF", "PIS", "COFINS", "CSLL", "INSS"];
 interface Empresa { id: string; razao_social: string; nome_fantasia?: string; cnpj: string; telefone?: string; email?: string; endereco?: string; cidade?: string; uf?: string; logo_url?: string; cor_primaria?: string; cor_secundaria?: string; nome_responsavel?: string; cargo_responsavel?: string; }
 
 const emptyForm = {
