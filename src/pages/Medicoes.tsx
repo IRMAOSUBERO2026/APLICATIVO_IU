@@ -388,6 +388,61 @@ export default function Medicoes() {
     setter(l => ({ ...l, [id]: { modo: l[id]?.modo || "und", valor: l[id]?.valor || 0, ...patch } }));
   };
 
+  // Renderizador de linha (usado em principais e aditivos)
+  const renderLancRow = (ci: ContratoItem, isAditivo = false) => {
+    const prevQtd = acumuladoAnterior[ci.id] || 0;
+    const lanc = lancamentos[ci.id];
+    const qtdAtual = calcularQtd(ci, lanc);
+    const saldoQtd = ci.quantidade - (prevQtd + qtdAtual);
+    const vUnitEf = getValorUnitarioEfetivo(ci);
+    const reajustado = vUnitEf !== ci.valor_unitario;
+    const valorTotal = ci.quantidade * ci.valor_unitario;
+    const saldoR = saldoQtd * vUnitEf;
+    return (
+      <TableRow key={ci.id} className={`border-b hover:bg-slate-50/40 ${isAditivo ? "bg-blue-50/20" : ""}`}>
+        <TableCell className="px-3 py-4 font-mono text-[11px] font-bold text-blue-600">
+          {isAditivo && <Badge className="mr-1 bg-blue-100 text-blue-700 border-none text-[8px] px-1 py-0">A{ci.aditivo_numero || ""}</Badge>}
+          {ci.item_numero}
+        </TableCell>
+        <TableCell className="px-3 py-4 font-bold text-slate-800 text-sm">{ci.descricao}</TableCell>
+        <TableCell className="px-3 py-4 text-right font-bold text-slate-700 text-xs">{fmtNum(ci.quantidade)} <span className="text-[9px] text-slate-400">{ci.unidade}</span></TableCell>
+        <TableCell className="px-3 py-4 text-right font-bold text-slate-700 text-xs">
+          {fmtBRL(ci.valor_unitario)}
+          {reajustado && <div className="text-[9px] text-amber-600 font-black">→ {fmtBRL(vUnitEf)}</div>}
+        </TableCell>
+        <TableCell className="px-3 py-4 text-right font-black text-slate-900 text-xs">{fmtBRL(valorTotal)}</TableCell>
+        <TableCell className="px-3 py-4 text-right font-bold text-amber-600 text-xs bg-amber-50/10">{fmtNum(prevQtd)}</TableCell>
+        <TableCell className="px-3 py-4 bg-emerald-50/20 border-x border-emerald-100">
+          <div className="flex gap-1.5 items-center">
+            <Select
+              value={lanc?.modo || "und"}
+              onValueChange={(v: ModoLanc) => setLanc(setLancamentos as any, ci.id, { modo: v })}
+            >
+              <SelectTrigger className="h-10 w-20 rounded-xl font-black text-xs bg-white"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="und">UN</SelectItem>
+                <SelectItem value="pct">%</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              type="number"
+              step="0.01"
+              value={lanc?.valor || ""}
+              onChange={e => setLanc(setLancamentos as any, ci.id, { valor: Number(e.target.value) })}
+              placeholder="0,00"
+              className="h-10 rounded-xl font-black text-right text-emerald-700 bg-white"
+            />
+            <span className="text-[10px] font-black text-emerald-500 w-16 text-right">
+              {qtdAtual > 0 ? `=${fmtNum(qtdAtual)}` : ""}
+            </span>
+          </div>
+        </TableCell>
+        <TableCell className={`px-3 py-4 text-right text-xs font-bold ${saldoQtd < 0 ? "text-rose-500" : "text-slate-500"}`}>{fmtNum(saldoQtd)}</TableCell>
+        <TableCell className="px-3 py-4 text-right font-black text-rose-600 text-xs bg-rose-50/20">{fmtBRL(saldoR)}</TableCell>
+      </TableRow>
+    );
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
