@@ -314,7 +314,7 @@ export default function Medicoes() {
           contrato_item_id: ci.id,
           quantidade_medida: q,
           percentual_medido: ci.quantidade > 0 ? (q / ci.quantidade) * 100 : 0,
-          valor_medido: q * ci.valor_unitario,
+          valor_medido: q * getValorUnitarioEfetivo(ci),
           modo_lancamento: editLancamentos[ci.id]?.modo === "pct" ? "porcentagem" : "quantidade",
         }));
       if (entries.length > 0) await supabase.from("medicao_boletim_itens").insert(entries);
