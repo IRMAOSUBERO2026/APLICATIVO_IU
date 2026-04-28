@@ -59,6 +59,7 @@ export default function Medicoes() {
   const [empresa, setEmpresa] = useState<any>(null);
   const [selectedObraId, setSelectedObraId] = useState("");
   const [contratoItens, setContratoItens] = useState<ContratoItem[]>([]);
+  const [reajustes, setReajustes] = useState<Reajuste[]>([]);
   const [medicoes, setMedicoes] = useState<Medicao[]>([]);
   const [boletimItens, setBoletimItens] = useState<Record<string, BoletimItem[]>>({});
   const [activeTab, setActiveTab] = useState("medicoes");
