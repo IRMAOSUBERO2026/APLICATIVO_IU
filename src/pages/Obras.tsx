@@ -65,7 +65,7 @@ export default function Obras() {
       supabase.from("obras").select("*").order("codigo"),
       supabase.from("empresas").select("id,razao_social,nome_fantasia,cnpj").eq("ativo", true),
     ]);
-    if (obrasRes.data) setObras(obrasRes.data as Obra[]);
+    if (obrasRes.data) setObras(obrasRes.data as any as Obra[]);
     if (empRes.data) setEmpresas(empRes.data as Empresa[]);
     setLoading(false);
   };
