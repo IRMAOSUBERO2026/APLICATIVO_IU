@@ -50,7 +50,8 @@ function calcExperiencia(admissao: string): string | null {
 export default function RH() {
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<TabKey>("lista");
-  const [sortBy, setSortBy] = useState<"nome" | "admissao" | "obra" | "status">("nome");
+  const [sortBy, setSortBy] = useState<"nome" | "admissao" | "obra" | "status" | "registro">("nome");
+  const [editingExamFunc, setEditingExamFunc] = useState<any>(null);
   const [filterObra, setFilterObra] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -85,7 +86,9 @@ export default function RH() {
 
   useEffect(() => {
     loadDbFuncionarios();
-    supabase.from("obras").select("id, nome, codigo").eq("status", "em_andamento")
+    supabase.from("obras").select("id, nome, codigo, status")
+      .in("status", ["em_andamento", "em_execucao", "ativa", "ativo"])
+      .order("codigo")
       .then(({ data }) => { if (data) setObras(data); });
     supabase.from("empresas").select("id, razao_social, nome_fantasia, cnpj")
       .then(({ data }) => { if (data) setEmpresas(data); });
@@ -138,9 +141,28 @@ export default function RH() {
       case "admissao": return (a.data_admissao || "").localeCompare(b.data_admissao || "");
       case "obra": return (a.obraNome || "").localeCompare(b.obraNome || "");
       case "status": return (a.status || "").localeCompare(b.status || "");
+      case "registro": {
+        const na = parseInt(String(a.numero_registro || "").replace(/\D/g, ""), 10);
+        const nb = parseInt(String(b.numero_registro || "").replace(/\D/g, ""), 10);
+        if (isNaN(na) && isNaN(nb)) return 0;
+        if (isNaN(na)) return 1;
+        if (isNaN(nb)) return -1;
+        return na - nb;
+      }
       default: return 0;
     }
   });
+
+  const saveExames = async (funcId: string, data: { data_aso?: string | null; data_nr6?: string | null; data_nr12?: string | null; data_nr18?: string | null; data_nr35?: string | null }) => {
+    const { error } = await supabase.from("funcionarios").update(data).eq("id", funcId);
+    if (error) {
+      toast({ title: "Erro ao salvar exames", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Exames/Treinamentos atualizados" });
+      setEditingExamFunc(null);
+      loadDbFuncionarios();
+    }
+  };
 
   const examesVencendo = funcionarios.filter(f =>
     getExamStatus(f.aso, 1) !== "ok" || getExamStatus(f.nr6, 1) !== "ok" ||
