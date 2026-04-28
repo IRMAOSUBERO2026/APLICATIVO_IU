@@ -297,6 +297,11 @@ export default function RH() {
                 toast({ title: "Importando...", description: "Processando planilha, aguarde." });
                 try {
                   const r = await importarPlanilhaFuncionarios(file);
+                  setSearch("");
+                  setFilterObra("");
+                  setFilterStatus("");
+                  setSortBy("nome");
+                  setTab("lista");
                   loadDbFuncionarios();
                   const msg = `${r.criados} criados, ${r.atualizados} atualizados, ${r.ignorados} ignorados (de ${r.total}).`;
                   if (r.erros.length > 0) {
