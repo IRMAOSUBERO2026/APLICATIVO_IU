@@ -23,6 +23,7 @@ const fmtNum = (v: any) => (Number(v) || 0).toLocaleString("pt-BR", { minimumFra
 
 interface Obra {
   id: string; nome: string; codigo: string; empresa_id: string;
+  status?: string;
   construtora?: string; cliente?: string; cidade?: string; uf?: string; endereco?: string;
   percentual_retencao_padrao?: number;
   impostos_padrao?: Array<{ imposto: string; aliquota: number }>;
@@ -56,6 +57,8 @@ type ModoLanc = "und" | "pct";
 export default function Medicoes() {
   const { toast } = useToast();
   const [obras, setObras] = useState<Obra[]>([]);
+  const [isLoadingObras, setIsLoadingObras] = useState(true);
+  const [obrasError, setObrasError] = useState("");
   const [empresa, setEmpresa] = useState<any>(null);
   const [selectedObraId, setSelectedObraId] = useState("");
   const [contratoItens, setContratoItens] = useState<ContratoItem[]>([]);
@@ -81,13 +84,44 @@ export default function Medicoes() {
   const selectedObra = obras.find(o => o.id === selectedObraId);
 
   useEffect(() => {
-    supabase.from("obras")
-      .select("id,nome,codigo,empresa_id,construtora,cliente,cidade,uf,endereco,percentual_retencao_padrao,impostos_padrao")
-      .then(({ data }) => { if (data) setObras(data as any[]); });
+    let mounted = true;
+
+    async function loadObrasEmExecucao() {
+      setIsLoadingObras(true);
+      setObrasError("");
+
+      const { data, error } = await supabase.from("obras")
+        .select("id,nome,codigo,empresa_id,status,construtora,cliente,cidade,uf,endereco,percentual_retencao_padrao,impostos_padrao")
+        .eq("status", "em_execucao")
+        .order("codigo", { ascending: true });
+
+      if (!mounted) return;
+
+      if (error) {
+        setObras([]);
+        setObrasError("Não foi possível carregar as obras em execução.");
+      } else {
+        const obrasAtivas = (data || []) as Obra[];
+        setObras(obrasAtivas);
+        setSelectedObraId(prev => obrasAtivas.some(o => o.id === prev) ? prev : "");
+      }
+
+      setIsLoadingObras(false);
+    }
+
+    loadObrasEmExecucao();
+    return () => { mounted = false; };
   }, []);
 
   useEffect(() => {
-    if (!selectedObraId) return;
+    if (!selectedObraId) {
+      setContratoItens([]);
+      setReajustes([]);
+      setMedicoes([]);
+      setBoletimItens({});
+      setEmpresa(null);
+      return;
+    }
     loadData();
     if (selectedObra) {
       setMedicaoForm(p => ({ ...p, percentual_retencao: Number(selectedObra.percentual_retencao_padrao ?? 5) }));
@@ -457,13 +491,17 @@ export default function Medicoes() {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
           <div className="md:col-span-4 bg-white p-4 rounded-3xl border shadow-sm">
             <Label className="px-1 text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest">Obra Alvo</Label>
-            <Select value={selectedObraId} onValueChange={setSelectedObraId}>
-              <SelectTrigger className="border-none shadow-none font-black text-xl text-slate-800 bg-slate-50 h-14 rounded-2xl px-6"><SelectValue placeholder={obras.length === 0 ? "Carregando obras..." : "Selecione a obra..."} /></SelectTrigger>
+            <Select value={selectedObraId} onValueChange={setSelectedObraId} disabled={isLoadingObras || !!obrasError || obras.length === 0}>
+              <SelectTrigger className="border-none shadow-none font-black text-xl text-slate-800 bg-slate-50 h-14 rounded-2xl px-6"><SelectValue placeholder={isLoadingObras ? "Carregando obras..." : "Selecione a obra..."} /></SelectTrigger>
               <SelectContent className="rounded-2xl shadow-2xl border-none max-h-[400px]">
-                {obras.length === 0 && <div className="p-4 text-xs text-slate-400">Nenhuma obra cadastrada</div>}
+                {!isLoadingObras && !obrasError && obras.length === 0 && <div className="p-4 text-xs text-slate-400">Nenhuma obra em execução cadastrada</div>}
                 {obras.map(o => <SelectItem key={o.id} value={o.id} className="font-bold">{o.codigo} — {o.nome}{o.construtora ? ` (${o.construtora})` : ""}</SelectItem>)}
               </SelectContent>
             </Select>
+            {obrasError && <p className="px-1 pt-2 text-xs font-bold text-rose-600">{obrasError}</p>}
+            {!isLoadingObras && !obrasError && obras.length === 0 && (
+              <p className="px-1 pt-2 text-xs text-slate-500">Cadastre ou altere uma obra para <span className="font-black">Em execução</span> em Operacional → Obras.</p>
+            )}
           </div>
 
           <div className="md:col-span-8 grid grid-cols-2 md:grid-cols-4 gap-4">
