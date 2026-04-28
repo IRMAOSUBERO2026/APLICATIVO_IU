@@ -1,5 +1,6 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Search, Upload, MessageCircle, UserPlus, FolderOpen, Stethoscope, ArrowRightLeft, Save, Filter, Calendar, LogOut, Pencil } from "lucide-react";
+import { Search, Upload, MessageCircle, UserPlus, FolderOpen, Stethoscope, ArrowRightLeft, Save, Filter, Calendar, LogOut, Pencil, FileSpreadsheet, FileDown } from "lucide-react";
+import { baixarModeloFuncionarios, importarPlanilhaFuncionarios } from "@/lib/funcionariosPlanilha";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { toast } from "@/hooks/use-toast";
 import { Funcionario, funcionariosData, getExamStatus } from "@/components/rh/types";
