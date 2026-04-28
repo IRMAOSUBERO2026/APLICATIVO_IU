@@ -38,9 +38,18 @@ interface BoletimItem {
   modo_lancamento: string; observacoes?: string; etapa_medida?: string;
 }
 
-const fmtBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-const fmtNum = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const fmtPct = (v: number) => v > 0 ? `${v.toFixed(2)}%` : "";
+const fmtBRL = (v: any) => {
+  const val = Number(v) || 0;
+  return val.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+};
+const fmtNum = (v: any) => {
+  const val = Number(v) || 0;
+  return val.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+const fmtPct = (v: any) => {
+  const val = Number(v) || 0;
+  return val > 0 ? `${val.toFixed(2)}%` : "";
+};
 
 export default function Medicoes() {
   const { toast } = useToast();
