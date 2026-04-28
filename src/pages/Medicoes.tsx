@@ -201,7 +201,7 @@ export default function Medicoes() {
           contrato_item_id: ci.id,
           quantidade_medida: q,
           percentual_medido: ci.quantidade > 0 ? (q / ci.quantidade) * 100 : 0,
-          valor_medido: q * ci.valor_unitario,
+          valor_medido: q * getValorUnitarioEfetivo(ci),
           modo_lancamento: lancamentos[ci.id]?.modo === "pct" ? "porcentagem" : "quantidade",
         }));
 
