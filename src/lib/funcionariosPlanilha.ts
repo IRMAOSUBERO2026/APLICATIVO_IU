@@ -205,11 +205,25 @@ export interface ImportResult {
   criados: number;
   atualizados: number;
   ignorados: number;
+  pulados_existentes: number;
   erros: { linha: number; cpf: string; erro: string }[];
 }
 
-/** Lê o arquivo .xlsx e faz upsert por CPF na tabela funcionarios */
-export async function importarPlanilhaFuncionarios(file: File): Promise<ImportResult> {
+export type ImportMode =
+  | "atualizar_e_criar"   // padrão: atualiza existentes e cria novos
+  | "atualizar_somente"   // só atualiza quem já existe — NUNCA cria
+  | "criar_somente";      // só cria novos — pula quem já existe
+
+function chaveNomeNasc(nome: string, dataNasc: string | null): string {
+  const n = String(nome ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  return `${n}|${dataNasc ?? ""}`;
+}
+
+/** Lê o arquivo .xlsx e importa funcionários conforme o modo escolhido */
+export async function importarPlanilhaFuncionarios(
+  file: File,
+  modo: ImportMode = "atualizar_e_criar",
+): Promise<ImportResult> {
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: "array" });
   const sheetName = wb.SheetNames.find((n) => /func/i.test(n)) || wb.SheetNames[0];
