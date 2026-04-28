@@ -23,6 +23,7 @@ const fmtNum = (v: any) => (Number(v) || 0).toLocaleString("pt-BR", { minimumFra
 
 interface Obra {
   id: string; nome: string; codigo: string; empresa_id: string;
+  status?: string;
   construtora?: string; cliente?: string; cidade?: string; uf?: string; endereco?: string;
   percentual_retencao_padrao?: number;
   impostos_padrao?: Array<{ imposto: string; aliquota: number }>;
@@ -56,6 +57,8 @@ type ModoLanc = "und" | "pct";
 export default function Medicoes() {
   const { toast } = useToast();
   const [obras, setObras] = useState<Obra[]>([]);
+  const [isLoadingObras, setIsLoadingObras] = useState(true);
+  const [obrasError, setObrasError] = useState("");
   const [empresa, setEmpresa] = useState<any>(null);
   const [selectedObraId, setSelectedObraId] = useState("");
   const [contratoItens, setContratoItens] = useState<ContratoItem[]>([]);
@@ -81,13 +84,44 @@ export default function Medicoes() {
   const selectedObra = obras.find(o => o.id === selectedObraId);
 
   useEffect(() => {
-    supabase.from("obras")
-      .select("id,nome,codigo,empresa_id,construtora,cliente,cidade,uf,endereco,percentual_retencao_padrao,impostos_padrao")
-      .then(({ data }) => { if (data) setObras(data as any[]); });
+    let mounted = true;
+
+    async function loadObrasEmExecucao() {
+      setIsLoadingObras(true);
+      setObrasError("");
+
+      const { data, error } = await supabase.from("obras")
+        .select("id,nome,codigo,empresa_id,status,construtora,cliente,cidade,uf,endereco,percentual_retencao_padrao,impostos_padrao")
+        .eq("status", "em_execucao")
+        .order("codigo", { ascending: true });
+
+      if (!mounted) return;
+
+      if (error) {
+        setObras([]);
+        setObrasError("Não foi possível carregar as obras em execução.");
+      } else {
+        const obrasAtivas = (data || []) as any[];
+        setObras(obrasAtivas);
+        setSelectedObraId(prev => obrasAtivas.some(o => o.id === prev) ? prev : "");
+      }
+
+      setIsLoadingObras(false);
+    }
+
+    loadObrasEmExecucao();
+    return () => { mounted = false; };
   }, []);
 
   useEffect(() => {
-    if (!selectedObraId) return;
+    if (!selectedObraId) {
+      setContratoItens([]);
+      setReajustes([]);
+      setMedicoes([]);
+      setBoletimItens({});
+      setEmpresa(null);
+      return;
+    }
     loadData();
     if (selectedObra) {
       setMedicaoForm(p => ({ ...p, percentual_retencao: Number(selectedObra.percentual_retencao_padrao ?? 5) }));
