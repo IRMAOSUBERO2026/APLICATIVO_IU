@@ -606,6 +606,64 @@ export default function RH() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Modal Editar Exames/Treinamentos */}
+      <Dialog open={!!editingExamFunc} onOpenChange={(o) => !o && setEditingExamFunc(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Stethoscope className="h-5 w-5 text-primary" /> Exames e Treinamentos
+            </DialogTitle>
+          </DialogHeader>
+          {editingExamFunc && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const fd = new FormData(e.currentTarget);
+                saveExames(editingExamFunc.id, {
+                  data_aso: (fd.get("data_aso") as string) || null,
+                  data_nr6: (fd.get("data_nr6") as string) || null,
+                  data_nr12: (fd.get("data_nr12") as string) || null,
+                  data_nr18: (fd.get("data_nr18") as string) || null,
+                  data_nr35: (fd.get("data_nr35") as string) || null,
+                });
+              }}
+              className="space-y-4"
+            >
+              <div className="rounded-lg border bg-muted/30 p-3">
+                <p className="font-medium">{editingExamFunc.nome}</p>
+                <p className="text-xs text-muted-foreground">{editingExamFunc.cargo} • Nº Reg: {editingExamFunc.numero_registro || "—"}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium mb-1 block">ASO (validade 1 ano)</label>
+                  <Input type="date" name="data_aso" defaultValue={editingExamFunc.data_aso || ""} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">NR6 (validade 1 ano)</label>
+                  <Input type="date" name="data_nr6" defaultValue={editingExamFunc.data_nr6 || ""} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">NR12 (validade 2 anos)</label>
+                  <Input type="date" name="data_nr12" defaultValue={editingExamFunc.data_nr12 || ""} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">NR18 (validade 2 anos)</label>
+                  <Input type="date" name="data_nr18" defaultValue={editingExamFunc.data_nr18 || ""} />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs font-medium mb-1 block">NR35 (validade 2 anos)</label>
+                  <Input type="date" name="data_nr35" defaultValue={editingExamFunc.data_nr35 || ""} />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button type="button" variant="outline" onClick={() => setEditingExamFunc(null)}>Cancelar</Button>
+                <Button type="submit"><Save className="h-4 w-4 mr-1" /> Salvar</Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
