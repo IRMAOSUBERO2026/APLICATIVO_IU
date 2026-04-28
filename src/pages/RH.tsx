@@ -56,6 +56,7 @@ export default function RH() {
   const [filterObra, setFilterObra] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const xlsxInputRef = useRef<HTMLInputElement>(null);
   const [funcionarios] = useState(funcionariosData);
   const [whatsOpen, setWhatsOpen] = useState(false);
   const [preCadastroOpen, setPreCadastroOpen] = useState(false);
