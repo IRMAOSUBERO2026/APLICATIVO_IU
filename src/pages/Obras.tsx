@@ -39,6 +39,9 @@ const emptyForm = {
   codigo: "", nome: "", empresa_id: "", construtora: "", cliente: "", endereco: "", cidade: "", uf: "",
   status: "prospeccao", data_inicio: "", data_previsao_fim: "", data_fim: "", observacoes: "",
   tipo_obra: "", engenheiro_responsavel: "",
+  percentual_retencao_padrao: 5,
+  impostos_padrao: [] as Array<{ imposto: string; aliquota: number }>,
+  observacoes_fiscais: "",
 };
 
 export default function Obras() {
