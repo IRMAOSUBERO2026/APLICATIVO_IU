@@ -329,13 +329,17 @@ export async function importarPlanilhaFuncionarios(file: File): Promise<ImportRe
         result.atualizados++;
       }
     } else {
-      const { error } = await supabase.from("funcionarios").insert(payload);
+      const { data: novoFuncionario, error } = await supabase
+        .from("funcionarios")
+        .insert(payload)
+        .select("id")
+        .single();
       if (error) {
         result.erros.push({ linha: i + 2, cpf, erro: error.message });
         result.ignorados++;
       } else {
         result.criados++;
-        funcionariosPorCpf.set(cpf, cpf);
+        if (novoFuncionario?.id) funcionariosPorCpf.set(cpf, novoFuncionario.id);
       }
     }
   }
