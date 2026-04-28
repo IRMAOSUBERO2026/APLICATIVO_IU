@@ -1814,6 +1814,9 @@ export type Database = {
       }
       medicoes: {
         Row: {
+          aprovado_em: string | null
+          aprovado_por: string | null
+          conta_receber_id: string | null
           created_at: string
           data_emissao: string
           empresa_id: string
@@ -1831,6 +1834,9 @@ export type Database = {
           valor_retencao: number
         }
         Insert: {
+          aprovado_em?: string | null
+          aprovado_por?: string | null
+          conta_receber_id?: string | null
           created_at?: string
           data_emissao?: string
           empresa_id: string
@@ -1848,6 +1854,9 @@ export type Database = {
           valor_retencao?: number
         }
         Update: {
+          aprovado_em?: string | null
+          aprovado_por?: string | null
+          conta_receber_id?: string | null
           created_at?: string
           data_emissao?: string
           empresa_id?: string
@@ -2004,8 +2013,11 @@ export type Database = {
           engenheiro_responsavel: string | null
           horario_padrao: Json | null
           id: string
+          impostos_padrao: Json
           nome: string
           observacoes: string | null
+          observacoes_fiscais: string | null
+          percentual_retencao_padrao: number
           status: string
           tipo_obra: string | null
           uf: string | null
@@ -2025,8 +2037,11 @@ export type Database = {
           engenheiro_responsavel?: string | null
           horario_padrao?: Json | null
           id?: string
+          impostos_padrao?: Json
           nome: string
           observacoes?: string | null
+          observacoes_fiscais?: string | null
+          percentual_retencao_padrao?: number
           status?: string
           tipo_obra?: string | null
           uf?: string | null
@@ -2046,8 +2061,11 @@ export type Database = {
           engenheiro_responsavel?: string | null
           horario_padrao?: Json | null
           id?: string
+          impostos_padrao?: Json
           nome?: string
           observacoes?: string | null
+          observacoes_fiscais?: string | null
+          percentual_retencao_padrao?: number
           status?: string
           tipo_obra?: string | null
           uf?: string | null
