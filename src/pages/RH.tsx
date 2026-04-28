@@ -263,6 +263,56 @@ export default function RH() {
               <Upload className="h-4 w-4" /> Importar CSV
             </button>
             <input ref={fileInputRef} type="file" accept=".csv,.txt" className="hidden" onChange={handleFileUpload} />
+            <button
+              onClick={async () => {
+                try {
+                  await baixarModeloFuncionarios();
+                  toast({ title: "Modelo gerado", description: "Arquivo .xlsx baixado." });
+                } catch (e: any) {
+                  toast({ title: "Erro", description: e?.message ?? "Falha ao gerar modelo", variant: "destructive" });
+                }
+              }}
+              className="inline-flex items-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+              title="Baixar planilha modelo (.xlsx) com todos os funcionários atuais"
+            >
+              <FileDown className="h-4 w-4" /> Baixar Modelo
+            </button>
+            <button
+              onClick={() => xlsxInputRef.current?.click()}
+              className="inline-flex items-center gap-2 rounded-lg bg-success/90 px-4 py-2.5 text-sm font-medium text-success-foreground shadow-sm hover:bg-success transition-colors"
+              title="Importar planilha .xlsx para criar/atualizar funcionários"
+            >
+              <FileSpreadsheet className="h-4 w-4" /> Importar Planilha
+            </button>
+            <input
+              ref={xlsxInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                e.target.value = "";
+                toast({ title: "Importando...", description: "Processando planilha, aguarde." });
+                try {
+                  const r = await importarPlanilhaFuncionarios(file);
+                  loadDbFuncionarios();
+                  const msg = `${r.criados} criados, ${r.atualizados} atualizados, ${r.ignorados} ignorados (de ${r.total}).`;
+                  if (r.erros.length > 0) {
+                    console.warn("Erros de importação:", r.erros);
+                    toast({
+                      title: "Importação concluída com avisos",
+                      description: msg + ` ${r.erros.length} erro(s) — veja o console.`,
+                      variant: r.criados + r.atualizados === 0 ? "destructive" : "default",
+                    });
+                  } else {
+                    toast({ title: "Importação concluída", description: msg });
+                  }
+                } catch (err: any) {
+                  toast({ title: "Erro na importação", description: err?.message ?? String(err), variant: "destructive" });
+                }
+              }}
+            />
             <button onClick={() => setPreCadastroOpen(true)} className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors">
               <UserPlus className="h-4 w-4" /> Pré-Cadastro
             </button>
