@@ -91,6 +91,9 @@ export default function Obras() {
       data_previsao_fim: obra.data_previsao_fim || "", data_fim: obra.data_fim || "",
       observacoes: obra.observacoes || "", tipo_obra: obra.tipo_obra || "",
       engenheiro_responsavel: obra.engenheiro_responsavel || "",
+      percentual_retencao_padrao: Number(obra.percentual_retencao_padrao ?? 5),
+      impostos_padrao: Array.isArray(obra.impostos_padrao) ? obra.impostos_padrao : [],
+      observacoes_fiscais: obra.observacoes_fiscais || "",
     });
     setFormOpen(true);
   };
