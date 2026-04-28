@@ -147,7 +147,8 @@ export async function baixarModeloFuncionarios() {
 // ---------- Importação ----------
 
 function normCPF(v: any): string {
-  return String(v ?? "").replace(/\D/g, "");
+  const digits = String(v ?? "").replace(/\D/g, "");
+  return digits.length >= 9 && digits.length < 11 ? digits.padStart(11, "0") : digits;
 }
 function normCNPJ(v: any): string {
   return String(v ?? "").replace(/\D/g, "");
@@ -238,7 +239,8 @@ export async function importarPlanilhaFuncionarios(file: File): Promise<ImportRe
 
   const { data: funcionariosExistentes, error: errFuncionarios } = await supabase
     .from("funcionarios")
-    .select("id, cpf, created_at");
+    .select("id, cpf, created_at")
+    .range(0, 9999);
 
   if (errFuncionarios) {
     throw new Error(`Não foi possível conferir funcionários existentes: ${errFuncionarios.message}`);
