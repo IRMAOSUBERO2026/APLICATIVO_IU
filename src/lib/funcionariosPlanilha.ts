@@ -236,6 +236,23 @@ export async function importarPlanilhaFuncionarios(file: File): Promise<ImportRe
 
   const result: ImportResult = { total: rows.length, criados: 0, atualizados: 0, ignorados: 0, erros: [] };
 
+  const { data: funcionariosExistentes, error: errFuncionarios } = await supabase
+    .from("funcionarios")
+    .select("id, cpf, created_at");
+
+  if (errFuncionarios) {
+    throw new Error(`Não foi possível conferir funcionários existentes: ${errFuncionarios.message}`);
+  }
+
+  const funcionariosPorCpf = new Map<string, string>();
+  (funcionariosExistentes ?? [])
+    .filter((f: any) => normCPF(f.cpf))
+    .sort((a: any, b: any) => String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")))
+    .forEach((f: any) => {
+      const cpfNormalizado = normCPF(f.cpf);
+      if (!funcionariosPorCpf.has(cpfNormalizado)) funcionariosPorCpf.set(cpfNormalizado, f.id);
+    });
+
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
     const cpf = normCPF(r["CPF"]);
@@ -301,21 +318,10 @@ export async function importarPlanilhaFuncionarios(file: File): Promise<ImportRe
     };
     if (observacoes) payload.observacoes = observacoes;
 
-    // Verifica se já existe pelo CPF
-    const { data: existente, error: errSel } = await supabase
-      .from("funcionarios")
-      .select("id")
-      .eq("cpf", cpf)
-      .maybeSingle();
+    const funcionarioExistenteId = funcionariosPorCpf.get(cpf);
 
-    if (errSel) {
-      result.erros.push({ linha: i + 2, cpf, erro: errSel.message });
-      result.ignorados++;
-      continue;
-    }
-
-    if (existente?.id) {
-      const { error } = await supabase.from("funcionarios").update(payload).eq("id", existente.id);
+    if (funcionarioExistenteId) {
+      const { error } = await supabase.from("funcionarios").update(payload).eq("id", funcionarioExistenteId);
       if (error) {
         result.erros.push({ linha: i + 2, cpf, erro: error.message });
         result.ignorados++;
@@ -329,6 +335,7 @@ export async function importarPlanilhaFuncionarios(file: File): Promise<ImportRe
         result.ignorados++;
       } else {
         result.criados++;
+        funcionariosPorCpf.set(cpf, cpf);
       }
     }
   }
