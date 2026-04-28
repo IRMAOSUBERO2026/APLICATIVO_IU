@@ -449,20 +449,31 @@ export default function RH() {
                       const empInfo = getEmpresaInfo(f.empresa_id);
                       return (
                         <tr key={f.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                          {/* Nº Registro */}
+                          {/* Nº Registro - limpo, edita ao clicar no lápis */}
                           <td className="px-3 py-2.5">
-                            <div className="flex items-center gap-1">
-                              <input
-                                type="text"
-                                value={editingRegistro[f.id] ?? f.numero_registro ?? ""}
-                                onChange={e => setEditingRegistro(prev => ({ ...prev, [f.id]: e.target.value }))}
-                                placeholder="—"
-                                className="w-20 rounded border bg-background px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
-                              />
-                              {editingRegistro[f.id] !== undefined && editingRegistro[f.id] !== (f.numero_registro ?? "") && (
-                                <button onClick={() => saveRegistro(f.id)} className="p-0.5 text-primary hover:text-primary/80"><Save className="h-3 w-3" /></button>
-                              )}
-                            </div>
+                            {editingRegistro[f.id] !== undefined ? (
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="text"
+                                  autoFocus
+                                  value={editingRegistro[f.id]}
+                                  onChange={e => setEditingRegistro(prev => ({ ...prev, [f.id]: e.target.value }))}
+                                  onKeyDown={e => { if (e.key === "Enter") saveRegistro(f.id); if (e.key === "Escape") setEditingRegistro(prev => { const n = { ...prev }; delete n[f.id]; return n; }); }}
+                                  placeholder="Nº"
+                                  className="w-16 rounded border bg-background px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                                />
+                                <button onClick={() => saveRegistro(f.id)} className="p-0.5 text-primary hover:text-primary/80" title="Salvar"><Save className="h-3 w-3" /></button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setEditingRegistro(prev => ({ ...prev, [f.id]: f.numero_registro ?? "" }))}
+                                className="group inline-flex items-center gap-1.5 text-xs font-mono text-foreground hover:text-primary transition-colors"
+                                title="Clique para editar"
+                              >
+                                <span className="min-w-[2.5rem] text-left">{f.numero_registro || <span className="text-muted-foreground">—</span>}</span>
+                                <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-60 transition-opacity" />
+                              </button>
+                            )}
                           </td>
                           {/* Nome */}
                           <td className="px-3 py-2.5 font-medium">{f.nome}</td>
@@ -483,13 +494,17 @@ export default function RH() {
                           <td className="px-3 py-2.5 text-xs text-muted-foreground">
                             {f.data_admissao ? format(parseISO(f.data_admissao), "dd/MM/yyyy") : "—"}
                           </td>
-                          {/* Status */}
+                          {/* Status - select que aceita o valor atual mesmo que diferente */}
                           <td className="px-3 py-2.5">
                             <select
-                              value={f.status}
+                              value={(f.status || "").toLowerCase()}
                               onChange={e => saveStatus(f.id, e.target.value)}
-                              className={`rounded-full px-2 py-0.5 text-xs font-medium border-0 cursor-pointer ${getStatusColor(f.status)}`}
+                              className={`rounded-full px-2 py-1 text-xs font-medium border cursor-pointer outline-none focus:ring-2 focus:ring-ring ${getStatusColor(f.status)}`}
                             >
+                              {/* opção fallback se o status atual não estiver no enum */}
+                              {f.status && !STATUS_OPTIONS.map(s => s.toLowerCase()).includes((f.status || "").toLowerCase()) && (
+                                <option value={(f.status || "").toLowerCase()}>{f.status}</option>
+                              )}
                               {STATUS_OPTIONS.map(s => <option key={s} value={s.toLowerCase()}>{s}</option>)}
                             </select>
                           </td>
