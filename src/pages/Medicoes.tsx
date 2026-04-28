@@ -461,7 +461,18 @@ export default function Medicoes() {
                   </div>
                 </div>
 
+                {contratoItens.length === 0 ? (
+                  <div className="p-16 text-center">
+                    <p className="text-slate-400 font-bold text-sm mb-2">Nenhum item de contrato cadastrado para esta obra.</p>
+                    <p className="text-slate-500 text-xs">Acesse <span className="font-black text-emerald-600">Obras → Contratos</span> para cadastrar os itens da planilha contratual antes de lançar medições.</p>
+                  </div>
+                ) : (
                 <div className="overflow-x-auto" style={{ maxHeight: "65vh" }}>
+                  {fatorReajuste !== 1 && (
+                    <div className="px-6 py-3 bg-amber-50 border-b border-amber-200 text-[11px] font-bold text-amber-800">
+                      ⚡ Reajuste contratual ativo: <span className="font-black">{((fatorReajuste - 1) * 100).toFixed(2)}%</span> aplicado sobre o saldo restante de cada item ({reajustes.length} reajuste{reajustes.length !== 1 ? "s" : ""} registrado{reajustes.length !== 1 ? "s" : ""}).
+                    </div>
+                  )}
                   <Table>
                     <TableHeader className="bg-white sticky top-0 z-10">
                       <TableRow className="border-b">
@@ -477,55 +488,25 @@ export default function Medicoes() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {contratoItens.map(ci => {
-                        const prevQtd = acumuladoAnterior[ci.id] || 0;
-                        const lanc = lancamentos[ci.id];
-                        const qtdAtual = calcularQtd(ci, lanc);
-                        const saldoQtd = ci.quantidade - (prevQtd + qtdAtual);
-                        const valorTotal = ci.quantidade * ci.valor_unitario;
-                        const valorMedidoAcum = (prevQtd + qtdAtual) * ci.valor_unitario;
-                        const saldoR = valorTotal - valorMedidoAcum;
-                        return (
-                          <TableRow key={ci.id} className="border-b hover:bg-slate-50/40">
-                            <TableCell className="px-3 py-4 font-mono text-[11px] font-bold text-blue-600">{ci.item_numero}</TableCell>
-                            <TableCell className="px-3 py-4 font-bold text-slate-800 text-sm">{ci.descricao}</TableCell>
-                            <TableCell className="px-3 py-4 text-right font-bold text-slate-700 text-xs">{fmtNum(ci.quantidade)} <span className="text-[9px] text-slate-400">{ci.unidade}</span></TableCell>
-                            <TableCell className="px-3 py-4 text-right font-bold text-slate-700 text-xs">{fmtBRL(ci.valor_unitario)}</TableCell>
-                            <TableCell className="px-3 py-4 text-right font-black text-slate-900 text-xs">{fmtBRL(valorTotal)}</TableCell>
-                            <TableCell className="px-3 py-4 text-right font-bold text-amber-600 text-xs bg-amber-50/10">{fmtNum(prevQtd)}</TableCell>
-                            <TableCell className="px-3 py-4 bg-emerald-50/20 border-x border-emerald-100">
-                              <div className="flex gap-1.5 items-center">
-                                <Select
-                                  value={lanc?.modo || "und"}
-                                  onValueChange={(v: ModoLanc) => setLanc(setLancamentos as any, ci.id, { modo: v })}
-                                >
-                                  <SelectTrigger className="h-10 w-20 rounded-xl font-black text-xs bg-white"><SelectValue /></SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="und">UN</SelectItem>
-                                    <SelectItem value="pct">%</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  value={lanc?.valor || ""}
-                                  onChange={e => setLanc(setLancamentos as any, ci.id, { valor: Number(e.target.value) })}
-                                  placeholder="0,00"
-                                  className="h-10 rounded-xl font-black text-right text-emerald-700 bg-white"
-                                />
-                                <span className="text-[10px] font-black text-emerald-500 w-16 text-right">
-                                  {qtdAtual > 0 ? `=${fmtNum(qtdAtual)}` : ""}
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell className={`px-3 py-4 text-right text-xs font-bold ${saldoQtd < 0 ? "text-rose-500" : "text-slate-500"}`}>{fmtNum(saldoQtd)}</TableCell>
-                            <TableCell className="px-3 py-4 text-right font-black text-rose-600 text-xs bg-rose-50/20">{fmtBRL(saldoR)}</TableCell>
+                      {itensPrincipais.length > 0 && (
+                        <TableRow className="bg-slate-100">
+                          <TableCell colSpan={9} className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600">📋 Itens Contratuais ({itensPrincipais.length})</TableCell>
+                        </TableRow>
+                      )}
+                      {itensPrincipais.map(ci => renderLancRow(ci))}
+
+                      {itensAditivos.length > 0 && (
+                        <>
+                          <TableRow className="bg-blue-50">
+                            <TableCell colSpan={9} className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-blue-700">➕ Itens Aditivos ({itensAditivos.length})</TableCell>
                           </TableRow>
-                        );
-                      })}
+                          {itensAditivos.map(ci => renderLancRow(ci, true))}
+                        </>
+                      )}
                     </TableBody>
                   </Table>
                 </div>
+                )}
 
                 <div className="p-10 bg-slate-900 border-t flex flex-col md:flex-row justify-between items-center gap-8">
                   <div className="text-white">
