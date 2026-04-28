@@ -31,6 +31,11 @@ interface ContratoItem {
   id: string; item_numero: string; descricao: string; unidade: string;
   quantidade: number; valor_unitario: number; valor_total: number;
   quantidade_acumulada_inicial?: number;
+  is_aditivo?: boolean; aditivo_numero?: number; aditivo_data?: string;
+  categoria?: string;
+}
+interface Reajuste {
+  id: string; data_aplicacao: string; percentual: number; tipo: string; motivo?: string;
 }
 interface Medicao {
   id: string; obra_id: string; empresa_id: string; numero: number;
@@ -54,6 +59,7 @@ export default function Medicoes() {
   const [empresa, setEmpresa] = useState<any>(null);
   const [selectedObraId, setSelectedObraId] = useState("");
   const [contratoItens, setContratoItens] = useState<ContratoItem[]>([]);
+  const [reajustes, setReajustes] = useState<Reajuste[]>([]);
   const [medicoes, setMedicoes] = useState<Medicao[]>([]);
   const [boletimItens, setBoletimItens] = useState<Record<string, BoletimItem[]>>({});
   const [activeTab, setActiveTab] = useState("medicoes");
@@ -91,11 +97,13 @@ export default function Medicoes() {
   }, [selectedObraId]);
 
   const loadData = async () => {
-    const [c, m] = await Promise.all([
+    const [c, m, r] = await Promise.all([
       supabase.from("medicao_contrato_itens").select("*").eq("obra_id", selectedObraId).order("item_numero"),
       supabase.from("medicoes").select("*").eq("obra_id", selectedObraId).order("numero", { ascending: false }),
+      supabase.from("medicao_reajustes").select("*").eq("obra_id", selectedObraId).order("data_aplicacao"),
     ]);
     if (c.data) setContratoItens(c.data as any[]);
+    if (r.data) setReajustes(r.data as Reajuste[]);
     if (m.data && m.data.length > 0) {
       setMedicoes(m.data as Medicao[]);
       const { data: allItems } = await supabase.from("medicao_boletim_itens").select("*").in("medicao_id", m.data.map(med => med.id));
@@ -122,6 +130,23 @@ export default function Medicoes() {
     return acc;
   }, [boletimItens, contratoItens, editingMedicao]);
 
+  // Fator de reajuste acumulado (multiplicativo). Aplica APENAS ao saldo restante de cada item.
+  const fatorReajuste = useMemo(() => {
+    let f = 1;
+    for (const r of reajustes) f *= (1 + (Number(r.percentual) || 0) / 100);
+    return f;
+  }, [reajustes]);
+
+  // Valor unitário efetivo: itens 100% medidos mantêm o valor unitário original.
+  // Itens com saldo recebem reajuste proporcional ao % do saldo.
+  // Fórmula: V_unit_efetivo = V_orig * (1 - %medido/100) * fator + V_orig * (%medido/100)
+  const getValorUnitarioEfetivo = (ci: ContratoItem): number => {
+    if (fatorReajuste === 1) return ci.valor_unitario;
+    const prevQ = (acumuladoAnterior[ci.id] || 0);
+    const pctMedido = ci.quantidade > 0 ? Math.min(prevQ / ci.quantidade, 1) : 0;
+    return ci.valor_unitario * pctMedido + ci.valor_unitario * (1 - pctMedido) * fatorReajuste;
+  };
+
   // Helper: converte lançamento (und ou pct) em quantidade
   const calcularQtd = (ci: ContratoItem, lanc?: { modo: ModoLanc; valor: number }) => {
     if (!lanc || !lanc.valor) return 0;
@@ -132,12 +157,16 @@ export default function Medicoes() {
   const subtotalLancamento = useMemo(() => {
     return contratoItens.reduce((s, ci) => {
       const q = calcularQtd(ci, lancamentos[ci.id]);
-      return s + q * ci.valor_unitario;
+      return s + q * getValorUnitarioEfetivo(ci);
     }, 0);
-  }, [lancamentos, contratoItens]);
+  }, [lancamentos, contratoItens, fatorReajuste, acumuladoAnterior]);
 
   const totalContrato = contratoItens.reduce((s, i) => s + (i.quantidade * i.valor_unitario), 0);
   const totalMedido = Object.entries(boletimItens).reduce((s, [, itens]) => s + itens.reduce((ss, i) => ss + i.valor_medido, 0), 0);
+
+  // Separação aditivos
+  const itensPrincipais = useMemo(() => contratoItens.filter(i => !i.is_aditivo), [contratoItens]);
+  const itensAditivos = useMemo(() => contratoItens.filter(i => i.is_aditivo), [contratoItens]);
 
   // ============ SALVAR (RASCUNHO) ============
   const handleSaveBatch = async () => {
@@ -172,7 +201,7 @@ export default function Medicoes() {
           contrato_item_id: ci.id,
           quantidade_medida: q,
           percentual_medido: ci.quantidade > 0 ? (q / ci.quantidade) * 100 : 0,
-          valor_medido: q * ci.valor_unitario,
+          valor_medido: q * getValorUnitarioEfetivo(ci),
           modo_lancamento: lancamentos[ci.id]?.modo === "pct" ? "porcentagem" : "quantidade",
         }));
 
@@ -269,8 +298,8 @@ export default function Medicoes() {
   };
 
   const subtotalEdit = useMemo(() => {
-    return contratoItens.reduce((s, ci) => s + calcularQtd(ci, editLancamentos[ci.id]) * ci.valor_unitario, 0);
-  }, [editLancamentos, contratoItens]);
+    return contratoItens.reduce((s, ci) => s + calcularQtd(ci, editLancamentos[ci.id]) * getValorUnitarioEfetivo(ci), 0);
+  }, [editLancamentos, contratoItens, fatorReajuste, acumuladoAnterior]);
 
   const handleSalvarEdicao = async () => {
     if (!editingMedicao) return;
@@ -285,7 +314,7 @@ export default function Medicoes() {
           contrato_item_id: ci.id,
           quantidade_medida: q,
           percentual_medido: ci.quantidade > 0 ? (q / ci.quantidade) * 100 : 0,
-          valor_medido: q * ci.valor_unitario,
+          valor_medido: q * getValorUnitarioEfetivo(ci),
           modo_lancamento: editLancamentos[ci.id]?.modo === "pct" ? "porcentagem" : "quantidade",
         }));
       if (entries.length > 0) await supabase.from("medicao_boletim_itens").insert(entries);
@@ -359,6 +388,61 @@ export default function Medicoes() {
     setter(l => ({ ...l, [id]: { modo: l[id]?.modo || "und", valor: l[id]?.valor || 0, ...patch } }));
   };
 
+  // Renderizador de linha (usado em principais e aditivos)
+  const renderLancRow = (ci: ContratoItem, isAditivo = false) => {
+    const prevQtd = acumuladoAnterior[ci.id] || 0;
+    const lanc = lancamentos[ci.id];
+    const qtdAtual = calcularQtd(ci, lanc);
+    const saldoQtd = ci.quantidade - (prevQtd + qtdAtual);
+    const vUnitEf = getValorUnitarioEfetivo(ci);
+    const reajustado = vUnitEf !== ci.valor_unitario;
+    const valorTotal = ci.quantidade * ci.valor_unitario;
+    const saldoR = saldoQtd * vUnitEf;
+    return (
+      <TableRow key={ci.id} className={`border-b hover:bg-slate-50/40 ${isAditivo ? "bg-blue-50/20" : ""}`}>
+        <TableCell className="px-3 py-4 font-mono text-[11px] font-bold text-blue-600">
+          {isAditivo && <Badge className="mr-1 bg-blue-100 text-blue-700 border-none text-[8px] px-1 py-0">A{ci.aditivo_numero || ""}</Badge>}
+          {ci.item_numero}
+        </TableCell>
+        <TableCell className="px-3 py-4 font-bold text-slate-800 text-sm">{ci.descricao}</TableCell>
+        <TableCell className="px-3 py-4 text-right font-bold text-slate-700 text-xs">{fmtNum(ci.quantidade)} <span className="text-[9px] text-slate-400">{ci.unidade}</span></TableCell>
+        <TableCell className="px-3 py-4 text-right font-bold text-slate-700 text-xs">
+          {fmtBRL(ci.valor_unitario)}
+          {reajustado && <div className="text-[9px] text-amber-600 font-black">→ {fmtBRL(vUnitEf)}</div>}
+        </TableCell>
+        <TableCell className="px-3 py-4 text-right font-black text-slate-900 text-xs">{fmtBRL(valorTotal)}</TableCell>
+        <TableCell className="px-3 py-4 text-right font-bold text-amber-600 text-xs bg-amber-50/10">{fmtNum(prevQtd)}</TableCell>
+        <TableCell className="px-3 py-4 bg-emerald-50/20 border-x border-emerald-100">
+          <div className="flex gap-1.5 items-center">
+            <Select
+              value={lanc?.modo || "und"}
+              onValueChange={(v: ModoLanc) => setLanc(setLancamentos as any, ci.id, { modo: v })}
+            >
+              <SelectTrigger className="h-10 w-20 rounded-xl font-black text-xs bg-white"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="und">UN</SelectItem>
+                <SelectItem value="pct">%</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input
+              type="number"
+              step="0.01"
+              value={lanc?.valor || ""}
+              onChange={e => setLanc(setLancamentos as any, ci.id, { valor: Number(e.target.value) })}
+              placeholder="0,00"
+              className="h-10 rounded-xl font-black text-right text-emerald-700 bg-white"
+            />
+            <span className="text-[10px] font-black text-emerald-500 w-16 text-right">
+              {qtdAtual > 0 ? `=${fmtNum(qtdAtual)}` : ""}
+            </span>
+          </div>
+        </TableCell>
+        <TableCell className={`px-3 py-4 text-right text-xs font-bold ${saldoQtd < 0 ? "text-rose-500" : "text-slate-500"}`}>{fmtNum(saldoQtd)}</TableCell>
+        <TableCell className="px-3 py-4 text-right font-black text-rose-600 text-xs bg-rose-50/20">{fmtBRL(saldoR)}</TableCell>
+      </TableRow>
+    );
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -374,9 +458,10 @@ export default function Medicoes() {
           <div className="md:col-span-4 bg-white p-4 rounded-3xl border shadow-sm">
             <Label className="px-1 text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest">Obra Alvo</Label>
             <Select value={selectedObraId} onValueChange={setSelectedObraId}>
-              <SelectTrigger className="border-none shadow-none font-black text-xl text-slate-800 bg-slate-50 h-14 rounded-2xl px-6"><SelectValue placeholder="Selecione a obra..." /></SelectTrigger>
-              <SelectContent className="rounded-2xl shadow-2xl border-none">
-                {obras.map(o => <SelectItem key={o.id} value={o.id} className="font-bold">{o.codigo} - {o.nome}</SelectItem>)}
+              <SelectTrigger className="border-none shadow-none font-black text-xl text-slate-800 bg-slate-50 h-14 rounded-2xl px-6"><SelectValue placeholder={obras.length === 0 ? "Carregando obras..." : "Selecione a obra..."} /></SelectTrigger>
+              <SelectContent className="rounded-2xl shadow-2xl border-none max-h-[400px]">
+                {obras.length === 0 && <div className="p-4 text-xs text-slate-400">Nenhuma obra cadastrada</div>}
+                {obras.map(o => <SelectItem key={o.id} value={o.id} className="font-bold">{o.codigo} — {o.nome}{o.construtora ? ` (${o.construtora})` : ""}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -432,7 +517,18 @@ export default function Medicoes() {
                   </div>
                 </div>
 
+                {contratoItens.length === 0 ? (
+                  <div className="p-16 text-center">
+                    <p className="text-slate-400 font-bold text-sm mb-2">Nenhum item de contrato cadastrado para esta obra.</p>
+                    <p className="text-slate-500 text-xs">Acesse <span className="font-black text-emerald-600">Obras → Contratos</span> para cadastrar os itens da planilha contratual antes de lançar medições.</p>
+                  </div>
+                ) : (
                 <div className="overflow-x-auto" style={{ maxHeight: "65vh" }}>
+                  {fatorReajuste !== 1 && (
+                    <div className="px-6 py-3 bg-amber-50 border-b border-amber-200 text-[11px] font-bold text-amber-800">
+                      ⚡ Reajuste contratual ativo: <span className="font-black">{((fatorReajuste - 1) * 100).toFixed(2)}%</span> aplicado sobre o saldo restante de cada item ({reajustes.length} reajuste{reajustes.length !== 1 ? "s" : ""} registrado{reajustes.length !== 1 ? "s" : ""}).
+                    </div>
+                  )}
                   <Table>
                     <TableHeader className="bg-white sticky top-0 z-10">
                       <TableRow className="border-b">
@@ -448,55 +544,25 @@ export default function Medicoes() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {contratoItens.map(ci => {
-                        const prevQtd = acumuladoAnterior[ci.id] || 0;
-                        const lanc = lancamentos[ci.id];
-                        const qtdAtual = calcularQtd(ci, lanc);
-                        const saldoQtd = ci.quantidade - (prevQtd + qtdAtual);
-                        const valorTotal = ci.quantidade * ci.valor_unitario;
-                        const valorMedidoAcum = (prevQtd + qtdAtual) * ci.valor_unitario;
-                        const saldoR = valorTotal - valorMedidoAcum;
-                        return (
-                          <TableRow key={ci.id} className="border-b hover:bg-slate-50/40">
-                            <TableCell className="px-3 py-4 font-mono text-[11px] font-bold text-blue-600">{ci.item_numero}</TableCell>
-                            <TableCell className="px-3 py-4 font-bold text-slate-800 text-sm">{ci.descricao}</TableCell>
-                            <TableCell className="px-3 py-4 text-right font-bold text-slate-700 text-xs">{fmtNum(ci.quantidade)} <span className="text-[9px] text-slate-400">{ci.unidade}</span></TableCell>
-                            <TableCell className="px-3 py-4 text-right font-bold text-slate-700 text-xs">{fmtBRL(ci.valor_unitario)}</TableCell>
-                            <TableCell className="px-3 py-4 text-right font-black text-slate-900 text-xs">{fmtBRL(valorTotal)}</TableCell>
-                            <TableCell className="px-3 py-4 text-right font-bold text-amber-600 text-xs bg-amber-50/10">{fmtNum(prevQtd)}</TableCell>
-                            <TableCell className="px-3 py-4 bg-emerald-50/20 border-x border-emerald-100">
-                              <div className="flex gap-1.5 items-center">
-                                <Select
-                                  value={lanc?.modo || "und"}
-                                  onValueChange={(v: ModoLanc) => setLanc(setLancamentos as any, ci.id, { modo: v })}
-                                >
-                                  <SelectTrigger className="h-10 w-20 rounded-xl font-black text-xs bg-white"><SelectValue /></SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="und">UN</SelectItem>
-                                    <SelectItem value="pct">%</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <Input
-                                  type="number"
-                                  step="0.01"
-                                  value={lanc?.valor || ""}
-                                  onChange={e => setLanc(setLancamentos as any, ci.id, { valor: Number(e.target.value) })}
-                                  placeholder="0,00"
-                                  className="h-10 rounded-xl font-black text-right text-emerald-700 bg-white"
-                                />
-                                <span className="text-[10px] font-black text-emerald-500 w-16 text-right">
-                                  {qtdAtual > 0 ? `=${fmtNum(qtdAtual)}` : ""}
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell className={`px-3 py-4 text-right text-xs font-bold ${saldoQtd < 0 ? "text-rose-500" : "text-slate-500"}`}>{fmtNum(saldoQtd)}</TableCell>
-                            <TableCell className="px-3 py-4 text-right font-black text-rose-600 text-xs bg-rose-50/20">{fmtBRL(saldoR)}</TableCell>
+                      {itensPrincipais.length > 0 && (
+                        <TableRow className="bg-slate-100">
+                          <TableCell colSpan={9} className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600">📋 Itens Contratuais ({itensPrincipais.length})</TableCell>
+                        </TableRow>
+                      )}
+                      {itensPrincipais.map(ci => renderLancRow(ci))}
+
+                      {itensAditivos.length > 0 && (
+                        <>
+                          <TableRow className="bg-blue-50">
+                            <TableCell colSpan={9} className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-blue-700">➕ Itens Aditivos ({itensAditivos.length})</TableCell>
                           </TableRow>
-                        );
-                      })}
+                          {itensAditivos.map(ci => renderLancRow(ci, true))}
+                        </>
+                      )}
                     </TableBody>
                   </Table>
                 </div>
+                )}
 
                 <div className="p-10 bg-slate-900 border-t flex flex-col md:flex-row justify-between items-center gap-8">
                   <div className="text-white">

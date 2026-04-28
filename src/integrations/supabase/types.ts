@@ -1668,6 +1668,7 @@ export type Database = {
           obra_id: string
           observacoes: string | null
           quantidade: number
+          quantidade_acumulada_inicial: number
           unidade: string
           updated_at: string
           valor_total: number
@@ -1686,6 +1687,7 @@ export type Database = {
           obra_id: string
           observacoes?: string | null
           quantidade?: number
+          quantidade_acumulada_inicial?: number
           unidade?: string
           updated_at?: string
           valor_total?: number
@@ -1704,6 +1706,7 @@ export type Database = {
           obra_id?: string
           observacoes?: string | null
           quantidade?: number
+          quantidade_acumulada_inicial?: number
           unidade?: string
           updated_at?: string
           valor_total?: number
