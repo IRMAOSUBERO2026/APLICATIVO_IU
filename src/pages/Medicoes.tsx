@@ -101,7 +101,7 @@ export default function Medicoes() {
         setObras([]);
         setObrasError("Não foi possível carregar as obras em execução.");
       } else {
-        const obrasAtivas = (data || []) as any[];
+        const obrasAtivas = (data || []) as Obra[];
         setObras(obrasAtivas);
         setSelectedObraId(prev => obrasAtivas.some(o => o.id === prev) ? prev : "");
       }
