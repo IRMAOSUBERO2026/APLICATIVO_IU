@@ -103,9 +103,12 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
   // Item dialog
   const [showItemDialog, setShowItemDialog] = useState(false);
   const [editingItem, setEditingItem] = useState<ContratoItem | null>(null);
-  const [itemForm, setItemForm] = useState({ item_numero: "", descricao: "", unidade: "un", quantidade: 0, valor_unitario: 0, is_aditivo: false, aditivo_numero: 0, observacoes: "", categoria: "servico" });
-
-  // Reajuste dialog
+  const [itemForm, setItemForm] = useState({ 
+    item_numero: "", descricao: "", unidade: "un", quantidade: 0, 
+    valor_unitario: 0, is_aditivo: false, aditivo_numero: 0, 
+    observacoes: "", categoria: "servico", quantidade_acumulada_inicial: 0,
+    condicoes_medicao: [] as { etapa: string; percentual: number }[] 
+  });
   const [showReajusteDialog, setShowReajusteDialog] = useState(false);
   const [reajusteForm, setReajusteForm] = useState({ data_aplicacao: "", percentual: 0, tipo: "anual", motivo: "", observacoes: "" });
 
@@ -147,13 +150,27 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
   // CRUD Item
   const openNewItem = (isAditivo: boolean) => {
     setEditingItem(null);
-    setItemForm({ item_numero: "", descricao: "", unidade: "un", quantidade: 0, valor_unitario: 0, is_aditivo: isAditivo, aditivo_numero: isAditivo ? (itensAditivo.length > 0 ? Math.max(...itensAditivo.map(i => i.aditivo_numero || 0)) + 1 : 1) : 0, observacoes: "", categoria: "servico", quantidade_acumulada_inicial: 0 });
+    setItemForm({ 
+      item_numero: "", descricao: "", unidade: "un", quantidade: 0, 
+      valor_unitario: 0, is_aditivo: isAditivo, 
+      aditivo_numero: isAditivo ? (itensAditivo.length > 0 ? Math.max(...itensAditivo.map(i => i.aditivo_numero || 0)) + 1 : 1) : 0, 
+      observacoes: "", categoria: "servico", quantidade_acumulada_inicial: 0, 
+      condicoes_medicao: [] 
+    });
     setShowItemDialog(true);
   };
 
   const openEditItem = (item: ContratoItem) => {
     setEditingItem(item);
-    setItemForm({ item_numero: item.item_numero, descricao: item.descricao, unidade: item.unidade, quantidade: item.quantidade, valor_unitario: item.valor_unitario, is_aditivo: item.is_aditivo, aditivo_numero: item.aditivo_numero || 0, observacoes: item.observacoes || "", categoria: item.categoria || "servico", quantidade_acumulada_inicial: item.quantidade_acumulada_inicial || 0 });
+    setItemForm({ 
+      item_numero: item.item_numero, descricao: item.descricao, 
+      unidade: item.unidade, quantidade: item.quantidade, 
+      valor_unitario: item.valor_unitario, is_aditivo: item.is_aditivo, 
+      aditivo_numero: item.aditivo_numero || 0, 
+      observacoes: item.observacoes || "", categoria: item.categoria || "servico", 
+      quantidade_acumulada_inicial: item.quantidade_acumulada_inicial || 0,
+      condicoes_medicao: (item as any).condicoes_medicao || []
+    });
     setShowItemDialog(true);
   };
 
@@ -207,40 +224,62 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
     const file = e.target.files?.[0];
     if (!file) return;
 
+    console.log("Iniciando importação de:", file.name);
+
     const reader = new FileReader();
     reader.onload = async (evt) => {
       try {
         const data = evt.target?.result;
-        const workbook = XLSX.read(data, { type: "binary" });
+        const workbook = XLSX.read(data, { type: "array" });
         const wsName = workbook.SheetNames[0];
         const ws = workbook.Sheets[wsName];
         const rows = XLSX.utils.sheet_to_json(ws) as any[];
 
-        const payloads = rows.map(r => ({
-          obra_id: currentObra.id,
-          empresa_id: currentObra.empresa_id,
-          item_numero: String(r["Item"] || ""),
-          descricao: String(r["Descrição"] || ""),
-          unidade: String(r["Unidade"] || "un"),
-          quantidade: Number(r["Quantidade Total"] || 0),
-          valor_unitario: Number(r["Preço Unitário"] || 0),
-          quantidade_acumulada_inicial: Number(r["Acumulado Inicial (Ant. Sistema)"] || 0),
-          valor_total: Number(r["Quantidade Total"] || 0) * Number(r["Preço Unitário"] || 0),
-          is_aditivo: false
-        })).filter(p => p.descricao && p.item_numero);
+        console.log("Linhas processadas do Excel:", rows.length);
 
-        if (payloads.length === 0) throw new Error("Documento vazio ou inválido.");
+        if (rows.length === 0) throw new Error("A planilha parece estar vazia.");
+
+        const payloads = rows.map((r, index) => {
+          // Tentamos encontrar as colunas mesmo que o nome mude um pouco (com ou sem acento)
+          const getItem = () => r["Item"] || r["item"] || r["ITEM"] || "";
+          const getDesc = () => r["Descrição"] || r["Descricao"] || r["descrição"] || r["DESCRIÇÃO"] || r["item_descricao"] || "";
+          const getUn = () => r["Unidade"] || r["unidade"] || r["UNIDADE"] || r["Un"] || "un";
+          const getQtd = () => Number(r["Quantidade Total"] || r["Quantidade"] || r["Qtd Total"] || r["qtd_total"] || r["QTD"] || 0);
+          const getPreco = () => Number(r["Preço Unitário"] || r["Preco Unitario"] || r["preco_unitario"] || r["VALOR UNITARIO"] || 0);
+          const getAcum = () => Number(r["Acumulado Inicial (Ant. Sistema)"] || r["Acumulado Inicial"] || r["Acumulado"] || r["acumulado"] || 0);
+
+          return {
+            obra_id: currentObra.id,
+            empresa_id: currentObra.empresa_id,
+            item_numero: String(getItem()),
+            descricao: String(getDesc()),
+            unidade: String(getUn()),
+            quantidade: getQtd(),
+            valor_unitario: getPreco(),
+            quantidade_acumulada_inicial: getAcum(),
+            valor_total: getQtd() * getPreco(),
+            is_aditivo: false
+          };
+        }).filter(p => p.descricao && p.item_numero);
+
+        if (payloads.length === 0) {
+          throw new Error("Não conseguimos ler os dados. Verifique se as colunas estão corretas: Item, Descrição, Unidade, Quantidade Total, Preço Unitário.");
+        }
 
         const { error } = await supabase.from("medicao_contrato_itens").insert(payloads);
         if (error) throw error;
 
-        toast({ title: "Sucesso!", description: `${payloads.length} itens importados.` });
+        toast({ title: "Importação concluída!", description: `${payloads.length} itens adicionados ao contrato.` });
+        
+        // Resetar o input para permitir subir o mesmo arquivo se necessário
+        e.target.value = "";
         loadAll();
       } catch (err: any) {
+        console.error("Erro no processamento do Excel:", err);
         toast({ title: "Erro na importação", description: err.message, variant: "destructive" });
       }
     };
-    reader.readAsBinaryString(file);
+    reader.readAsArrayBuffer(file);
   };
 
   // PDF: Proposta
@@ -328,14 +367,18 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
         <div className="flex gap-2">
           {!isAditivo && (
             <>
-              <Button size="sm" variant="outline" onClick={handleDownloadTemplate} className="h-8 text-xs gap-1.5"><Download className="h-3.5 w-3.5" /> Modelo</Button>
-              <div className="relative">
-                <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5"><Upload className="h-3.5 w-3.5" /> Importar</Button>
-                <input type="file" accept=".xlsx, .xls" onChange={handleImportExcel} className="absolute inset-0 opacity-0 cursor-pointer" />
-              </div>
+              <Button size="sm" variant="outline" onClick={handleDownloadTemplate} className="h-8 text-xs gap-1.5 font-bold"><Download className="h-3.5 w-3.5" /> Modelo</Button>
+              <Button size="sm" variant="outline" onClick={() => document.getElementById("import-excel-input")?.click()} className="h-8 text-xs gap-1.5 font-bold"><Upload className="h-3.5 w-3.5" /> Importar</Button>
+              <input 
+                id="import-excel-input"
+                type="file" 
+                accept=".xlsx, .xls" 
+                onChange={handleImportExcel} 
+                className="hidden" 
+              />
             </>
           )}
-          <Button size="sm" variant="outline" onClick={() => openNewItem(isAditivo)} className="h-8 text-xs"><Plus className="h-3.5 w-3.5 mr-1" /> Adicionar</Button>
+          <Button size="sm" variant="outline" onClick={() => openNewItem(isAditivo)} className="h-8 text-xs font-bold"><Plus className="h-3.5 w-3.5 mr-1" /> Adicionar</Button>
         </div>
       </div>
       {items.length === 0 ? (
@@ -685,7 +728,40 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
               </div>
             )}
             {itemForm.is_aditivo && <div><Label>Nº Aditivo</Label><Input type="number" value={itemForm.aditivo_numero || ""} onChange={e => setItemForm(f => ({ ...f, aditivo_numero: Number(e.target.value) }))} /></div>}
-            <div className={itemForm.is_aditivo ? "" : "col-span-2"}><Label>Observações</Label><Textarea value={itemForm.observacoes} onChange={e => setItemForm(f => ({ ...f, observacoes: e.target.value }))} rows={2} /></div>
+            <div className="col-span-2 space-y-3 pt-2 border-t">
+              <div className="flex items-center justify-between">
+                <Label className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Etapas / Condições de Medição</Label>
+                <Button type="button" variant="ghost" size="sm" onClick={() => setItemForm(p => ({ ...p, condicoes_medicao: [...p.condicoes_medicao, { etapa: "", percentual: 0 }] }))} className="h-7 text-[10px] gap-1 font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50"><Plus className="h-3 w-3" /> Adicionar Etapa</Button>
+              </div>
+              {itemForm.condicoes_medicao.length > 0 ? (
+                <div className="space-y-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                   {itemForm.condicoes_medicao.map((cond, idx) => (
+                      <div key={idx} className="flex gap-2 items-center">
+                         <Input placeholder="Ex: Execução" value={cond.etapa} onChange={e => {
+                            const newC = [...itemForm.condicoes_medicao];
+                            newC[idx].etapa = e.target.value;
+                            setItemForm(p => ({ ...p, condicoes_medicao: newC }));
+                         }} className="h-9 text-xs font-medium bg-white" />
+                         <div className="relative w-24">
+                           <Input type="number" placeholder="%" value={cond.percentual || ""} onChange={e => {
+                              const newC = [...itemForm.condicoes_medicao];
+                              newC[idx].percentual = Number(e.target.value);
+                              setItemForm(p => ({ ...p, condicoes_medicao: newC }));
+                           }} className="h-9 text-xs font-bold text-center bg-white pr-6" />
+                           <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">%</span>
+                         </div>
+                         <Button variant="ghost" size="icon" onClick={() => setItemForm(p => ({ ...p, condicoes_medicao: p.condicoes_medicao.filter((_, i) => i !== idx) }))} className="h-8 w-8 text-slate-300 hover:text-rose-500"><Trash2 className="h-4 w-4" /></Button>
+                      </div>
+                   ))}
+                   <div className="pt-2 flex justify-between px-1">
+                      <span className="text-[10px] font-black uppercase text-slate-400">Total das Etapas:</span>
+                      <span className={`text-[10px] font-black ${itemForm.condicoes_medicao.reduce((s, c) => s + c.percentual, 0) !== 100 ? "text-rose-500" : "text-emerald-500"}`}>{itemForm.condicoes_medicao.reduce((s, c) => s + c.percentual, 0)}%</span>
+                   </div>
+                </div>
+              ) : (
+                <p className="text-[10px] text-slate-400 font-medium italic">Nenhuma etapa definida. O item será medido integralmente.</p>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowItemDialog(false)}>Cancelar</Button>
