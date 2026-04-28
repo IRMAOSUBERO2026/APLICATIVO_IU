@@ -329,10 +329,15 @@ export default function RH() {
           <ExamesModule />
         ) : tab === "exames_tab" ? (
           <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+            <div className="px-4 py-3 border-b bg-muted/30 flex items-center justify-between">
+              <h3 className="text-sm font-semibold">Exames e Treinamentos ({sorted.length} funcionários)</h3>
+              <p className="text-xs text-muted-foreground">Clique em <Pencil className="inline h-3 w-3" /> para editar as datas</p>
+            </div>
             <ScrollableTable>
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50">
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Nº Reg</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Nome</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Empresa</th>
                     <th className="px-4 py-3 text-center font-medium text-muted-foreground">ASO</th>
@@ -340,20 +345,33 @@ export default function RH() {
                     <th className="px-4 py-3 text-center font-medium text-muted-foreground">NR12</th>
                     <th className="px-4 py-3 text-center font-medium text-muted-foreground">NR18</th>
                     <th className="px-4 py-3 text-center font-medium text-muted-foreground">NR35</th>
+                    <th className="px-4 py-3 text-center font-medium text-muted-foreground">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {funcionarios.map((f) => (
-                    <tr key={f.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3.5"><div className="flex items-center gap-3"><FuncionarioAvatar nome={f.nome} foto={f.foto} size="sm" /><span className="font-medium">{f.nome}</span></div></td>
-                      <td className="px-4 py-3.5 text-xs text-muted-foreground">{f.empresa}</td>
-                      <td className="px-4 py-3.5 text-center"><ExamBadge date={f.aso} validityYears={1} label="ASO" /></td>
-                      <td className="px-4 py-3.5 text-center"><ExamBadge date={f.nr6} validityYears={1} label="NR6" /></td>
-                      <td className="px-4 py-3.5 text-center"><ExamBadge date={f.nr12} validityYears={2} label="NR12" /></td>
-                      <td className="px-4 py-3.5 text-center"><ExamBadge date={f.nr18} validityYears={2} label="NR18" /></td>
-                      <td className="px-4 py-3.5 text-center"><ExamBadge date={f.nr35} validityYears={2} label="NR35" /></td>
-                    </tr>
-                  ))}
+                  {sorted.map((f) => {
+                    const empInfo = getEmpresaInfo(f.empresa_id);
+                    return (
+                      <tr key={f.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-3.5 text-xs font-mono text-muted-foreground">{f.numero_registro || "—"}</td>
+                        <td className="px-4 py-3.5"><div className="flex items-center gap-3"><FuncionarioAvatar nome={f.nome} foto={f.foto_url} size="sm" /><span className="font-medium">{f.nome}</span></div></td>
+                        <td className="px-4 py-3.5 text-xs text-muted-foreground">{empInfo.nome}</td>
+                        <td className="px-4 py-3.5 text-center">{f.data_aso ? <ExamBadge date={f.data_aso} validityYears={1} label="ASO" /> : <span className="text-[10px] text-muted-foreground">—</span>}</td>
+                        <td className="px-4 py-3.5 text-center">{f.data_nr6 ? <ExamBadge date={f.data_nr6} validityYears={1} label="NR6" /> : <span className="text-[10px] text-muted-foreground">—</span>}</td>
+                        <td className="px-4 py-3.5 text-center">{f.data_nr12 ? <ExamBadge date={f.data_nr12} validityYears={2} label="NR12" /> : <span className="text-[10px] text-muted-foreground">—</span>}</td>
+                        <td className="px-4 py-3.5 text-center">{f.data_nr18 ? <ExamBadge date={f.data_nr18} validityYears={2} label="NR18" /> : <span className="text-[10px] text-muted-foreground">—</span>}</td>
+                        <td className="px-4 py-3.5 text-center">{f.data_nr35 ? <ExamBadge date={f.data_nr35} validityYears={2} label="NR35" /> : <span className="text-[10px] text-muted-foreground">—</span>}</td>
+                        <td className="px-4 py-3.5 text-center">
+                          <button onClick={() => setEditingExamFunc(f)} className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors" title="Editar Exames/Treinamentos">
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {sorted.length === 0 && (
+                    <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">Nenhum funcionário encontrado</td></tr>
+                  )}
                 </tbody>
               </table>
             </ScrollableTable>
