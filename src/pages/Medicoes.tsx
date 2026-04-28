@@ -491,13 +491,17 @@ export default function Medicoes() {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
           <div className="md:col-span-4 bg-white p-4 rounded-3xl border shadow-sm">
             <Label className="px-1 text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest">Obra Alvo</Label>
-            <Select value={selectedObraId} onValueChange={setSelectedObraId}>
-              <SelectTrigger className="border-none shadow-none font-black text-xl text-slate-800 bg-slate-50 h-14 rounded-2xl px-6"><SelectValue placeholder={obras.length === 0 ? "Carregando obras..." : "Selecione a obra..."} /></SelectTrigger>
+            <Select value={selectedObraId} onValueChange={setSelectedObraId} disabled={isLoadingObras || !!obrasError || obras.length === 0}>
+              <SelectTrigger className="border-none shadow-none font-black text-xl text-slate-800 bg-slate-50 h-14 rounded-2xl px-6"><SelectValue placeholder={isLoadingObras ? "Carregando obras..." : "Selecione a obra..."} /></SelectTrigger>
               <SelectContent className="rounded-2xl shadow-2xl border-none max-h-[400px]">
-                {obras.length === 0 && <div className="p-4 text-xs text-slate-400">Nenhuma obra cadastrada</div>}
+                {!isLoadingObras && !obrasError && obras.length === 0 && <div className="p-4 text-xs text-slate-400">Nenhuma obra em execução cadastrada</div>}
                 {obras.map(o => <SelectItem key={o.id} value={o.id} className="font-bold">{o.codigo} — {o.nome}{o.construtora ? ` (${o.construtora})` : ""}</SelectItem>)}
               </SelectContent>
             </Select>
+            {obrasError && <p className="px-1 pt-2 text-xs font-bold text-rose-600">{obrasError}</p>}
+            {!isLoadingObras && !obrasError && obras.length === 0 && (
+              <p className="px-1 pt-2 text-xs text-slate-500">Cadastre ou altere uma obra para <span className="font-black">Em execução</span> em Operacional → Obras.</p>
+            )}
           </div>
 
           <div className="md:col-span-8 grid grid-cols-2 md:grid-cols-4 gap-4">
