@@ -394,6 +394,7 @@ export default function RH() {
               </select>
               <select value={sortBy} onChange={e => setSortBy(e.target.value as any)} className="rounded-lg border bg-card px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
                 <option value="nome">Ordenar por Nome</option>
+                <option value="registro">Ordenar por Nº Reg.</option>
                 <option value="admissao">Ordenar por Admissão</option>
                 <option value="obra">Ordenar por Obra</option>
                 <option value="status">Ordenar por Status</option>
