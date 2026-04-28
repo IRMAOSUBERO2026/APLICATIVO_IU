@@ -103,7 +103,7 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
   // Item dialog
   const [showItemDialog, setShowItemDialog] = useState(false);
   const [editingItem, setEditingItem] = useState<ContratoItem | null>(null);
-  const [itemForm, setItemForm] = useState({ item_numero: "", descricao: "", unidade: "un", quantidade: 0, valor_unitario: 0, is_aditivo: false, aditivo_numero: 0, observacoes: "", categoria: "servico" });
+  const [itemForm, setItemForm] = useState({ item_numero: "", descricao: "", unidade: "un", quantidade: 0, valor_unitario: 0, is_aditivo: false, aditivo_numero: 0, observacoes: "", categoria: "servico", quantidade_acumulada_inicial: 0 });
 
   // Reajuste dialog
   const [showReajusteDialog, setShowReajusteDialog] = useState(false);
