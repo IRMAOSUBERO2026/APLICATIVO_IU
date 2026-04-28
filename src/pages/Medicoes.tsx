@@ -298,8 +298,8 @@ export default function Medicoes() {
   };
 
   const subtotalEdit = useMemo(() => {
-    return contratoItens.reduce((s, ci) => s + calcularQtd(ci, editLancamentos[ci.id]) * ci.valor_unitario, 0);
-  }, [editLancamentos, contratoItens]);
+    return contratoItens.reduce((s, ci) => s + calcularQtd(ci, editLancamentos[ci.id]) * getValorUnitarioEfetivo(ci), 0);
+  }, [editLancamentos, contratoItens, fatorReajuste, acumuladoAnterior]);
 
   const handleSalvarEdicao = async () => {
     if (!editingMedicao) return;
