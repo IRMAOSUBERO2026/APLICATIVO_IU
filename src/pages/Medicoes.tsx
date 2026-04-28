@@ -499,14 +499,21 @@ export default function Medicoes() {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
           <div className="md:col-span-4 bg-white p-4 rounded-3xl border shadow-sm">
             <Label className="px-1 text-[10px] font-black uppercase text-slate-400 mb-2 block tracking-widest">Obra Alvo</Label>
-            <Select value={selectedObraId} onValueChange={setSelectedObraId} disabled={isLoadingObras || !!obrasError || obras.length === 0}>
+            <Select value={selectedObraId} onValueChange={setSelectedObraId} disabled={isLoadingObras || obras.length === 0}>
               <SelectTrigger className="border-none shadow-none font-black text-xl text-slate-800 bg-slate-50 h-14 rounded-2xl px-6"><SelectValue placeholder={isLoadingObras ? "Carregando obras..." : "Selecione a obra..."} /></SelectTrigger>
               <SelectContent className="rounded-2xl shadow-2xl border-none max-h-[400px]">
-                {!isLoadingObras && !obrasError && obras.length === 0 && <div className="p-4 text-xs text-slate-400">Nenhuma obra em execução cadastrada</div>}
+                {!isLoadingObras && obras.length === 0 && <div className="p-4 text-xs text-slate-400">Nenhuma obra em execução cadastrada</div>}
                 {obras.map(o => <SelectItem key={o.id} value={o.id} className="font-bold">{o.codigo} — {o.nome}{o.construtora ? ` (${o.construtora})` : ""}</SelectItem>)}
               </SelectContent>
             </Select>
-            {obrasError && <p className="px-1 pt-2 text-xs font-bold text-rose-600">{obrasError}</p>}
+            {obrasError && (
+              <div className="px-1 pt-2 flex items-center gap-2">
+                <p className="text-xs font-bold text-rose-600 flex-1">{obrasError}</p>
+                <Button size="sm" variant="outline" className="h-7 rounded-lg text-xs" onClick={loadObrasEmExecucao}>
+                  <RefreshCw className="h-3 w-3 mr-1" /> Tentar novamente
+                </Button>
+              </div>
+            )}
             {!isLoadingObras && !obrasError && obras.length === 0 && (
               <p className="px-1 pt-2 text-xs text-slate-500">Cadastre ou altere uma obra para <span className="font-black">Em execução</span> em Operacional → Obras.</p>
             )}
