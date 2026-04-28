@@ -39,7 +39,7 @@ const menuSections = [
     ],
   },
   {
-    label: "Obras",
+    label: "Operacional",
     items: [
       { icon: HardHat, label: "Obras", path: "/obras" },
       { icon: ClipboardList, label: "Diário de Obra", path: "/diario-obra" },
