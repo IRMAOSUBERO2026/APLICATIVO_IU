@@ -205,11 +205,25 @@ export interface ImportResult {
   criados: number;
   atualizados: number;
   ignorados: number;
+  pulados_existentes: number;
   erros: { linha: number; cpf: string; erro: string }[];
 }
 
-/** Lê o arquivo .xlsx e faz upsert por CPF na tabela funcionarios */
-export async function importarPlanilhaFuncionarios(file: File): Promise<ImportResult> {
+export type ImportMode =
+  | "atualizar_e_criar"   // padrão: atualiza existentes e cria novos
+  | "atualizar_somente"   // só atualiza quem já existe — NUNCA cria
+  | "criar_somente";      // só cria novos — pula quem já existe
+
+function chaveNomeNasc(nome: string, dataNasc: string | null): string {
+  const n = String(nome ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  return `${n}|${dataNasc ?? ""}`;
+}
+
+/** Lê o arquivo .xlsx e importa funcionários conforme o modo escolhido */
+export async function importarPlanilhaFuncionarios(
+  file: File,
+  modo: ImportMode = "atualizar_e_criar",
+): Promise<ImportResult> {
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: "array" });
   const sheetName = wb.SheetNames.find((n) => /func/i.test(n)) || wb.SheetNames[0];
@@ -235,34 +249,71 @@ export async function importarPlanilhaFuncionarios(file: File): Promise<ImportRe
   });
   const semObra = obrasByCodigo.get(SEM_OBRA_CODIGO.toLowerCase()) ?? null;
 
-  const result: ImportResult = { total: rows.length, criados: 0, atualizados: 0, ignorados: 0, erros: [] };
+  const result: ImportResult = {
+    total: rows.length,
+    criados: 0,
+    atualizados: 0,
+    ignorados: 0,
+    pulados_existentes: 0,
+    erros: [],
+  };
 
+  // Carrega TODOS os funcionários existentes (com nome e data_nascimento p/ matching de fallback)
   const { data: funcionariosExistentes, error: errFuncionarios } = await supabase
     .from("funcionarios")
-    .select("id, cpf, created_at")
+    .select("id, cpf, nome, data_nascimento, created_at")
     .range(0, 9999);
 
   if (errFuncionarios) {
     throw new Error(`Não foi possível conferir funcionários existentes: ${errFuncionarios.message}`);
   }
 
+  // Index por CPF normalizado (apenas o mais antigo) e por nome+data_nascimento (fallback)
   const funcionariosPorCpf = new Map<string, string>();
+  const funcionariosPorNomeNasc = new Map<string, string>();
   (funcionariosExistentes ?? [])
-    .filter((f: any) => normCPF(f.cpf))
+    .slice()
     .sort((a: any, b: any) => String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")))
     .forEach((f: any) => {
-      const cpfNormalizado = normCPF(f.cpf);
-      if (!funcionariosPorCpf.has(cpfNormalizado)) funcionariosPorCpf.set(cpfNormalizado, f.id);
+      const cpfN = normCPF(f.cpf);
+      if (cpfN && !funcionariosPorCpf.has(cpfN)) funcionariosPorCpf.set(cpfN, f.id);
+      const k = chaveNomeNasc(f.nome, f.data_nascimento);
+      if (!funcionariosPorNomeNasc.has(k)) funcionariosPorNomeNasc.set(k, f.id);
     });
 
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
     const cpf = normCPF(r["CPF"]);
     const nome = String(r["NOME DO FUNCIONARIO"] ?? "").trim();
+    const dataNascimento = parseDate(r["DATA DE NASCIMENTO"]);
 
-    if (!cpf || !nome) {
+    if (!nome) {
       result.ignorados++;
-      result.erros.push({ linha: i + 2, cpf: cpf || "(vazio)", erro: "CPF e NOME são obrigatórios" });
+      result.erros.push({ linha: i + 2, cpf: cpf || "(vazio)", erro: "NOME é obrigatório" });
+      continue;
+    }
+
+    // Match: 1º por CPF, 2º por NOME+DATA_NASCIMENTO
+    let funcionarioExistenteId: string | undefined = cpf ? funcionariosPorCpf.get(cpf) : undefined;
+    if (!funcionarioExistenteId) {
+      funcionarioExistenteId = funcionariosPorNomeNasc.get(chaveNomeNasc(nome, dataNascimento));
+    }
+
+    // Se modo "criar_somente" e já existe, pula
+    if (modo === "criar_somente" && funcionarioExistenteId) {
+      result.pulados_existentes++;
+      continue;
+    }
+    // Se modo "atualizar_somente" e NÃO existe, pula
+    if (modo === "atualizar_somente" && !funcionarioExistenteId) {
+      result.pulados_existentes++;
+      continue;
+    }
+
+    // Para CRIAR é obrigatório CPF
+    if (!funcionarioExistenteId && !cpf) {
+      result.ignorados++;
+      result.erros.push({ linha: i + 2, cpf: "(vazio)", erro: "CPF obrigatório para novos cadastros" });
       continue;
     }
 
@@ -295,35 +346,55 @@ export async function importarPlanilhaFuncionarios(file: File): Promise<ImportRe
 
     const status = normStatus(r["STATUS"]);
 
-    const payload: any = {
-      empresa_id,
-      obra_id,
-      nome,
-      cpf,
-      rg: String(r["RG"] ?? "") || null,
-      pis: String(r["PIS"] ?? "") || null,
-      codigo_pix: String(r["CODIGO PIX"] ?? "") || null,
-      telefone: String(r["TELEFONE"] ?? "") || null,
-      cargo: String(r["CARGO"] ?? "").trim() || "Não informado",
-      data_admissao: parseDate(r["DATA DE ADMISSAO"]) || new Date().toISOString().slice(0, 10),
-      data_nascimento: parseDate(r["DATA DE NASCIMENTO"]),
-      data_rescisao: parseDate(r["DATA DE RESCISAO"]),
-      data_aso: parseDate(r["ASO"]),
-      data_nr6: parseDate(r["NR6"]),
-      data_nr12: parseDate(r["NR12"]),
-      data_nr18: parseDate(r["NR18"]),
-      data_nr35: parseDate(r["NR35"]),
-      clinica_aso: String(r["CLINICA"] ?? "") || null,
-      salario_base: parseNum(r["SALARIO BASE"]),
-      salario_combinado: r["SALARIO COMBINADO"] === "" ? null : parseNum(r["SALARIO COMBINADO"]),
-      status,
+    // Helper: só inclui no payload se houver valor (evita sobrescrever com vazio em UPDATE)
+    const txt = (v: any) => {
+      const s = String(v ?? "").trim();
+      return s || null;
     };
-    if (observacoes) payload.observacoes = observacoes;
-
-    const funcionarioExistenteId = funcionariosPorCpf.get(cpf);
+    const num = (v: any) => {
+      if (v === null || v === undefined || v === "") return null;
+      return parseNum(v);
+    };
 
     if (funcionarioExistenteId) {
-      const { error } = await supabase.from("funcionarios").update(payload).eq("id", funcionarioExistenteId);
+      // ===== UPDATE: atualiza apenas campos preenchidos (não apaga dados existentes) =====
+      const updatePayload: Record<string, any> = {};
+      const setIf = (key: string, val: any) => {
+        if (val !== null && val !== undefined && val !== "") updatePayload[key] = val;
+      };
+      setIf("empresa_id", empresa_id);
+      setIf("obra_id", obra_id);
+      setIf("nome", nome);
+      if (cpf) setIf("cpf", cpf);
+      setIf("rg", txt(r["RG"]));
+      setIf("pis", txt(r["PIS"]));
+      setIf("codigo_pix", txt(r["CODIGO PIX"]));
+      setIf("telefone", txt(r["TELEFONE"]));
+      setIf("cargo", txt(r["CARGO"]));
+      setIf("data_admissao", parseDate(r["DATA DE ADMISSAO"]));
+      setIf("data_nascimento", dataNascimento);
+      setIf("data_rescisao", parseDate(r["DATA DE RESCISAO"]));
+      setIf("data_aso", parseDate(r["ASO"]));
+      setIf("data_nr6", parseDate(r["NR6"]));
+      setIf("data_nr12", parseDate(r["NR12"]));
+      setIf("data_nr18", parseDate(r["NR18"]));
+      setIf("data_nr35", parseDate(r["NR35"]));
+      setIf("clinica_aso", txt(r["CLINICA"]));
+      setIf("salario_base", num(r["SALARIO BASE"]));
+      setIf("salario_combinado", num(r["SALARIO COMBINADO"]));
+      // Status só se vier explicitamente preenchido na planilha
+      if (String(r["STATUS"] ?? "").trim()) setIf("status", status);
+      if (observacoes) updatePayload.observacoes = observacoes;
+
+      if (Object.keys(updatePayload).length === 0) {
+        result.pulados_existentes++;
+        continue;
+      }
+
+      const { error } = await supabase
+        .from("funcionarios")
+        .update(updatePayload)
+        .eq("id", funcionarioExistenteId);
       if (error) {
         result.erros.push({ linha: i + 2, cpf, erro: error.message });
         result.ignorados++;
@@ -331,9 +402,35 @@ export async function importarPlanilhaFuncionarios(file: File): Promise<ImportRe
         result.atualizados++;
       }
     } else {
+      // ===== INSERT: criar novo =====
+      const insertPayload: any = {
+        empresa_id,
+        obra_id,
+        nome,
+        cpf,
+        rg: txt(r["RG"]),
+        pis: txt(r["PIS"]),
+        codigo_pix: txt(r["CODIGO PIX"]),
+        telefone: txt(r["TELEFONE"]),
+        cargo: txt(r["CARGO"]) || "Não informado",
+        data_admissao: parseDate(r["DATA DE ADMISSAO"]) || new Date().toISOString().slice(0, 10),
+        data_nascimento: dataNascimento,
+        data_rescisao: parseDate(r["DATA DE RESCISAO"]),
+        data_aso: parseDate(r["ASO"]),
+        data_nr6: parseDate(r["NR6"]),
+        data_nr12: parseDate(r["NR12"]),
+        data_nr18: parseDate(r["NR18"]),
+        data_nr35: parseDate(r["NR35"]),
+        clinica_aso: txt(r["CLINICA"]),
+        salario_base: parseNum(r["SALARIO BASE"]),
+        salario_combinado: r["SALARIO COMBINADO"] === "" ? null : parseNum(r["SALARIO COMBINADO"]),
+        status,
+      };
+      if (observacoes) insertPayload.observacoes = observacoes;
+
       const { data: novoFuncionario, error } = await supabase
         .from("funcionarios")
-        .insert(payload)
+        .insert(insertPayload)
         .select("id")
         .single();
       if (error) {
@@ -341,10 +438,14 @@ export async function importarPlanilhaFuncionarios(file: File): Promise<ImportRe
         result.ignorados++;
       } else {
         result.criados++;
-        if (novoFuncionario?.id) funcionariosPorCpf.set(cpf, novoFuncionario.id);
+        if (novoFuncionario?.id) {
+          funcionariosPorCpf.set(cpf, novoFuncionario.id);
+          funcionariosPorNomeNasc.set(chaveNomeNasc(nome, dataNascimento), novoFuncionario.id);
+        }
       }
     }
   }
 
   return result;
 }
+

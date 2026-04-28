@@ -294,16 +294,39 @@ export default function RH() {
                 const file = e.target.files?.[0];
                 if (!file) return;
                 e.target.value = "";
-                toast({ title: "Importando...", description: "Processando planilha, aguarde." });
+
+                // Pergunta o MODO de importação para evitar duplicatas
+                const escolha = window.prompt(
+                  "Como deseja importar a planilha?\n\n" +
+                  "1 = ATUALIZAR funcionários existentes E criar novos (padrão)\n" +
+                  "2 = APENAS ATUALIZAR funcionários já cadastrados (não cria nada novo)\n" +
+                  "3 = APENAS CRIAR novos (pula quem já existe)\n\n" +
+                  "Digite 1, 2 ou 3:",
+                  "1",
+                );
+                if (escolha === null) return; // cancelou
+                const modo: "atualizar_e_criar" | "atualizar_somente" | "criar_somente" =
+                  escolha.trim() === "2" ? "atualizar_somente"
+                  : escolha.trim() === "3" ? "criar_somente"
+                  : "atualizar_e_criar";
+
+                const labelModo =
+                  modo === "atualizar_somente" ? "Apenas atualização"
+                  : modo === "criar_somente" ? "Apenas novos"
+                  : "Atualizar + criar novos";
+
+                toast({ title: `Importando (${labelModo})...`, description: "Processando planilha, aguarde." });
                 try {
-                  const r = await importarPlanilhaFuncionarios(file);
+                  const r = await importarPlanilhaFuncionarios(file, modo);
                   setSearch("");
                   setFilterObra("");
                   setFilterStatus("");
                   setSortBy("nome");
                   setTab("lista");
                   loadDbFuncionarios();
-                  const msg = `${r.criados} criados, ${r.atualizados} atualizados, ${r.ignorados} ignorados (de ${r.total}).`;
+                  const msg =
+                    `${r.criados} criados, ${r.atualizados} atualizados, ` +
+                    `${r.pulados_existentes} pulados, ${r.ignorados} ignorados (de ${r.total}).`;
                   if (r.erros.length > 0) {
                     console.warn("Erros de importação:", r.erros);
                     toast({
@@ -312,7 +335,7 @@ export default function RH() {
                       variant: r.criados + r.atualizados === 0 ? "destructive" : "default",
                     });
                   } else {
-                    toast({ title: "Importação concluída", description: msg });
+                    toast({ title: `Importação concluída — ${labelModo}`, description: msg });
                   }
                 } catch (err: any) {
                   toast({ title: "Erro na importação", description: err?.message ?? String(err), variant: "destructive" });
