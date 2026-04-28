@@ -298,8 +298,8 @@ export async function importarPlanilhaFuncionarios(file: File): Promise<ImportRe
       salario_base: parseNum(r["SALARIO BASE"]),
       salario_combinado: r["SALARIO COMBINADO"] === "" ? null : parseNum(r["SALARIO COMBINADO"]),
       status,
-      observacoes,
     };
+    if (observacoes) payload.observacoes = observacoes;
 
     // Verifica se já existe pelo CPF
     const { data: existente, error: errSel } = await supabase
