@@ -1304,6 +1304,7 @@ export type Database = {
           nome_pai: string | null
           numero_registro: string | null
           obra_id: string | null
+          observacoes: string | null
           pis: string | null
           rg: string | null
           rne: string | null
@@ -1362,6 +1363,7 @@ export type Database = {
           nome_pai?: string | null
           numero_registro?: string | null
           obra_id?: string | null
+          observacoes?: string | null
           pis?: string | null
           rg?: string | null
           rne?: string | null
@@ -1420,6 +1422,7 @@ export type Database = {
           nome_pai?: string | null
           numero_registro?: string | null
           obra_id?: string | null
+          observacoes?: string | null
           pis?: string | null
           rg?: string | null
           rne?: string | null
