@@ -83,35 +83,43 @@ export default function Medicoes() {
 
   const selectedObra = obras.find(o => o.id === selectedObraId);
 
-  useEffect(() => {
-    let mounted = true;
+  const loadObrasEmExecucao = async () => {
+    setIsLoadingObras(true);
+    setObrasError("");
 
-    async function loadObrasEmExecucao() {
-      setIsLoadingObras(true);
-      setObrasError("");
+    // Tentativa 1: traz colunas extras (retenção/impostos). Se a coluna não existir
+    // (cache de schema, projeto antigo etc.), faz fallback para colunas básicas.
+    const fullCols = "id,nome,codigo,empresa_id,status,construtora,cliente,cidade,uf,endereco,percentual_retencao_padrao,impostos_padrao";
+    const baseCols = "id,nome,codigo,empresa_id,status,construtora,cliente,cidade,uf,endereco";
 
-      const { data, error } = await supabase.from("obras")
-        .select("id,nome,codigo,empresa_id,status,construtora,cliente,cidade,uf,endereco,percentual_retencao_padrao,impostos_padrao")
+    let { data, error } = await supabase.from("obras")
+      .select(fullCols)
+      .eq("status", "em_execucao")
+      .order("codigo", { ascending: true });
+
+    if (error) {
+      console.warn("[Medicoes] Fallback para colunas básicas de obras:", error.message);
+      const fb = await supabase.from("obras")
+        .select(baseCols)
         .eq("status", "em_execucao")
         .order("codigo", { ascending: true });
-
-      if (!mounted) return;
-
-      if (error) {
-        setObras([]);
-        setObrasError("Não foi possível carregar as obras em execução.");
-      } else {
-        const obrasAtivas = (data || []) as Obra[];
-        setObras(obrasAtivas);
-        setSelectedObraId(prev => obrasAtivas.some(o => o.id === prev) ? prev : "");
-      }
-
-      setIsLoadingObras(false);
+      data = fb.data as any;
+      error = fb.error;
     }
 
-    loadObrasEmExecucao();
-    return () => { mounted = false; };
-  }, []);
+    if (error) {
+      setObras([]);
+      setObrasError("Não foi possível carregar as obras em execução.");
+    } else {
+      const obrasAtivas = (data || []) as Obra[];
+      setObras(obrasAtivas);
+      setSelectedObraId(prev => obrasAtivas.some(o => o.id === prev) ? prev : "");
+    }
+
+    setIsLoadingObras(false);
+  };
+
+  useEffect(() => { loadObrasEmExecucao(); }, []);
 
   useEffect(() => {
     if (!selectedObraId) {
