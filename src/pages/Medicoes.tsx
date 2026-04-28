@@ -97,11 +97,13 @@ export default function Medicoes() {
   }, [selectedObraId]);
 
   const loadData = async () => {
-    const [c, m] = await Promise.all([
+    const [c, m, r] = await Promise.all([
       supabase.from("medicao_contrato_itens").select("*").eq("obra_id", selectedObraId).order("item_numero"),
       supabase.from("medicoes").select("*").eq("obra_id", selectedObraId).order("numero", { ascending: false }),
+      supabase.from("medicao_reajustes").select("*").eq("obra_id", selectedObraId).order("data_aplicacao"),
     ]);
     if (c.data) setContratoItens(c.data as any[]);
+    if (r.data) setReajustes(r.data as Reajuste[]);
     if (m.data && m.data.length > 0) {
       setMedicoes(m.data as Medicao[]);
       const { data: allItems } = await supabase.from("medicao_boletim_itens").select("*").in("medicao_id", m.data.map(med => med.id));
@@ -128,6 +130,23 @@ export default function Medicoes() {
     return acc;
   }, [boletimItens, contratoItens, editingMedicao]);
 
+  // Fator de reajuste acumulado (multiplicativo). Aplica APENAS ao saldo restante de cada item.
+  const fatorReajuste = useMemo(() => {
+    let f = 1;
+    for (const r of reajustes) f *= (1 + (Number(r.percentual) || 0) / 100);
+    return f;
+  }, [reajustes]);
+
+  // Valor unitário efetivo: itens 100% medidos mantêm o valor unitário original.
+  // Itens com saldo recebem reajuste proporcional ao % do saldo.
+  // Fórmula: V_unit_efetivo = V_orig * (1 - %medido/100) * fator + V_orig * (%medido/100)
+  const getValorUnitarioEfetivo = (ci: ContratoItem): number => {
+    if (fatorReajuste === 1) return ci.valor_unitario;
+    const prevQ = (acumuladoAnterior[ci.id] || 0);
+    const pctMedido = ci.quantidade > 0 ? Math.min(prevQ / ci.quantidade, 1) : 0;
+    return ci.valor_unitario * pctMedido + ci.valor_unitario * (1 - pctMedido) * fatorReajuste;
+  };
+
   // Helper: converte lançamento (und ou pct) em quantidade
   const calcularQtd = (ci: ContratoItem, lanc?: { modo: ModoLanc; valor: number }) => {
     if (!lanc || !lanc.valor) return 0;
@@ -138,12 +157,16 @@ export default function Medicoes() {
   const subtotalLancamento = useMemo(() => {
     return contratoItens.reduce((s, ci) => {
       const q = calcularQtd(ci, lancamentos[ci.id]);
-      return s + q * ci.valor_unitario;
+      return s + q * getValorUnitarioEfetivo(ci);
     }, 0);
-  }, [lancamentos, contratoItens]);
+  }, [lancamentos, contratoItens, fatorReajuste, acumuladoAnterior]);
 
   const totalContrato = contratoItens.reduce((s, i) => s + (i.quantidade * i.valor_unitario), 0);
   const totalMedido = Object.entries(boletimItens).reduce((s, [, itens]) => s + itens.reduce((ss, i) => ss + i.valor_medido, 0), 0);
+
+  // Separação aditivos
+  const itensPrincipais = useMemo(() => contratoItens.filter(i => !i.is_aditivo), [contratoItens]);
+  const itensAditivos = useMemo(() => contratoItens.filter(i => i.is_aditivo), [contratoItens]);
 
   // ============ SALVAR (RASCUNHO) ============
   const handleSaveBatch = async () => {
