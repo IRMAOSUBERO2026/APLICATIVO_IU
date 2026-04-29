@@ -190,6 +190,7 @@ export default function EquipamentosProprios() {
       toast({ title: "Selecione a empresa proprietária", variant: "destructive" });
       return;
     }
+    const valor = Number(formEquip.valor_aquisicao) || 0;
     const payload: any = {
       codigo: formEquip.codigo.trim(),
       descricao: formEquip.descricao.trim(),
@@ -198,7 +199,7 @@ export default function EquipamentosProprios() {
       modelo: formEquip.modelo?.trim() || null,
       numero_serie: formEquip.numero_serie?.trim() || null,
       data_aquisicao: formEquip.data_aquisicao || null,
-      valor_aquisicao: Number(formEquip.valor_aquisicao) || 0,
+      valor_aquisicao: valor,
       fornecedor: formEquip.fornecedor?.trim() || null,
       obra_id: formEquip.obra_id || null,
       empresa_id: formEquip.empresa_id,
@@ -213,11 +214,29 @@ export default function EquipamentosProprios() {
       toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
       return;
     }
+
+    // Lança despesa no Financeiro se for novo equipamento com valor + fornecedor + data
+    if (!editingEquip && valor > 0 && payload.fornecedor && payload.data_aquisicao) {
+      await supabase.from("contas_pagar").insert({
+        descricao: `Aquisição de equipamento: ${payload.codigo} - ${payload.descricao}`,
+        categoria: "Equipamentos",
+        valor: valor,
+        data_vencimento: payload.data_aquisicao,
+        empresa_id: payload.empresa_id,
+        obra_id: payload.obra_id,
+        status: "pendente",
+        observacoes: `Fornecedor: ${payload.fornecedor}`,
+      });
+      toast({ title: "Equipamento cadastrado!", description: "Despesa lançada no Financeiro." });
+    } else {
+      toast({ title: editingEquip ? "Equipamento atualizado!" : "Equipamento cadastrado!" });
+    }
+
     setShowEquipForm(false);
     setEditingEquip(null);
-    setFormEquip({ codigo: "", descricao: "", tipo: "Outros", marca: "", modelo: "", numero_serie: "", data_aquisicao: "", valor_aquisicao: 0, fornecedor: "", obra_id: "", empresa_id: "", status: "disponivel", observacoes: "", foto_url: "" });
+    const uberoId = empresas.find(e => /irm[aã]os?\s+ubero/i.test(e.razao_social))?.id || empresas[0]?.id || "";
+    setFormEquip({ codigo: "", descricao: "", tipo: "Outros", marca: "", modelo: "", numero_serie: "", data_aquisicao: "", valor_aquisicao: 0, fornecedor: "", obra_id: "", empresa_id: uberoId, status: "disponivel", observacoes: "", foto_url: "" });
     loadData();
-    toast({ title: editingEquip ? "Equipamento atualizado!" : "Equipamento cadastrado!" });
   }
 
   async function handleTransfer() {
