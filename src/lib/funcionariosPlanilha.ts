@@ -168,7 +168,7 @@ function chaveNomeNasc(empresaId: string, nome: string, dataNasc: string | null)
 }
 
 const COL = {
-  registro: ["Nº REG", "N° REG", "Nº REGISTRO", "N° REGISTRO", "NUMERO REGISTRO", "NRO REG", "NRO_REG", "REGISTRO", "N REG", "NREG"],
+  registro: ["Nº REG", "N° REG", "Nº REGISTRO", "N° REGISTRO", "NUMERO REGISTRO", "NRO REG", "NRO_REG", "REGISTRO", "N REG", "NREG", "ID", "MATRICULA", "MATRÍCULA", "CODIGO", "CÓDIGO", "REG"],
   nome: ["NOME DO FUNCIONARIO", "NOME DO FUNCIONÁRIO", "FUNCIONARIO", "FUNCIONÁRIO", "NOME"],
   cnpj: ["CNPJ", "CNPJ EMPRESA", "CNPJ DA EMPRESA"],
   obra: ["OBRA", "NOME DA OBRA", "OBRA ATUAL", "ALOCAÇÃO", "ALOCACAO"],
@@ -334,7 +334,12 @@ export async function importarPlanilhaFuncionarios(
     const observacoes = obsParts.length ? obsParts.join(" | ") : null;
 
     const statusOriginal = getCell(r, COL.status);
-    const status = normStatus(statusOriginal);
+    const statusForcado = abandono && abandono.toLowerCase() !== "não" && abandono.toLowerCase() !== "nao"
+      ? "desligado"
+      : atestado
+        ? "afastado"
+        : "";
+    const status = normStatus(statusForcado || statusOriginal);
 
     // Helper: só inclui no payload se houver valor (evita sobrescrever com vazio em UPDATE)
     const txt = (v: any) => {
@@ -373,8 +378,8 @@ export async function importarPlanilhaFuncionarios(
       setIf("clinica_aso", txt(getCell(r, COL.clinica)));
       setIf("salario_base", num(getCell(r, COL.salarioBase)));
       setIf("salario_combinado", num(getCell(r, COL.salarioCombinado)));
-      // Status só se vier explicitamente preenchido na planilha
-      if (String(statusOriginal ?? "").trim()) setIf("status", status);
+      // Status só se vier explicitamente preenchido na planilha ou por ABANDONO/ATESTADO
+      if (String(statusOriginal ?? "").trim() || statusForcado) setIf("status", status);
       if (observacoes) setIf("motivo_rescisao", observacoes);
 
       if (Object.keys(updatePayload).length === 0) {
