@@ -108,6 +108,16 @@ function normCPF(v: any): string {
   const digits = String(v ?? "").replace(/\D/g, "");
   return digits.length >= 9 && digits.length < 11 ? digits.padStart(11, "0") : digits;
 }
+function normRegistro(v: any): string {
+  return String(v ?? "").trim().replace(/\.0$/, "");
+}
+function getCell(row: any, aliases: string[]): any {
+  const entries = Object.entries(row);
+  const normalize = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/gi, "").toLowerCase();
+  const wanted = new Set(aliases.map(normalize));
+  const found = entries.find(([key]) => wanted.has(normalize(key)));
+  return found?.[1] ?? "";
+}
 function normCNPJ(v: any): string {
   return String(v ?? "").replace(/\D/g, "");
 }
@@ -216,18 +226,19 @@ export async function importarPlanilhaFuncionarios(
     erros: [],
   };
 
-  // Carrega TODOS os funcionários existentes (com nome e data_nascimento p/ matching de fallback)
+  // Carrega TODOS os funcionários existentes (com CPF, Nº Reg e nome+nascimento p/ matching de fallback)
   const { data: funcionariosExistentes, error: errFuncionarios } = await supabase
     .from("funcionarios")
-    .select("id, cpf, nome, data_nascimento, created_at")
+    .select("id, empresa_id, cpf, numero_registro, nome, data_nascimento, created_at")
     .range(0, 9999);
 
   if (errFuncionarios) {
     throw new Error(`Não foi possível conferir funcionários existentes: ${errFuncionarios.message}`);
   }
 
-  // Index por CPF normalizado (apenas o mais antigo) e por nome+data_nascimento (fallback)
+  // Index por CPF normalizado, Nº Reg e nome+data_nascimento (apenas o mais antigo)
   const funcionariosPorCpf = new Map<string, string>();
+  const funcionariosPorRegistro = new Map<string, string>();
   const funcionariosPorNomeNasc = new Map<string, string>();
   (funcionariosExistentes ?? [])
     .slice()
@@ -235,6 +246,8 @@ export async function importarPlanilhaFuncionarios(
     .forEach((f: any) => {
       const cpfN = normCPF(f.cpf);
       if (cpfN && !funcionariosPorCpf.has(cpfN)) funcionariosPorCpf.set(cpfN, f.id);
+      const regN = normRegistro(f.numero_registro).toUpperCase();
+      if (regN && !funcionariosPorRegistro.has(`${f.empresa_id}|${regN}`)) funcionariosPorRegistro.set(`${f.empresa_id}|${regN}`, f.id);
       const k = chaveNomeNasc(f.nome, f.data_nascimento);
       if (!funcionariosPorNomeNasc.has(k)) funcionariosPorNomeNasc.set(k, f.id);
     });
