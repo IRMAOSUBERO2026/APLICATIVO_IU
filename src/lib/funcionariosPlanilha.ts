@@ -89,8 +89,9 @@ function getCell(row: any, aliases: readonly string[]): any {
   const entries = Object.entries(row);
   const normalize = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/gi, "").toLowerCase();
   const wanted = new Set(aliases.map(normalize));
-  const found = entries.find(([key]) => wanted.has(normalize(key)));
-  return found?.[1] ?? "";
+  const matches = entries.filter(([key]) => wanted.has(normalize(key)));
+  const filled = matches.find(([, value]) => String(value ?? "").trim() !== "");
+  return filled?.[1] ?? matches[0]?.[1] ?? "";
 }
 function normCNPJ(v: any): string {
   return String(v ?? "").replace(/\D/g, "");
