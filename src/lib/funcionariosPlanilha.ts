@@ -255,6 +255,7 @@ export async function importarPlanilhaFuncionarios(
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
     const cpf = normCPF(r["CPF"]);
+    const numeroRegistro = normRegistro(getCell(r, ["Nº REG", "N° REG", "Nº REGISTRO", "N° REGISTRO", "NUMERO REGISTRO", "NRO REG", "NRO_REG", "REGISTRO", "N REG"]));
     const nome = String(r["NOME DO FUNCIONARIO"] ?? "").trim();
     const dataNascimento = parseDate(r["DATA DE NASCIMENTO"]);
 
@@ -264,8 +265,20 @@ export async function importarPlanilhaFuncionarios(
       continue;
     }
 
-    // Match: 1º por CPF, 2º por NOME+DATA_NASCIMENTO
+    // Resolve empresa antes do match por Nº Reg (registro é único por empresa)
+    const cnpjNorm = normCNPJ(r["CNPJ"]);
+    const empresa_id = empresasByCnpj.get(cnpjNorm) || empresaPadraoId;
+    if (!empresa_id) {
+      result.ignorados++;
+      result.erros.push({ linha: i + 2, cpf, erro: "Nenhuma empresa cadastrada no sistema" });
+      continue;
+    }
+
+    // Match: 1º por CPF, 2º por Nº REG dentro da empresa, 3º por NOME+DATA_NASCIMENTO
     let funcionarioExistenteId: string | undefined = cpf ? funcionariosPorCpf.get(cpf) : undefined;
+    if (!funcionarioExistenteId && numeroRegistro) {
+      funcionarioExistenteId = funcionariosPorRegistro.get(`${empresa_id}|${numeroRegistro.toUpperCase()}`);
+    }
     if (!funcionarioExistenteId) {
       funcionarioExistenteId = funcionariosPorNomeNasc.get(chaveNomeNasc(nome, dataNascimento));
     }
@@ -285,15 +298,6 @@ export async function importarPlanilhaFuncionarios(
     if (!funcionarioExistenteId && !cpf) {
       result.ignorados++;
       result.erros.push({ linha: i + 2, cpf: "(vazio)", erro: "CPF obrigatório para novos cadastros" });
-      continue;
-    }
-
-    // Resolve empresa
-    const cnpjNorm = normCNPJ(r["CNPJ"]);
-    const empresa_id = empresasByCnpj.get(cnpjNorm) || empresaPadraoId;
-    if (!empresa_id) {
-      result.ignorados++;
-      result.erros.push({ linha: i + 2, cpf, erro: "Nenhuma empresa cadastrada no sistema" });
       continue;
     }
 
