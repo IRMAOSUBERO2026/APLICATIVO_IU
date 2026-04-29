@@ -138,15 +138,24 @@ export default function EquipamentosLocados() {
   }
 
   async function saveEquip() {
-    if (!form.descricao || !form.empresa_id || !form.data_inicio) {
-      toast({ title: "Preencha campos obrigatórios", variant: "destructive" }); return;
+    if (!form.descricao || !form.data_inicio) {
+      toast({ title: "Preencha descrição e data de início", variant: "destructive" }); return;
     }
-    const payload = { ...form, fornecedor_id: form.fornecedor_id || null, obra_id: form.obra_id || null, data_fim: form.data_fim || null, numero_oc: form.numero_oc || null };
+    const payload: any = {
+      ...form,
+      fornecedor_id: form.fornecedor_id || null,
+      obra_id: form.obra_id || null,
+      data_fim: form.data_fim || null,
+      numero_oc: form.numero_oc || null,
+      empresa_id: form.empresa_id || null, // opcional no início; obrigatório só no fechamento
+    };
     if (editing) {
-      await supabase.from("equipamentos_locados").update(payload).eq("id", editing.id);
+      const { error } = await supabase.from("equipamentos_locados").update(payload).eq("id", editing.id);
+      if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
       toast({ title: "Locação atualizada!" });
     } else {
-      await supabase.from("equipamentos_locados").insert(payload);
+      const { error } = await supabase.from("equipamentos_locados").insert(payload);
+      if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
       toast({ title: "Locação cadastrada!" });
     }
     setShowForm(false); setEditing(null); resetForm(); loadData();
