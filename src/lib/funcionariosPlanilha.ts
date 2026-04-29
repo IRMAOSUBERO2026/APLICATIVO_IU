@@ -295,7 +295,7 @@ export async function importarPlanilhaFuncionarios(
       funcionarioExistenteId = funcionariosPorRegistro.get(`${empresa_id}|${numeroRegistro.toUpperCase()}`);
     }
     if (!funcionarioExistenteId) {
-      funcionarioExistenteId = funcionariosPorNomeNasc.get(chaveNomeNasc(nome, dataNascimento));
+      funcionarioExistenteId = funcionariosPorNomeNasc.get(chaveNomeNasc(empresa_id, nome, dataNascimento));
     }
 
     // Se modo "criar_somente" e já existe, pula
@@ -394,7 +394,7 @@ export async function importarPlanilhaFuncionarios(
         result.atualizados++;
         if (cpf) funcionariosPorCpf.set(`${empresa_id}|${cpf}`, funcionarioExistenteId);
         if (numeroRegistro) funcionariosPorRegistro.set(`${empresa_id}|${numeroRegistro.toUpperCase()}`, funcionarioExistenteId);
-        funcionariosPorNomeNasc.set(chaveNomeNasc(nome, dataNascimento), funcionarioExistenteId);
+        funcionariosPorNomeNasc.set(chaveNomeNasc(empresa_id, nome, dataNascimento), funcionarioExistenteId);
       }
     } else {
       // ===== INSERT: criar novo =====
@@ -437,7 +437,7 @@ export async function importarPlanilhaFuncionarios(
         if (novoFuncionario?.id) {
           if (cpf) funcionariosPorCpf.set(`${empresa_id}|${cpf}`, novoFuncionario.id);
           if (numeroRegistro) funcionariosPorRegistro.set(`${empresa_id}|${numeroRegistro.toUpperCase()}`, novoFuncionario.id);
-          funcionariosPorNomeNasc.set(chaveNomeNasc(nome, dataNascimento), novoFuncionario.id);
+          funcionariosPorNomeNasc.set(chaveNomeNasc(empresa_id, nome, dataNascimento), novoFuncionario.id);
         }
       }
     }
