@@ -267,6 +267,27 @@ export default function EquipamentosProprios() {
 
   async function updateManutStatus(id: string, status: string) {
     await supabase.from("manutencoes_equipamento").update({ status }).eq("id", id);
+    // Quando concluída, lança despesa no Financeiro e devolve equipamento ao almoxarifado
+    if (status === "concluido") {
+      const m = manutencoes.find(x => x.id === id);
+      if (m && (m.valor_aprovado || 0) > 0) {
+        const eq = equipamentos.find(e => e.id === m.equipamento_id);
+        await supabase.from("contas_pagar").insert({
+          descricao: `Manutenção ${m.tipo}: ${eq?.codigo || ""} - ${eq?.descricao || ""}`,
+          categoria: "Manutenção de Equipamentos",
+          valor: m.valor_aprovado,
+          data_vencimento: new Date().toISOString().slice(0, 10),
+          empresa_id: eq?.empresa_id,
+          status: "pendente",
+          observacoes: `Fornecedor: ${m.fornecedor || "—"} | ${m.descricao || ""}`,
+        });
+        toast({ title: "Manutenção concluída", description: "Despesa lançada no Financeiro." });
+      }
+      // Volta para disponível
+      if (m?.equipamento_id) {
+        await supabase.from("equipamentos_proprios").update({ status: "disponivel" }).eq("id", m.equipamento_id);
+      }
+    }
     loadData();
   }
 
