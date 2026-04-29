@@ -43,9 +43,11 @@ export function AppLayout({ children }: AppLayoutProps) {
 
         <main
           id="app-main"
-          className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin p-4 lg:p-6"
+          className="flex-1 overflow-auto p-4 lg:p-6"
         >
-          {children}
+          <div className="min-w-0 w-full">
+            {children}
+          </div>
         </main>
       </div>
     </div>

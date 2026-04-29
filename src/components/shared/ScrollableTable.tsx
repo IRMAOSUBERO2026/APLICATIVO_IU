@@ -103,25 +103,25 @@ export function ScrollableTable({ children, className, maxHeight }: ScrollableTa
 
   return (
     <div ref={outerRef} className={cn("relative flex flex-col", className)}>
-      {/* Conteúdo com scroll real (scrollbar nativo escondida) */}
+      {/* Conteúdo com scroll real (scrollbar nativo visível e estilizado) */}
       <div
         ref={innerRef}
-        className="overflow-x-auto scrollbar-hide"
+        className="overflow-x-auto scrollbar-visible"
         style={{ maxHeight: maxHeight ?? undefined }}
       >
         {children}
       </div>
 
-      {/* Barra de rolagem horizontal STICKY na base */}
+      {/* Barra de rolagem horizontal STICKY adicional na base — sempre visível e moderna */}
       {hasScroll && (
         <div
           ref={mirrorRef}
-          className="sticky bottom-0 z-10 h-2.5 w-full cursor-pointer rounded-b-md bg-muted/60 border-t border-border/40 backdrop-blur-sm"
-          title="Arraste para rolar a tabela"
+          className="sticky bottom-0 z-20 h-4 w-full cursor-pointer rounded-b-md bg-muted border-t border-border/60 backdrop-blur-sm shadow-[0_-4px_12px_-6px_hsl(var(--foreground)/0.15)] flex items-center px-1"
+          title="Arraste para rolar a tabela horizontalmente"
         >
           <div
             ref={thumbRef}
-            className="absolute top-0.5 left-0 h-1.5 min-w-[40px] rounded-full bg-primary/50 hover:bg-primary/80 active:bg-primary transition-colors cursor-grab active:cursor-grabbing"
+            className="relative h-2.5 min-w-[60px] rounded-full bg-primary/70 hover:bg-primary active:bg-primary transition-colors cursor-grab active:cursor-grabbing shadow-sm"
             style={{ willChange: "transform" }}
           />
         </div>
