@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const COLUNAS_MODELO = [
   "ID",
+  "Nº REG",
   "NOME DO FUNCIONARIO",
   "CNPJ",
   "EMPRESA",
@@ -37,55 +38,12 @@ export const COLUNAS_MODELO = [
 
 const SEM_OBRA_CODIGO = "SEM-OBRA";
 
-/** Gera e baixa o arquivo modelo .xlsx (com 1 linha de exemplo) */
+/** Gera e baixa o arquivo modelo .xlsx limpo (com 1 linha de exemplo) */
 export async function baixarModeloFuncionarios() {
-  // Carrega lista atual de funcionários para já preencher o modelo (facilita atualização)
-  const { data: funcs } = await supabase
-    .from("funcionarios")
-    .select(`
-      id, nome, cpf, rg, pis, codigo_pix, telefone, cargo,
-      data_admissao, data_nascimento, data_rescisao,
-      data_aso, data_nr6, data_nr12, data_nr18, data_nr35,
-      clinica_aso, salario_base, salario_combinado, status, observacoes,
-      empresas:empresa_id ( cnpj, razao_social ),
-      obras:obra_id ( codigo, nome, construtora, cidade )
-    `)
-    .order("nome", { ascending: true });
-
-  const rows = (funcs ?? []).map((f: any) => ({
-    "ID": f.id ?? "",
-    "NOME DO FUNCIONARIO": f.nome ?? "",
-    "CNPJ": f.empresas?.cnpj ?? "",
-    "EMPRESA": f.empresas?.razao_social ?? "",
-    "OBRA": f.obras?.nome ?? "",
-    "CONSTRUTORA": f.obras?.construtora ?? "",
-    "CIDADE DE TRABALHO": f.obras?.cidade ?? "",
-    "DATA DE ADMISSAO": f.data_admissao ?? "",
-    "CARGO": f.cargo ?? "",
-    "DATA DE NASCIMENTO": f.data_nascimento ?? "",
-    "TELEFONE": f.telefone ?? "",
-    "RG": f.rg ?? "",
-    "CPF": f.cpf ?? "",
-    "PIS": f.pis ?? "",
-    "CODIGO PIX": f.codigo_pix ?? "",
-    "SALARIO BASE": f.salario_base ?? 0,
-    "SALARIO COMBINADO": f.salario_combinado ?? "",
-    "CLINICA": f.clinica_aso ?? "",
-    "ASO": f.data_aso ?? "",
-    "NR6": f.data_nr6 ?? "",
-    "NR12": f.data_nr12 ?? "",
-    "NR18": f.data_nr18 ?? "",
-    "NR35": f.data_nr35 ?? "",
-    "DATA DE RESCISAO": f.data_rescisao ?? "",
-    "STATUS": f.status ?? "ativo",
-    "ABANDONO": "",
-    "ATESTADO": "",
-  }));
-
-  // Se não tem nenhum funcionário, cria 1 linha de exemplo para orientar o preenchimento
-  if (rows.length === 0) {
-    rows.push({
+  const rows = [
+    {
       "ID": "",
+      "Nº REG": "001",
       "NOME DO FUNCIONARIO": "João da Silva",
       "CNPJ": "12.345.678/0001-90",
       "EMPRESA": "Irmãos Ubero Engenharia",
@@ -112,8 +70,8 @@ export async function baixarModeloFuncionarios() {
       "STATUS": "ativo",
       "ABANDONO": "",
       "ATESTADO": "",
-    });
-  }
+    },
+  ];
 
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(rows, { header: COLUNAS_MODELO as unknown as string[] });
