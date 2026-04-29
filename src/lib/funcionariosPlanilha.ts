@@ -227,20 +227,25 @@ export async function importarPlanilhaFuncionarios(
   // Carrega TODOS os funcionários existentes (com CPF, Nº Reg e nome+nascimento p/ matching de fallback)
   const { data: funcionariosExistentes, error: errFuncionarios } = await supabase
     .from("funcionarios")
-    .select("id, empresa_id, cpf, numero_registro, nome, data_nascimento, created_at")
+    .select("id, empresa_id, cpf, numero_registro, nome, data_nascimento, status, obra_id, telefone, data_aso, data_nr6, data_nr12, data_nr18, data_nr35, created_at")
     .range(0, 9999);
 
   if (errFuncionarios) {
     throw new Error(`Não foi possível conferir funcionários existentes: ${errFuncionarios.message}`);
   }
 
-  // Index por CPF normalizado, Nº Reg e nome+data_nascimento (apenas o mais antigo)
+  // Index por CPF normalizado, Nº Reg e nome+data_nascimento.
+  // Quando houver duplicado legado, usa o cadastro mais completo para atualizar em vez de criar outro.
   const funcionariosPorCpf = new Map<string, string>();
   const funcionariosPorRegistro = new Map<string, string>();
   const funcionariosPorNomeNasc = new Map<string, string>();
+  const qualidadeCadastro = (f: any) =>
+    ["numero_registro", "obra_id", "telefone", "data_aso", "data_nr6", "data_nr12", "data_nr18", "data_nr35"]
+      .reduce((score, key) => score + (f?.[key] ? 1 : 0), 0) +
+    (String(f?.status ?? "").toLowerCase() === "ativo" ? 2 : 0);
   (funcionariosExistentes ?? [])
     .slice()
-    .sort((a: any, b: any) => String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")))
+    .sort((a: any, b: any) => qualidadeCadastro(b) - qualidadeCadastro(a) || String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")))
     .forEach((f: any) => {
       const cpfN = normCPF(f.cpf);
       if (cpfN && !funcionariosPorCpf.has(`${f.empresa_id}|${cpfN}`)) funcionariosPorCpf.set(`${f.empresa_id}|${cpfN}`, f.id);
