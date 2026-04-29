@@ -490,7 +490,7 @@ export default function RH() {
               </select>
               <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="rounded-lg border bg-card px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
                 <option value="">Todos os Status</option>
-                {STATUS_OPTIONS.map(s => <option key={s} value={s.toLowerCase()}>{s}</option>)}
+                {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
               <select value={sortBy} onChange={e => setSortBy(e.target.value as any)} className="rounded-lg border bg-card px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
                 <option value="nome">Ordenar por Nome</option>
@@ -597,15 +597,15 @@ export default function RH() {
                           {/* Status - select que aceita o valor atual mesmo que diferente */}
                           <td className="px-3 py-2.5">
                             <select
-                              value={(f.status || "").toLowerCase()}
+                              value={normalizeStatusForDb(f.status)}
                               onChange={e => saveStatus(f.id, e.target.value)}
                               className={`rounded-full px-2 py-1 text-xs font-medium border cursor-pointer outline-none focus:ring-2 focus:ring-ring ${getStatusColor(f.status)}`}
                             >
                               {/* opção fallback se o status atual não estiver no enum */}
-                              {f.status && !STATUS_OPTIONS.map(s => s.toLowerCase()).includes((f.status || "").toLowerCase()) && (
-                                <option value={(f.status || "").toLowerCase()}>{f.status}</option>
+                              {f.status && !STATUS_OPTIONS.some(s => s.value === normalizeStatusForDb(f.status)) && (
+                                <option value={normalizeStatusForDb(f.status)}>{f.status}</option>
                               )}
-                              {STATUS_OPTIONS.map(s => <option key={s} value={s.toLowerCase()}>{s}</option>)}
+                              {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                             </select>
                           </td>
                           {/* Experiência */}
