@@ -294,10 +294,10 @@ export async function importarPlanilhaFuncionarios(
       continue;
     }
 
-    // Para CRIAR é obrigatório CPF
-    if (!funcionarioExistenteId && !cpf) {
+    // Para CRIAR é obrigatório CPF ou Nº Reg
+    if (!funcionarioExistenteId && !cpf && !numeroRegistro) {
       result.ignorados++;
-      result.erros.push({ linha: i + 2, cpf: "(vazio)", erro: "CPF obrigatório para novos cadastros" });
+      result.erros.push({ linha: i + 2, cpf: "(vazio)", erro: "CPF ou Nº Reg obrigatório para novos cadastros" });
       continue;
     }
 
