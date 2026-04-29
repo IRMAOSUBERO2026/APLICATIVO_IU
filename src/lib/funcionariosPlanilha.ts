@@ -78,7 +78,12 @@ function normCPF(v: any): string {
   return digits.length >= 9 && digits.length < 11 ? digits.padStart(11, "0") : digits;
 }
 function normRegistro(v: any): string {
-  return String(v ?? "").trim().replace(/\.0$/, "").replace(/,0$/, "");
+  return String(v ?? "")
+    .trim()
+    .replace(/\.0$/, "")
+    .replace(/,0$/, "")
+    .replace(/[^0-9A-Za-z]/g, "")
+    .toUpperCase();
 }
 function getCell(row: any, aliases: readonly string[]): any {
   const entries = Object.entries(row);
@@ -153,9 +158,14 @@ export type ImportMode =
   | "atualizar_somente"   // só atualiza quem já existe — NUNCA cria
   | "criar_somente";      // só cria novos — pula quem já existe
 
-function chaveNomeNasc(nome: string, dataNasc: string | null): string {
-  const n = String(nome ?? "").trim().toLowerCase().replace(/\s+/g, " ");
-  return `${n}|${dataNasc ?? ""}`;
+function chaveNomeNasc(empresaId: string, nome: string, dataNasc: string | null): string {
+  const n = String(nome ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+  return `${empresaId}|${n}|${dataNasc ?? ""}`;
 }
 
 const COL = {
@@ -240,7 +250,9 @@ export async function importarPlanilhaFuncionarios(
   const funcionariosPorRegistro = new Map<string, string>();
   const funcionariosPorNomeNasc = new Map<string, string>();
   const qualidadeCadastro = (f: any) =>
-    ["numero_registro", "obra_id", "telefone", "data_aso", "data_nr6", "data_nr12", "data_nr18", "data_nr35"]
+    (normRegistro(f?.numero_registro) ? 100 : 0) +
+    (normCPF(f?.cpf).length === 11 ? 20 : 0) +
+    ["obra_id", "telefone", "data_aso", "data_nr6", "data_nr12", "data_nr18", "data_nr35"]
       .reduce((score, key) => score + (f?.[key] ? 1 : 0), 0) +
     (String(f?.status ?? "").toLowerCase() === "ativo" ? 2 : 0);
   (funcionariosExistentes ?? [])
@@ -249,9 +261,9 @@ export async function importarPlanilhaFuncionarios(
     .forEach((f: any) => {
       const cpfN = normCPF(f.cpf);
       if (cpfN && !funcionariosPorCpf.has(`${f.empresa_id}|${cpfN}`)) funcionariosPorCpf.set(`${f.empresa_id}|${cpfN}`, f.id);
-      const regN = normRegistro(f.numero_registro).toUpperCase();
+      const regN = normRegistro(f.numero_registro);
       if (regN && !funcionariosPorRegistro.has(`${f.empresa_id}|${regN}`)) funcionariosPorRegistro.set(`${f.empresa_id}|${regN}`, f.id);
-      const k = chaveNomeNasc(f.nome, f.data_nascimento);
+      const k = chaveNomeNasc(f.empresa_id, f.nome, f.data_nascimento);
       if (!funcionariosPorNomeNasc.has(k)) funcionariosPorNomeNasc.set(k, f.id);
     });
 
