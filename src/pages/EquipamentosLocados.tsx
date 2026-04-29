@@ -369,21 +369,28 @@ export default function EquipamentosLocados() {
                         <TableHeader>
                           <TableRow className="bg-muted/20">
                             <TableHead>Equipamento</TableHead><TableHead>Obra</TableHead>
+                            <TableHead>CNPJ (NF)</TableHead>
                             <TableHead>OC</TableHead><TableHead>Qtd</TableHead>
                             <TableHead className="text-right">Unit.</TableHead><TableHead className="text-right">Subtotal</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {grupo.items.map(e => (
-                            <TableRow key={e.id} className="hover:bg-muted/20">
+                          {grupo.items.map(e => {
+                            const empNome = e.empresa_id ? (empresas.find(em => em.id === e.empresa_id)?.razao_social || "—") : null;
+                            return (
+                            <TableRow key={e.id} className={`hover:bg-muted/20 ${!e.empresa_id ? "bg-amber-50" : ""}`}>
                               <TableCell className="text-sm font-medium">{e.descricao}</TableCell>
                               <TableCell className="text-sm">{e.obra_id ? obraMap[e.obra_id] || "—" : "—"}</TableCell>
+                              <TableCell className="text-xs">
+                                {empNome ? <span className="text-foreground">{empNome}</span> : <span className="text-amber-600 font-bold">⚠ Pendente</span>}
+                              </TableCell>
                               <TableCell className="text-sm font-mono">{e.numero_oc || "—"}</TableCell>
                               <TableCell className="text-sm">{e.quantidade}</TableCell>
                               <TableCell className="text-right text-sm">R$ {e.valor_mensal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
                               <TableCell className="text-right text-sm font-bold text-primary">R$ {(e.valor_mensal * e.quantidade).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
                             </TableRow>
-                          ))}
+                            );
+                          })}
                         </TableBody>
                       </Table>
                     </CardContent>
