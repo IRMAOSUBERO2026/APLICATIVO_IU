@@ -128,25 +128,36 @@
   /* Scrollbar destacado para tabelas com rolagem horizontal */
   .scrollbar-visible {
     scrollbar-width: auto;
-    scrollbar-color: hsl(var(--primary) / 0.6) hsl(var(--muted));
-    scrollbar-gutter: stable;
+    scrollbar-color: hsl(var(--primary) / 0.75) hsl(var(--secondary));
+    scrollbar-gutter: stable both-edges;
   }
   .scrollbar-visible::-webkit-scrollbar { width: 14px; height: 14px; }
   .scrollbar-visible::-webkit-scrollbar-track {
-    background: hsl(var(--muted));
+    background: hsl(var(--secondary));
     border-radius: 99px;
   }
   .scrollbar-visible::-webkit-scrollbar-thumb {
-    background: hsl(var(--primary) / 0.6);
+    background: hsl(var(--primary) / 0.75);
     border-radius: 99px;
-    border: 3px solid hsl(var(--muted));
+    border: 3px solid hsl(var(--secondary));
     background-clip: padding-box;
   }
   .scrollbar-visible::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--primary) / 0.9);
+    background: hsl(var(--primary));
     background-clip: padding-box;
   }
-  .scrollbar-visible::-webkit-scrollbar-corner { background: hsl(var(--muted)); }
+  .scrollbar-visible::-webkit-scrollbar-corner { background: hsl(var(--secondary)); }
+
+  .app-page {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .table-scroll-shell {
+    max-width: 100%;
+    overflow: hidden;
+  }
 }
 
 /* ============================================================
@@ -154,63 +165,63 @@
    ============================================================ */
 html {
   scrollbar-width: auto;
-  scrollbar-color: hsl(var(--primary) / 0.55) hsl(var(--muted));
+  scrollbar-color: hsl(var(--primary) / 0.7) hsl(var(--secondary));
 }
 
 ::-webkit-scrollbar {
   width: 12px;
   height: 12px;
-  background-color: hsl(var(--muted));
+  background-color: hsl(var(--secondary));
 }
 
 ::-webkit-scrollbar-track {
-  background: hsl(var(--muted));
+  background: hsl(var(--secondary));
   border-radius: 99px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--primary) / 0.55);
+  background: hsl(var(--primary) / 0.7);
   border-radius: 99px;
-  border: 2px solid hsl(var(--muted));
+  border: 2px solid hsl(var(--secondary));
   background-clip: padding-box;
   min-height: 40px;
   min-width: 40px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--primary) / 0.85);
+  background: hsl(var(--primary));
   background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-corner {
-  background: hsl(var(--muted));
+  background: hsl(var(--secondary));
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: hsl(var(--primary) / 0.55) hsl(var(--muted) / 0.6);
+  scrollbar-color: hsl(var(--primary) / 0.7) hsl(var(--secondary) / 0.75);
 }
 
 /* Garante barra horizontal sempre presente em containers de tabelas */
 .overflow-x-auto {
   overflow-x: auto !important;
-  scrollbar-gutter: stable;
+  scrollbar-gutter: stable both-edges;
 }
 .overflow-x-auto::-webkit-scrollbar {
   height: 14px;
   width: 14px;
 }
 .overflow-x-auto::-webkit-scrollbar-track {
-  background: hsl(var(--muted));
+  background: hsl(var(--secondary));
   border-radius: 99px;
 }
 .overflow-x-auto::-webkit-scrollbar-thumb {
-  background: hsl(var(--primary) / 0.65);
+  background: hsl(var(--primary) / 0.75);
   border-radius: 99px;
-  border: 3px solid hsl(var(--muted));
+  border: 3px solid hsl(var(--secondary));
   background-clip: padding-box;
 }
 .overflow-x-auto::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--primary) / 0.95);
+  background: hsl(var(--primary));
   background-clip: padding-box;
 }
