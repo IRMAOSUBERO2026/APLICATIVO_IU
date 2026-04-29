@@ -340,6 +340,7 @@ export async function importarPlanilhaFuncionarios(
       setIf("empresa_id", empresa_id);
       setIf("obra_id", obra_id);
       setIf("nome", nome);
+      setIf("numero_registro", numeroRegistro);
       if (cpf) setIf("cpf", cpf);
       setIf("rg", txt(r["RG"]));
       setIf("pis", txt(r["PIS"]));
@@ -382,6 +383,7 @@ export async function importarPlanilhaFuncionarios(
         empresa_id,
         obra_id,
         nome,
+        numero_registro: numeroRegistro || null,
         cpf,
         rg: txt(r["RG"]),
         pis: txt(r["PIS"]),
@@ -415,6 +417,7 @@ export async function importarPlanilhaFuncionarios(
         result.criados++;
         if (novoFuncionario?.id) {
           funcionariosPorCpf.set(cpf, novoFuncionario.id);
+          if (numeroRegistro) funcionariosPorRegistro.set(`${empresa_id}|${numeroRegistro.toUpperCase()}`, novoFuncionario.id);
           funcionariosPorNomeNasc.set(chaveNomeNasc(nome, dataNascimento), novoFuncionario.id);
         }
       }
