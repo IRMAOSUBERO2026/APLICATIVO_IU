@@ -455,11 +455,16 @@ export default function EquipamentosLocados() {
                 <SelectContent>{Object.entries(STATUS_LOC).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div><Label>Empresa *</Label>
-              <Select value={form.empresa_id} onValueChange={v => setForm(p => ({ ...p, empresa_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>{empresas.map(e => <SelectItem key={e.id} value={e.id}>{e.razao_social}</SelectItem>)}</SelectContent>
+            <div>
+              <Label>Empresa (CNPJ p/ NF) <span className="text-xs text-muted-foreground font-normal">(pode preencher depois)</span></Label>
+              <Select value={form.empresa_id || "__none__"} onValueChange={v => setForm(p => ({ ...p, empresa_id: v === "__none__" ? "" : v }))}>
+                <SelectTrigger><SelectValue placeholder="Definir depois" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— Definir depois —</SelectItem>
+                  {empresas.map(e => <SelectItem key={e.id} value={e.id}>{e.razao_social}</SelectItem>)}
+                </SelectContent>
               </Select>
+              <p className="text-[10px] text-muted-foreground mt-1">Obrigatório antes do fechamento mensal para emissão de NF.</p>
             </div>
             <div className="md:col-span-2"><Label>Observações</Label><Textarea value={form.observacoes} onChange={e => setForm(p => ({ ...p, observacoes: e.target.value }))} /></div>
           </div>
