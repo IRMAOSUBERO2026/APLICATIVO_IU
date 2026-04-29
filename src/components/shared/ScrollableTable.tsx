@@ -37,10 +37,13 @@ export function ScrollableTable({ children, className, maxHeight }: ScrollableTa
 
     function sync() {
       if (!inner || !thumb) return;
-      const ratio = inner.clientWidth / inner.scrollWidth;
-      setHasScroll(inner.scrollWidth > inner.clientWidth + 2);
-      thumb.style.width = `${ratio * 100}%`;
-      thumb.style.transform = `translateX(${inner.scrollLeft / (inner.scrollWidth - inner.clientWidth) * (inner.clientWidth - ratio * inner.clientWidth)}px)`;
+      const canScroll = inner.scrollWidth > inner.clientWidth + 2;
+      const ratio = canScroll ? inner.clientWidth / inner.scrollWidth : 1;
+      const travel = inner.clientWidth - ratio * inner.clientWidth;
+      const scrollRatio = canScroll ? inner.scrollLeft / (inner.scrollWidth - inner.clientWidth) : 0;
+      setHasScroll(canScroll);
+      thumb.style.width = `${Math.max(ratio * 100, 12)}%`;
+      thumb.style.transform = `translateX(${scrollRatio * travel}px)`;
     }
 
     // Quando o inner scrollar → atualiza a thumb
@@ -102,11 +105,11 @@ export function ScrollableTable({ children, className, maxHeight }: ScrollableTa
   }, []);
 
   return (
-    <div ref={outerRef} className={cn("relative flex flex-col", className)}>
+    <div ref={outerRef} className={cn("table-scroll-shell relative flex min-w-0 flex-col", className)}>
       {/* Conteúdo com scroll real (scrollbar nativo visível e estilizado) */}
       <div
         ref={innerRef}
-        className="overflow-x-auto scrollbar-visible"
+        className="scrollbar-visible min-w-0 overflow-x-auto overscroll-x-contain pb-1"
         style={{ maxHeight: maxHeight ?? undefined }}
       >
         {children}
@@ -116,12 +119,12 @@ export function ScrollableTable({ children, className, maxHeight }: ScrollableTa
       {hasScroll && (
         <div
           ref={mirrorRef}
-          className="sticky bottom-0 z-20 h-4 w-full cursor-pointer rounded-b-md bg-muted border-t border-border/60 backdrop-blur-sm shadow-[0_-4px_12px_-6px_hsl(var(--foreground)/0.15)] flex items-center px-1"
+          className="sticky bottom-0 z-20 flex h-5 w-full cursor-pointer items-center border-t border-border/70 bg-secondary/95 px-1.5 shadow-[0_-6px_16px_-10px_hsl(var(--foreground)/0.35)] backdrop-blur-sm"
           title="Arraste para rolar a tabela horizontalmente"
         >
           <div
             ref={thumbRef}
-            className="relative h-2.5 min-w-[60px] rounded-full bg-primary/70 hover:bg-primary active:bg-primary transition-colors cursor-grab active:cursor-grabbing shadow-sm"
+            className="relative h-3 min-w-[70px] cursor-grab rounded-full bg-primary/80 shadow-sm transition-colors hover:bg-primary active:cursor-grabbing active:bg-primary"
             style={{ willChange: "transform" }}
           />
         </div>
