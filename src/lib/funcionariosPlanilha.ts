@@ -1,6 +1,6 @@
 // Helper para gerar/importar planilha modelo de Funcionários (RH/DP)
 // - Formato Excel (.xlsx)
-// - Importa fazendo UPSERT por CPF
+// - Importa fazendo deduplicação por CPF, Nº Reg e Nome+Nascimento
 // - Funcionários sem obra são alocados na obra global "SEM-OBRA"
 import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
@@ -86,13 +86,13 @@ export async function baixarModeloFuncionarios() {
     ["INSTRUÇÕES DE PREENCHIMENTO"],
     [""],
     ["1. NÃO altere os nomes das colunas da aba 'Funcionários'."],
-    ["2. CPF é a chave de identificação. Se já existir, o registro será atualizado; se não, será criado."],
+    ["2. CPF é a chave principal; se faltar/variar, o sistema também confere Nº Reg e Nome + Data de Nascimento."],
     ["3. Para deixar o funcionário SEM OBRA, preencha a coluna OBRA com: SEM OBRA (Funcionários sem alocação)."],
     ["4. Datas no formato AAAA-MM-DD (ex: 2024-01-15) ou DD/MM/AAAA."],
     ["5. STATUS aceitos: ativo, ferias, atestado, afastado, desligado, abandono, pre-cadastro."],
     ["6. ABANDONO: preencha 'sim' para marcar abandono. ATESTADO: período / texto livre."],
     ["7. CNPJ deve corresponder a uma empresa já cadastrada no sistema (Empresas > CNPJ)."],
-    ["8. ID: deixe em branco para novos cadastros. Não altere o ID dos existentes."],
+    ["8. ID: deixe em branco para novos cadastros. Nº REG será importado para o campo Nº Registro do funcionário."],
   ];
   const wsInstr = XLSX.utils.aoa_to_sheet(instrucoes);
   wsInstr["!cols"] = [{ wch: 100 }];
