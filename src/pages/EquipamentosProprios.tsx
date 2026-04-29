@@ -113,6 +113,29 @@ export default function EquipamentosProprios() {
   const [formManut, setFormManut] = useState({ equipamento_id: "", tipo: "corretiva", descricao: "", fornecedor: "", valor_orcamento: 0, valor_aprovado: 0, observacoes: "" });
   const [transferObraId, setTransferObraId] = useState("");
   const [transferResponsavel, setTransferResponsavel] = useState("");
+  const [uploadingFoto, setUploadingFoto] = useState(false);
+
+  async function handleUploadFoto(file: File) {
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Imagem muito grande", description: "Máximo 5MB.", variant: "destructive" });
+      return;
+    }
+    setUploadingFoto(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `equipamentos/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+      const { error } = await supabase.storage.from("documentos").upload(path, file, { upsert: false, contentType: file.type });
+      if (error) throw error;
+      const { data } = supabase.storage.from("documentos").getPublicUrl(path);
+      setFormEquip(p => ({ ...p, foto_url: data.publicUrl }));
+      toast({ title: "Foto enviada!" });
+    } catch (e: any) {
+      toast({ title: "Erro no upload", description: e.message, variant: "destructive" });
+    } finally {
+      setUploadingFoto(false);
+    }
+  }
 
   const loadData = async () => {
     const [eq, mt, ob, em] = await Promise.all([
@@ -418,7 +441,34 @@ export default function EquipamentosProprios() {
          <DialogContent className="max-w-2xl">
             <DialogHeader><DialogTitle>{editingEquip ? "Editar Equipamento" : "Novo Cadastro"}</DialogTitle></DialogHeader>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-               <div className="md:col-span-2"><Label>URL Foto</Label><Input value={formEquip.foto_url} onChange={e => setFormEquip({...formEquip, foto_url: e.target.value})} placeholder="https://..." /></div>
+               <div className="md:col-span-2 space-y-2">
+                  <Label>Foto do Equipamento</Label>
+                  <div className="flex items-start gap-3">
+                    <div className="w-24 h-24 rounded-lg border-2 border-dashed bg-muted flex items-center justify-center overflow-hidden shrink-0">
+                      {formEquip.foto_url ? (
+                        <img src={formEquip.foto_url} className="w-full h-full object-cover" alt="Prévia" />
+                      ) : (
+                        <Camera className="text-muted-foreground/40" size={28} />
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <div className="flex flex-wrap gap-2">
+                        <label className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-md border bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer">
+                          <Camera size={14} />
+                          {uploadingFoto ? "Enviando..." : (formEquip.foto_url ? "Trocar foto" : "Enviar foto do dispositivo")}
+                          <input type="file" accept="image/*" className="hidden" disabled={uploadingFoto} onChange={e => { const f = e.target.files?.[0]; if (f) handleUploadFoto(f); e.target.value = ""; }} />
+                        </label>
+                        {formEquip.foto_url && (
+                          <Button type="button" size="sm" variant="ghost" className="h-9 text-rose-600" onClick={() => setFormEquip({ ...formEquip, foto_url: "" })}>
+                            <Trash2 size={14} className="mr-1" /> Remover
+                          </Button>
+                        )}
+                      </div>
+                      <Input value={formEquip.foto_url} onChange={e => setFormEquip({...formEquip, foto_url: e.target.value})} placeholder="ou cole uma URL: https://..." className="text-xs" />
+                      <p className="text-[10px] text-muted-foreground">JPG, PNG ou WEBP — máx. 5MB.</p>
+                    </div>
+                  </div>
+               </div>
                <div><Label>Codigo IU *</Label><Input value={formEquip.codigo} onChange={e => setFormEquip({...formEquip, codigo: e.target.value})} /></div>
                <div><Label>Descricao *</Label><Input value={formEquip.descricao} onChange={e => setFormEquip({...formEquip, descricao: e.target.value})} /></div>
                <div><Label>Tipo</Label><Select value={formEquip.tipo} onValueChange={v => setFormEquip({...formEquip, tipo: v})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{TIPOS_EQUIPAMENTO.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
