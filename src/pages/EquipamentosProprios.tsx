@@ -109,7 +109,7 @@ export default function EquipamentosProprios() {
   const [selectedEquip, setSelectedEquip] = useState<Equipamento | null>(null);
   const [historicoAlocacao, setHistoricoAlocacao] = useState<HistoricoAlocacao[]>([]);
   
-  const [formEquip, setFormEquip] = useState({ codigo: "", descricao: "", tipo: "Outros", marca: "", modelo: "", numero_serie: "", data_aquisicao: "", valor_aquisicao: 0, obra_id: "", empresa_id: "", status: "disponivel", observacoes: "", foto_url: "" });
+  const [formEquip, setFormEquip] = useState({ codigo: "", descricao: "", tipo: "Outros", marca: "", modelo: "", numero_serie: "", data_aquisicao: "", valor_aquisicao: 0, fornecedor: "", obra_id: "", empresa_id: "", status: "disponivel", observacoes: "", foto_url: "" });
   const [formManut, setFormManut] = useState({ equipamento_id: "", tipo: "corretiva", descricao: "", fornecedor: "", valor_orcamento: 0, valor_aprovado: 0, observacoes: "" });
   const [transferObraId, setTransferObraId] = useState("");
   const [transferResponsavel, setTransferResponsavel] = useState("");
