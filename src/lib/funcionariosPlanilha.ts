@@ -289,10 +289,10 @@ export async function importarPlanilhaFuncionarios(
       continue;
     }
 
-    // Match: 1º por CPF, 2º por Nº REG dentro da empresa, 3º por NOME+DATA_NASCIMENTO
+    // Match: 1º por CPF, 2º por Nº REG dentro da empresa, 3º por NOME+DATA_NASCIMENTO dentro da empresa
     let funcionarioExistenteId: string | undefined = cpf ? funcionariosPorCpf.get(`${empresa_id}|${cpf}`) : undefined;
     if (!funcionarioExistenteId && numeroRegistro) {
-      funcionarioExistenteId = funcionariosPorRegistro.get(`${empresa_id}|${numeroRegistro.toUpperCase()}`);
+      funcionarioExistenteId = funcionariosPorRegistro.get(`${empresa_id}|${numeroRegistro}`);
     }
     if (!funcionarioExistenteId) {
       funcionarioExistenteId = funcionariosPorNomeNasc.get(chaveNomeNasc(empresa_id, nome, dataNascimento));
@@ -393,7 +393,7 @@ export async function importarPlanilhaFuncionarios(
       } else {
         result.atualizados++;
         if (cpf) funcionariosPorCpf.set(`${empresa_id}|${cpf}`, funcionarioExistenteId);
-        if (numeroRegistro) funcionariosPorRegistro.set(`${empresa_id}|${numeroRegistro.toUpperCase()}`, funcionarioExistenteId);
+        if (numeroRegistro) funcionariosPorRegistro.set(`${empresa_id}|${numeroRegistro}`, funcionarioExistenteId);
         funcionariosPorNomeNasc.set(chaveNomeNasc(empresa_id, nome, dataNascimento), funcionarioExistenteId);
       }
     } else {
@@ -436,7 +436,7 @@ export async function importarPlanilhaFuncionarios(
         result.criados++;
         if (novoFuncionario?.id) {
           if (cpf) funcionariosPorCpf.set(`${empresa_id}|${cpf}`, novoFuncionario.id);
-          if (numeroRegistro) funcionariosPorRegistro.set(`${empresa_id}|${numeroRegistro.toUpperCase()}`, novoFuncionario.id);
+          if (numeroRegistro) funcionariosPorRegistro.set(`${empresa_id}|${numeroRegistro}`, novoFuncionario.id);
           funcionariosPorNomeNasc.set(chaveNomeNasc(empresa_id, nome, dataNascimento), novoFuncionario.id);
         }
       }
