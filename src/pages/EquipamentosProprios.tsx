@@ -284,6 +284,8 @@ export default function EquipamentosProprios() {
     doc.save(`ferramentas-disponiveis-${new Date().toISOString().slice(0,10)}.pdf`);
     toast({ title: "Relatório gerado!" });
   }
+
+  return (
     <AppLayout>
       <div className="space-y-6 p-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
