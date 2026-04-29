@@ -15,9 +15,12 @@ import { toast } from "@/hooks/use-toast";
 import {
   Wrench, Plus, Search, MapPin, ShoppingCart, Settings, History,
   Trash2, Edit, HardHat, Zap, Wind, Hammer, Box, Layers,
-  CheckCircle2, AlertTriangle, Clock, XCircle, Package, ArrowRightLeft, Camera, DollarSign
+  CheckCircle2, AlertTriangle, Clock, XCircle, Package, ArrowRightLeft, Camera, DollarSign, FileText, FileBarChart
 } from "lucide-react";
 import { ScrollableTable } from "@/components/shared/ScrollableTable";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 interface Equipamento {
   id: string;
