@@ -456,7 +456,7 @@ export default function EquipamentosProprios() {
                     ))}
                   </CardContent>
                 </Card>
-              ))}
+              );})}
            </TabsContent>
 
            <TabsContent value="cadastro" className="mt-4 space-y-4">
