@@ -12,7 +12,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex h-screen min-w-0 overflow-hidden bg-background">
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-foreground/30 backdrop-blur-sm lg:hidden"
@@ -28,7 +28,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         <AppSidebar onClose={() => setSidebarOpen(false)} />
       </aside>
 
-      <div className="flex flex-1 flex-col min-w-0">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* Header desktop + mobile com seletor de contexto */}
         <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background/95 backdrop-blur px-4">
           <button
@@ -43,9 +43,9 @@ export function AppLayout({ children }: AppLayoutProps) {
 
         <main
           id="app-main"
-          className="flex-1 overflow-auto p-4 lg:p-6"
+          className="min-h-0 flex-1 overflow-auto p-3 sm:p-4 lg:p-6"
         >
-          <div className="min-w-0 w-full">
+          <div className="app-page">
             {children}
           </div>
         </main>
