@@ -58,8 +58,8 @@ export async function baixarModeloFuncionarios() {
     ["2. CPF é a chave principal; se faltar/variar, o sistema também confere Nº Reg e Nome + Data de Nascimento."],
     ["3. Para deixar o funcionário SEM OBRA, preencha a coluna OBRA com: SEM OBRA (Funcionários sem alocação)."],
     ["4. Datas no formato AAAA-MM-DD (ex: 2024-01-15) ou DD/MM/AAAA."],
-    ["5. STATUS aceitos: ativo, ferias, atestado, afastado, desligado, abandono, pre-cadastro."],
-    ["6. ABANDONO: preencha 'sim' para marcar abandono. ATESTADO: período / texto livre."],
+    ["5. STATUS aceitos no banco: ativo, ferias, afastado, desligado."],
+    ["6. ABANDONO será tratado como desligado. ATESTADO será tratado como afastado e também registrado nas observações."],
     ["7. CNPJ deve corresponder a uma empresa já cadastrada no sistema (Empresas > CNPJ)."],
     ["8. ID: deixe em branco para novos cadastros. Nº REG será importado para o campo Nº Registro do funcionário."],
   ];
@@ -134,14 +134,13 @@ function normStatus(s: any): string {
   const map: Record<string, string> = {
     "ativo": "ativo", "ativa": "ativo",
     "férias": "ferias", "ferias": "ferias",
-    "atestado": "atestado",
-    "afastado": "afastado",
+    "atestado": "afastado", "afastamento": "afastado", "afastado": "afastado",
     "desligado": "desligado", "desligada": "desligado",
-    "abandono": "abandono",
-    "pré-cadastro": "pre-cadastro", "pre-cadastro": "pre-cadastro", "pré cadastro": "pre-cadastro",
+    "abandono": "desligado",
+    "pré-cadastro": "ativo", "pre-cadastro": "ativo", "pré cadastro": "ativo",
     "experiência": "ativo", "experiencia": "ativo",
   };
-  return map[v] || (v || "ativo");
+  return map[v] || "ativo";
 }
 
 export interface ImportResult {
