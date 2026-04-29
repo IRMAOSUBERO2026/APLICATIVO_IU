@@ -58,8 +58,8 @@ export async function baixarModeloFuncionarios() {
     ["2. CPF é a chave principal; se faltar/variar, o sistema também confere Nº Reg e Nome + Data de Nascimento."],
     ["3. Para deixar o funcionário SEM OBRA, preencha a coluna OBRA com: SEM OBRA (Funcionários sem alocação)."],
     ["4. Datas no formato AAAA-MM-DD (ex: 2024-01-15) ou DD/MM/AAAA."],
-    ["5. STATUS aceitos: ativo, ferias, atestado, afastado, desligado, abandono, pre-cadastro."],
-    ["6. ABANDONO: preencha 'sim' para marcar abandono. ATESTADO: período / texto livre."],
+    ["5. STATUS aceitos no banco: ativo, ferias, afastado, desligado."],
+    ["6. ABANDONO será tratado como desligado. ATESTADO será tratado como afastado e também registrado nas observações."],
     ["7. CNPJ deve corresponder a uma empresa já cadastrada no sistema (Empresas > CNPJ)."],
     ["8. ID: deixe em branco para novos cadastros. Nº REG será importado para o campo Nº Registro do funcionário."],
   ];
@@ -88,9 +88,13 @@ function normRegistro(v: any): string {
 function getCell(row: any, aliases: readonly string[]): any {
   const entries = Object.entries(row);
   const normalize = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/gi, "").toLowerCase();
-  const wanted = new Set(aliases.map(normalize));
-  const found = entries.find(([key]) => wanted.has(normalize(key)));
-  return found?.[1] ?? "";
+  for (const alias of aliases) {
+    const wanted = normalize(alias);
+    const found = entries.find(([key, value]) => normalize(key) === wanted && String(value ?? "").trim() !== "");
+    if (found) return found[1];
+  }
+  const fallback = entries.find(([key]) => aliases.map(normalize).includes(normalize(key)));
+  return fallback?.[1] ?? "";
 }
 function normCNPJ(v: any): string {
   return String(v ?? "").replace(/\D/g, "");
@@ -134,14 +138,13 @@ function normStatus(s: any): string {
   const map: Record<string, string> = {
     "ativo": "ativo", "ativa": "ativo",
     "férias": "ferias", "ferias": "ferias",
-    "atestado": "atestado",
-    "afastado": "afastado",
+    "atestado": "afastado", "afastamento": "afastado", "afastado": "afastado",
     "desligado": "desligado", "desligada": "desligado",
-    "abandono": "abandono",
-    "pré-cadastro": "pre-cadastro", "pre-cadastro": "pre-cadastro", "pré cadastro": "pre-cadastro",
+    "abandono": "desligado",
+    "pré-cadastro": "ativo", "pre-cadastro": "ativo", "pré cadastro": "ativo",
     "experiência": "ativo", "experiencia": "ativo",
   };
-  return map[v] || (v || "ativo");
+  return map[v] || "ativo";
 }
 
 export interface ImportResult {
@@ -169,7 +172,7 @@ function chaveNomeNasc(empresaId: string, nome: string, dataNasc: string | null)
 }
 
 const COL = {
-  registro: ["Nº REG", "N° REG", "Nº REGISTRO", "N° REGISTRO", "NUMERO REGISTRO", "NRO REG", "NRO_REG", "REGISTRO", "N REG", "NREG"],
+  registro: ["Nº REG", "N° REG", "Nº REGISTRO", "N° REGISTRO", "NUMERO REGISTRO", "NRO REG", "NRO_REG", "REGISTRO", "N REG", "NREG", "ID", "MATRICULA", "MATRÍCULA", "CODIGO", "CÓDIGO", "REG"],
   nome: ["NOME DO FUNCIONARIO", "NOME DO FUNCIONÁRIO", "FUNCIONARIO", "FUNCIONÁRIO", "NOME"],
   cnpj: ["CNPJ", "CNPJ EMPRESA", "CNPJ DA EMPRESA"],
   obra: ["OBRA", "NOME DA OBRA", "OBRA ATUAL", "ALOCAÇÃO", "ALOCACAO"],
@@ -335,7 +338,12 @@ export async function importarPlanilhaFuncionarios(
     const observacoes = obsParts.length ? obsParts.join(" | ") : null;
 
     const statusOriginal = getCell(r, COL.status);
-    const status = normStatus(statusOriginal);
+    const statusForcado = abandono && abandono.toLowerCase() !== "não" && abandono.toLowerCase() !== "nao"
+      ? "desligado"
+      : atestado
+        ? "afastado"
+        : "";
+    const status = normStatus(statusForcado || statusOriginal);
 
     // Helper: só inclui no payload se houver valor (evita sobrescrever com vazio em UPDATE)
     const txt = (v: any) => {
@@ -374,8 +382,8 @@ export async function importarPlanilhaFuncionarios(
       setIf("clinica_aso", txt(getCell(r, COL.clinica)));
       setIf("salario_base", num(getCell(r, COL.salarioBase)));
       setIf("salario_combinado", num(getCell(r, COL.salarioCombinado)));
-      // Status só se vier explicitamente preenchido na planilha
-      if (String(statusOriginal ?? "").trim()) setIf("status", status);
+      // Status só se vier explicitamente preenchido na planilha ou por ABANDONO/ATESTADO
+      if (String(statusOriginal ?? "").trim() || statusForcado) setIf("status", status);
       if (observacoes) setIf("motivo_rescisao", observacoes);
 
       if (Object.keys(updatePayload).length === 0) {

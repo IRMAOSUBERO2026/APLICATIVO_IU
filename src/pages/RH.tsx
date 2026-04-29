@@ -22,16 +22,27 @@ import { ScrollableTable } from "@/components/shared/ScrollableTable";
 
 type TabKey = "lista" | "exames_tab" | "exames_modulo";
 
-const STATUS_OPTIONS = ["Pré-Cadastro", "Ativo", "Experiência", "Desligado", "Abandono", "Atestado"] as const;
+const STATUS_OPTIONS = [
+  { value: "ativo", label: "Ativo" },
+  { value: "ferias", label: "Férias" },
+  { value: "afastado", label: "Afastado / Atestado" },
+  { value: "desligado", label: "Desligado / Abandono" },
+] as const;
+
+function normalizeStatusForDb(status: string) {
+  const s = String(status ?? "").toLowerCase().trim();
+  if (["atestado", "afastado"].includes(s)) return "afastado";
+  if (["abandono", "desligado"].includes(s)) return "desligado";
+  if (["ferias", "férias"].includes(s)) return "ferias";
+  return "ativo";
+}
 
 function getStatusColor(status: string) {
-  switch (status?.toLowerCase()) {
+  switch (normalizeStatusForDb(status)) {
     case "ativo": return "bg-success/10 text-success";
-    case "pré-cadastro": case "pre-cadastro": return "bg-warning/10 text-warning";
-    case "experiência": case "experiencia": return "bg-accent/10 text-accent";
+    case "ferias": return "bg-warning/10 text-warning";
+    case "afastado": return "bg-muted text-muted-foreground";
     case "desligado": return "bg-destructive/10 text-destructive";
-    case "abandono": return "bg-destructive/10 text-destructive";
-    case "atestado": return "bg-muted text-muted-foreground";
     default: return "bg-muted text-muted-foreground";
   }
 }
@@ -208,9 +219,10 @@ export default function RH() {
   };
 
   const saveStatus = async (funcId: string, newStatus: string) => {
-    const updateData: any = { status: newStatus.toLowerCase() };
+    const statusDb = normalizeStatusForDb(newStatus);
+    const updateData: any = { status: statusDb };
     // If desligado and no rescisao date, set today
-    if (newStatus.toLowerCase() === "desligado") {
+    if (statusDb === "desligado") {
       const f = dbFuncionarios.find(x => x.id === funcId);
       if (!f?.data_rescisao) {
         updateData.data_rescisao = format(new Date(), "yyyy-MM-dd");
@@ -471,7 +483,7 @@ export default function RH() {
               </select>
               <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="rounded-lg border bg-card px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
                 <option value="">Todos os Status</option>
-                {STATUS_OPTIONS.map(s => <option key={s} value={s.toLowerCase()}>{s}</option>)}
+                {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
               <select value={sortBy} onChange={e => setSortBy(e.target.value as any)} className="rounded-lg border bg-card px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
                 <option value="nome">Ordenar por Nome</option>
@@ -578,15 +590,15 @@ export default function RH() {
                           {/* Status - select que aceita o valor atual mesmo que diferente */}
                           <td className="px-3 py-2.5">
                             <select
-                              value={(f.status || "").toLowerCase()}
+                              value={normalizeStatusForDb(f.status)}
                               onChange={e => saveStatus(f.id, e.target.value)}
                               className={`rounded-full px-2 py-1 text-xs font-medium border cursor-pointer outline-none focus:ring-2 focus:ring-ring ${getStatusColor(f.status)}`}
                             >
                               {/* opção fallback se o status atual não estiver no enum */}
-                              {f.status && !STATUS_OPTIONS.map(s => s.toLowerCase()).includes((f.status || "").toLowerCase()) && (
-                                <option value={(f.status || "").toLowerCase()}>{f.status}</option>
+                              {f.status && !STATUS_OPTIONS.some(s => s.value === normalizeStatusForDb(f.status)) && (
+                                <option value={normalizeStatusForDb(f.status)}>{f.status}</option>
                               )}
-                              {STATUS_OPTIONS.map(s => <option key={s} value={s.toLowerCase()}>{s}</option>)}
+                              {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                             </select>
                           </td>
                           {/* Experiência */}
