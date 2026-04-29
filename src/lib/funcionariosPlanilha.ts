@@ -380,6 +380,9 @@ export async function importarPlanilhaFuncionarios(
         result.ignorados++;
       } else {
         result.atualizados++;
+        if (cpf) funcionariosPorCpf.set(`${empresa_id}|${cpf}`, funcionarioExistenteId);
+        if (numeroRegistro) funcionariosPorRegistro.set(`${empresa_id}|${numeroRegistro.toUpperCase()}`, funcionarioExistenteId);
+        funcionariosPorNomeNasc.set(chaveNomeNasc(nome, dataNascimento), funcionarioExistenteId);
       }
     } else {
       // ===== INSERT: criar novo =====
