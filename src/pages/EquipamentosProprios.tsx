@@ -142,13 +142,18 @@ export default function EquipamentosProprios() {
     const [eq, mt, ob, em] = await Promise.all([
       supabase.from("equipamentos_proprios").select("*").order("codigo"),
       supabase.from("manutencoes_equipamento").select("*").order("data_solicitacao", { ascending: false }),
-      supabase.from("obras").select("id, nome, codigo"),
-      supabase.from("empresas").select("id, razao_social"),
+      supabase.from("obras").select("id, nome, codigo, status").in("status", OBRA_STATUS_ATIVOS_ARR).order("codigo"),
+      supabase.from("empresas").select("id, razao_social").eq("ativo", true).order("razao_social"),
     ]);
     if (eq.data) setEquipamentos(eq.data);
     if (mt.data) setManutencoes(mt.data);
     if (ob.data) setObras(ob.data);
-    if (em.data) setEmpresas(em.data);
+    if (em.data) {
+      setEmpresas(em.data);
+      // Auto-seleciona Irmãos Ubero (todas as ferramentas pertencem ao grupo)
+      const ubero = em.data.find(e => /irm[aã]os?\s+ubero/i.test(e.razao_social)) || em.data[0];
+      if (ubero && !formEquip.empresa_id) setFormEquip(p => ({ ...p, empresa_id: ubero.id }));
+    }
   };
 
   useEffect(() => { loadData(); }, []);
