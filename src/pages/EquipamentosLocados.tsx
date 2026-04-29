@@ -33,7 +33,7 @@ interface EquipLocado {
   quantidade: number;
   status: string;
   observacoes: string | null;
-  empresa_id: string;
+  empresa_id: string | null;
 }
 
 const TIPOS_EQUIP = ["Retroescavadeira", "Escavadeira", "Caminhão", "Guindaste", "Plataforma", "Andaime", "Container", "Gerador", "Compressor", "Betoneira", "Outros"];
