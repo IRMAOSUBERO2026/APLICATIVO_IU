@@ -227,9 +227,10 @@ export default function RH() {
   };
 
   const saveStatus = async (funcId: string, newStatus: string) => {
-    const updateData: any = { status: newStatus.toLowerCase() };
+    const statusDb = normalizeStatusForDb(newStatus);
+    const updateData: any = { status: statusDb };
     // If desligado and no rescisao date, set today
-    if (newStatus.toLowerCase() === "desligado") {
+    if (statusDb === "desligado") {
       const f = dbFuncionarios.find(x => x.id === funcId);
       if (!f?.data_rescisao) {
         updateData.data_rescisao = format(new Date(), "yyyy-MM-dd");
