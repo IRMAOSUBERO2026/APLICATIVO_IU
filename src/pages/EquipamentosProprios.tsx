@@ -176,11 +176,42 @@ export default function EquipamentosProprios() {
   }, [equipamentos]);
 
   async function saveEquip() {
-    if (!formEquip.codigo || !formEquip.descricao) return;
-    const p = { ...formEquip, obra_id: formEquip.obra_id || null, empresa_id: formEquip.empresa_id || null };
-    if (editingEquip) await supabase.from("equipamentos_proprios").update(p).eq("id", editingEquip.id);
-    else await supabase.from("equipamentos_proprios").insert(p);
-    setShowEquipForm(false); loadData(); toast({ title: "Salvo!" });
+    if (!formEquip.codigo.trim() || !formEquip.descricao.trim()) {
+      toast({ title: "Preencha código e descrição", variant: "destructive" });
+      return;
+    }
+    if (!formEquip.empresa_id) {
+      toast({ title: "Selecione a empresa proprietária", variant: "destructive" });
+      return;
+    }
+    const payload: any = {
+      codigo: formEquip.codigo.trim(),
+      descricao: formEquip.descricao.trim(),
+      tipo: formEquip.tipo || "Outros",
+      marca: formEquip.marca?.trim() || null,
+      modelo: formEquip.modelo?.trim() || null,
+      numero_serie: formEquip.numero_serie?.trim() || null,
+      data_aquisicao: formEquip.data_aquisicao || null,
+      valor_aquisicao: Number(formEquip.valor_aquisicao) || 0,
+      fornecedor: formEquip.fornecedor?.trim() || null,
+      obra_id: formEquip.obra_id || null,
+      empresa_id: formEquip.empresa_id,
+      status: formEquip.status || "disponivel",
+      observacoes: formEquip.observacoes?.trim() || null,
+      foto_url: formEquip.foto_url?.trim() || null,
+    };
+    const { error } = editingEquip
+      ? await supabase.from("equipamentos_proprios").update(payload).eq("id", editingEquip.id)
+      : await supabase.from("equipamentos_proprios").insert(payload);
+    if (error) {
+      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
+      return;
+    }
+    setShowEquipForm(false);
+    setEditingEquip(null);
+    setFormEquip({ codigo: "", descricao: "", tipo: "Outros", marca: "", modelo: "", numero_serie: "", data_aquisicao: "", valor_aquisicao: 0, fornecedor: "", obra_id: "", empresa_id: "", status: "disponivel", observacoes: "", foto_url: "" });
+    loadData();
+    toast({ title: editingEquip ? "Equipamento atualizado!" : "Equipamento cadastrado!" });
   }
 
   async function handleTransfer() {
