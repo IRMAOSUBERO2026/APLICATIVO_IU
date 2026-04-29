@@ -341,25 +341,25 @@ export async function importarPlanilhaFuncionarios(
       setIf("nome", nome);
       setIf("numero_registro", numeroRegistro);
       if (cpf) setIf("cpf", cpf);
-      setIf("rg", txt(r["RG"]));
-      setIf("pis", txt(r["PIS"]));
-      setIf("codigo_pix", txt(r["CODIGO PIX"]));
-      setIf("telefone", txt(r["TELEFONE"]));
-      setIf("cargo", txt(r["CARGO"]));
-      setIf("data_admissao", parseDate(r["DATA DE ADMISSAO"]));
+      setIf("rg", txt(getCell(r, COL.rg)));
+      setIf("pis", txt(getCell(r, COL.pis)));
+      setIf("codigo_pix", txt(getCell(r, COL.pix)));
+      setIf("telefone", txt(getCell(r, COL.telefone)));
+      setIf("cargo", txt(getCell(r, COL.cargo)));
+      setIf("data_admissao", parseDate(getCell(r, COL.admissao)));
       setIf("data_nascimento", dataNascimento);
-      setIf("data_rescisao", parseDate(r["DATA DE RESCISAO"]));
-      setIf("data_aso", parseDate(r["ASO"]));
-      setIf("data_nr6", parseDate(r["NR6"]));
-      setIf("data_nr12", parseDate(r["NR12"]));
-      setIf("data_nr18", parseDate(r["NR18"]));
-      setIf("data_nr35", parseDate(r["NR35"]));
-      setIf("clinica_aso", txt(r["CLINICA"]));
-      setIf("salario_base", num(r["SALARIO BASE"]));
-      setIf("salario_combinado", num(r["SALARIO COMBINADO"]));
+      setIf("data_rescisao", parseDate(getCell(r, COL.rescisao)));
+      setIf("data_aso", parseDate(getCell(r, COL.aso)));
+      setIf("data_nr6", parseDate(getCell(r, COL.nr6)));
+      setIf("data_nr12", parseDate(getCell(r, COL.nr12)));
+      setIf("data_nr18", parseDate(getCell(r, COL.nr18)));
+      setIf("data_nr35", parseDate(getCell(r, COL.nr35)));
+      setIf("clinica_aso", txt(getCell(r, COL.clinica)));
+      setIf("salario_base", num(getCell(r, COL.salarioBase)));
+      setIf("salario_combinado", num(getCell(r, COL.salarioCombinado)));
       // Status só se vier explicitamente preenchido na planilha
-      if (String(r["STATUS"] ?? "").trim()) setIf("status", status);
-      if (observacoes) updatePayload.observacoes = observacoes;
+      if (String(statusOriginal ?? "").trim()) setIf("status", status);
+      if (observacoes) setIf("motivo_rescisao", observacoes);
 
       if (Object.keys(updatePayload).length === 0) {
         result.pulados_existentes++;
@@ -384,25 +384,25 @@ export async function importarPlanilhaFuncionarios(
         nome,
         numero_registro: numeroRegistro || null,
         cpf,
-        rg: txt(r["RG"]),
-        pis: txt(r["PIS"]),
-        codigo_pix: txt(r["CODIGO PIX"]),
-        telefone: txt(r["TELEFONE"]),
-        cargo: txt(r["CARGO"]) || "Não informado",
-        data_admissao: parseDate(r["DATA DE ADMISSAO"]) || new Date().toISOString().slice(0, 10),
+        rg: txt(getCell(r, COL.rg)),
+        pis: txt(getCell(r, COL.pis)),
+        codigo_pix: txt(getCell(r, COL.pix)),
+        telefone: txt(getCell(r, COL.telefone)),
+        cargo: txt(getCell(r, COL.cargo)) || "Não informado",
+        data_admissao: parseDate(getCell(r, COL.admissao)) || new Date().toISOString().slice(0, 10),
         data_nascimento: dataNascimento,
-        data_rescisao: parseDate(r["DATA DE RESCISAO"]),
-        data_aso: parseDate(r["ASO"]),
-        data_nr6: parseDate(r["NR6"]),
-        data_nr12: parseDate(r["NR12"]),
-        data_nr18: parseDate(r["NR18"]),
-        data_nr35: parseDate(r["NR35"]),
-        clinica_aso: txt(r["CLINICA"]),
-        salario_base: parseNum(r["SALARIO BASE"]),
-        salario_combinado: r["SALARIO COMBINADO"] === "" ? null : parseNum(r["SALARIO COMBINADO"]),
+        data_rescisao: parseDate(getCell(r, COL.rescisao)),
+        data_aso: parseDate(getCell(r, COL.aso)),
+        data_nr6: parseDate(getCell(r, COL.nr6)),
+        data_nr12: parseDate(getCell(r, COL.nr12)),
+        data_nr18: parseDate(getCell(r, COL.nr18)),
+        data_nr35: parseDate(getCell(r, COL.nr35)),
+        clinica_aso: txt(getCell(r, COL.clinica)),
+        salario_base: parseNum(getCell(r, COL.salarioBase)),
+        salario_combinado: getCell(r, COL.salarioCombinado) === "" ? null : parseNum(getCell(r, COL.salarioCombinado)),
         status,
       };
-      if (observacoes) insertPayload.observacoes = observacoes;
+      if (observacoes) insertPayload.motivo_rescisao = observacoes;
 
       const { data: novoFuncionario, error } = await supabase
         .from("funcionarios")
