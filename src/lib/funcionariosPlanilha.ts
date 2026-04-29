@@ -38,40 +38,9 @@ export const COLUNAS_MODELO = [
 
 const SEM_OBRA_CODIGO = "SEM-OBRA";
 
-/** Gera e baixa o arquivo modelo .xlsx limpo (com 1 linha de exemplo) */
+/** Gera e baixa o arquivo modelo .xlsx limpo (somente cabeçalhos, sem funcionários antigos) */
 export async function baixarModeloFuncionarios() {
-  const rows = [
-    {
-      "ID": "",
-      "Nº REG": "001",
-      "NOME DO FUNCIONARIO": "João da Silva",
-      "CNPJ": "12.345.678/0001-90",
-      "EMPRESA": "Irmãos Ubero Engenharia",
-      "OBRA": "SEM OBRA (Funcionários sem alocação)",
-      "CONSTRUTORA": "",
-      "CIDADE DE TRABALHO": "São Paulo",
-      "DATA DE ADMISSAO": "2024-01-15",
-      "CARGO": "Pedreiro",
-      "DATA DE NASCIMENTO": "1985-06-20",
-      "TELEFONE": "(11) 99999-0000",
-      "RG": "12.345.678-9",
-      "CPF": "123.456.789-00",
-      "PIS": "123.45678.90-1",
-      "CODIGO PIX": "123.456.789-00",
-      "SALARIO BASE": 2500,
-      "SALARIO COMBINADO": 3200,
-      "CLINICA": "MedWork",
-      "ASO": "2025-11-20",
-      "NR6": "2025-11-20",
-      "NR12": "",
-      "NR18": "2025-01-10",
-      "NR35": "",
-      "DATA DE RESCISAO": "",
-      "STATUS": "ativo",
-      "ABANDONO": "",
-      "ATESTADO": "",
-    },
-  ];
+  const rows: Record<string, unknown>[] = [];
 
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(rows, { header: COLUNAS_MODELO as unknown as string[] });
