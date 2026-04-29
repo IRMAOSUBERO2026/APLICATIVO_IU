@@ -109,7 +109,7 @@ export default function EquipamentosProprios() {
   const [selectedEquip, setSelectedEquip] = useState<Equipamento | null>(null);
   const [historicoAlocacao, setHistoricoAlocacao] = useState<HistoricoAlocacao[]>([]);
   
-  const [formEquip, setFormEquip] = useState({ codigo: "", descricao: "", tipo: "Outros", marca: "", modelo: "", numero_serie: "", data_aquisicao: "", valor_aquisicao: 0, obra_id: "", empresa_id: "", status: "disponivel", observacoes: "", foto_url: "" });
+  const [formEquip, setFormEquip] = useState({ codigo: "", descricao: "", tipo: "Outros", marca: "", modelo: "", numero_serie: "", data_aquisicao: "", valor_aquisicao: 0, fornecedor: "", obra_id: "", empresa_id: "", status: "disponivel", observacoes: "", foto_url: "" });
   const [formManut, setFormManut] = useState({ equipamento_id: "", tipo: "corretiva", descricao: "", fornecedor: "", valor_orcamento: 0, valor_aprovado: 0, observacoes: "" });
   const [transferObraId, setTransferObraId] = useState("");
   const [transferResponsavel, setTransferResponsavel] = useState("");
@@ -176,11 +176,42 @@ export default function EquipamentosProprios() {
   }, [equipamentos]);
 
   async function saveEquip() {
-    if (!formEquip.codigo || !formEquip.descricao) return;
-    const p = { ...formEquip, obra_id: formEquip.obra_id || null, empresa_id: formEquip.empresa_id || null };
-    if (editingEquip) await supabase.from("equipamentos_proprios").update(p).eq("id", editingEquip.id);
-    else await supabase.from("equipamentos_proprios").insert(p);
-    setShowEquipForm(false); loadData(); toast({ title: "Salvo!" });
+    if (!formEquip.codigo.trim() || !formEquip.descricao.trim()) {
+      toast({ title: "Preencha código e descrição", variant: "destructive" });
+      return;
+    }
+    if (!formEquip.empresa_id) {
+      toast({ title: "Selecione a empresa proprietária", variant: "destructive" });
+      return;
+    }
+    const payload: any = {
+      codigo: formEquip.codigo.trim(),
+      descricao: formEquip.descricao.trim(),
+      tipo: formEquip.tipo || "Outros",
+      marca: formEquip.marca?.trim() || null,
+      modelo: formEquip.modelo?.trim() || null,
+      numero_serie: formEquip.numero_serie?.trim() || null,
+      data_aquisicao: formEquip.data_aquisicao || null,
+      valor_aquisicao: Number(formEquip.valor_aquisicao) || 0,
+      fornecedor: formEquip.fornecedor?.trim() || null,
+      obra_id: formEquip.obra_id || null,
+      empresa_id: formEquip.empresa_id,
+      status: formEquip.status || "disponivel",
+      observacoes: formEquip.observacoes?.trim() || null,
+      foto_url: formEquip.foto_url?.trim() || null,
+    };
+    const { error } = editingEquip
+      ? await supabase.from("equipamentos_proprios").update(payload).eq("id", editingEquip.id)
+      : await supabase.from("equipamentos_proprios").insert(payload);
+    if (error) {
+      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
+      return;
+    }
+    setShowEquipForm(false);
+    setEditingEquip(null);
+    setFormEquip({ codigo: "", descricao: "", tipo: "Outros", marca: "", modelo: "", numero_serie: "", data_aquisicao: "", valor_aquisicao: 0, fornecedor: "", obra_id: "", empresa_id: "", status: "disponivel", observacoes: "", foto_url: "" });
+    loadData();
+    toast({ title: editingEquip ? "Equipamento atualizado!" : "Equipamento cadastrado!" });
   }
 
   async function handleTransfer() {
@@ -398,7 +429,7 @@ export default function EquipamentosProprios() {
                               <Button size="sm" variant="ghost" className="h-8 flex-1 text-primary" title="Transferir / Disponibilizar para obra" onClick={() => { setSelectedEquip(eq); setTransferObraId(eq.obra_id || "estoque"); setTransferResponsavel(""); setShowTransferForm(true); }}><ArrowRightLeft size={16} /></Button>
                               <Button size="sm" variant="ghost" className="h-8 flex-1" title="Histórico" onClick={() => openHistorico(eq)}><History size={16} /></Button>
                               <Button size="sm" variant="ghost" className="h-8 flex-1 text-amber-600" title="Enviar para oficina" onClick={() => quickMaintenance(eq)}><Wrench size={16} /></Button>
-                              <Button size="sm" variant="ghost" className="h-8 flex-1" title="Editar" onClick={() => { setEditingEquip(eq); setFormEquip({ ...eq, marca: eq.marca || "", modelo: eq.modelo || "", numero_serie: eq.numero_serie || "", data_aquisicao: eq.data_aquisicao || "", foto_url: eq.foto_url || "", empresa_id: eq.empresa_id || "", obra_id: eq.obra_id || "", observacoes: eq.observacoes || "" }); setShowEquipForm(true); }}><Edit size={16} /></Button>
+                              <Button size="sm" variant="ghost" className="h-8 flex-1" title="Editar" onClick={() => { setEditingEquip(eq); setFormEquip({ ...eq, marca: eq.marca || "", modelo: eq.modelo || "", numero_serie: eq.numero_serie || "", data_aquisicao: eq.data_aquisicao || "", foto_url: eq.foto_url || "", empresa_id: eq.empresa_id || "", obra_id: eq.obra_id || "", observacoes: eq.observacoes || "", fornecedor: (eq as any).fornecedor || "" }); setShowEquipForm(true); }}><Edit size={16} /></Button>
                               <Button size="sm" variant="ghost" className="h-8 flex-1 text-rose-500" title="Excluir" onClick={async () => { if(confirm("Excluir?")) { await supabase.from("equipamentos_proprios").delete().eq("id", eq.id); loadData(); } }}><Trash2 size={16} /></Button>
                            </div>
                         </CardContent>
@@ -473,7 +504,14 @@ export default function EquipamentosProprios() {
                <div><Label>Descricao *</Label><Input value={formEquip.descricao} onChange={e => setFormEquip({...formEquip, descricao: e.target.value})} /></div>
                <div><Label>Tipo</Label><Select value={formEquip.tipo} onValueChange={v => setFormEquip({...formEquip, tipo: v})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{TIPOS_EQUIPAMENTO.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
                <div><Label>Status Atual</Label><Select value={formEquip.status} onValueChange={v => setFormEquip({...formEquip, status: v})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Object.entries(STATUS_EQUIP).map(([k,v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}</SelectContent></Select></div>
-               <div><Label>Empresa Proprietaria</Label><Select value={formEquip.empresa_id || ""} onValueChange={v => setFormEquip({...formEquip, empresa_id: v})}><SelectTrigger><SelectValue placeholder="Global" /></SelectTrigger><SelectContent>{empresas.map(e => <SelectItem key={e.id} value={e.id}>{e.razao_social}</SelectItem>)}</SelectContent></Select></div>
+               <div><Label>Marca</Label><Input value={formEquip.marca} onChange={e => setFormEquip({...formEquip, marca: e.target.value})} placeholder="Ex: Bosch, Makita" /></div>
+               <div><Label>Modelo</Label><Input value={formEquip.modelo} onChange={e => setFormEquip({...formEquip, modelo: e.target.value})} placeholder="Ex: GSB 550" /></div>
+               <div><Label>Nº de Série</Label><Input value={formEquip.numero_serie} onChange={e => setFormEquip({...formEquip, numero_serie: e.target.value})} /></div>
+               <div><Label>Data de Aquisição</Label><Input type="date" value={formEquip.data_aquisicao} onChange={e => setFormEquip({...formEquip, data_aquisicao: e.target.value})} /></div>
+               <div><Label>Valor de Aquisição (R$)</Label><Input type="number" step="0.01" min="0" value={formEquip.valor_aquisicao} onChange={e => setFormEquip({...formEquip, valor_aquisicao: parseFloat(e.target.value) || 0})} /></div>
+               <div><Label>Fornecedor</Label><Input value={formEquip.fornecedor} onChange={e => setFormEquip({...formEquip, fornecedor: e.target.value})} placeholder="Onde foi adquirido" /></div>
+               <div><Label>Empresa Proprietária *</Label><Select value={formEquip.empresa_id || ""} onValueChange={v => setFormEquip({...formEquip, empresa_id: v})}><SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger><SelectContent>{empresas.map(e => <SelectItem key={e.id} value={e.id}>{e.razao_social}</SelectItem>)}</SelectContent></Select></div>
+               <div><Label>Obra atual (opcional)</Label><Select value={formEquip.obra_id || "estoque"} onValueChange={v => setFormEquip({...formEquip, obra_id: v === "estoque" ? "" : v})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="estoque">Almoxarifado</SelectItem>{obras.map(o => <SelectItem key={o.id} value={o.id}>{o.codigo} — {o.nome}</SelectItem>)}</SelectContent></Select></div>
                <div className="md:col-span-2"><Label>Observacoes</Label><Textarea value={formEquip.observacoes} onChange={e => setFormEquip({...formEquip, observacoes: e.target.value})} /></div>
             </div>
             <DialogFooter><Button onClick={saveEquip} className="w-full">Confirmar e Salvar</Button></DialogFooter>
