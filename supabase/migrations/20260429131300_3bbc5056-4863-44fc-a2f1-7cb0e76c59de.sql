@@ -1,0 +1,1 @@
+ALTER TABLE public.equipamentos_locados ALTER COLUMN empresa_id DROP NOT NULL;

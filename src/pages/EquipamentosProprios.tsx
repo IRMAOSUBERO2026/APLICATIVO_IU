@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { ScrollableTable } from "@/components/shared/ScrollableTable";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -141,13 +142,18 @@ export default function EquipamentosProprios() {
     const [eq, mt, ob, em] = await Promise.all([
       supabase.from("equipamentos_proprios").select("*").order("codigo"),
       supabase.from("manutencoes_equipamento").select("*").order("data_solicitacao", { ascending: false }),
-      supabase.from("obras").select("id, nome, codigo"),
-      supabase.from("empresas").select("id, razao_social"),
+      supabase.from("obras").select("id, nome, codigo, status").in("status", OBRA_STATUS_ATIVOS_ARR).order("codigo"),
+      supabase.from("empresas").select("id, razao_social").eq("ativo", true).order("razao_social"),
     ]);
     if (eq.data) setEquipamentos(eq.data);
     if (mt.data) setManutencoes(mt.data);
     if (ob.data) setObras(ob.data);
-    if (em.data) setEmpresas(em.data);
+    if (em.data) {
+      setEmpresas(em.data);
+      // Auto-seleciona Irmãos Ubero (todas as ferramentas pertencem ao grupo)
+      const ubero = em.data.find(e => /irm[aã]os?\s+ubero/i.test(e.razao_social)) || em.data[0];
+      if (ubero && !formEquip.empresa_id) setFormEquip(p => ({ ...p, empresa_id: ubero.id }));
+    }
   };
 
   useEffect(() => { loadData(); }, []);
@@ -166,11 +172,14 @@ export default function EquipamentosProprios() {
   }, [equipamentos, busca]);
 
   const equipPorObra = useMemo(() => {
-    const g: Record<string, Equipamento[]> = {};
+    const g: Record<string, Equipamento[]> = { __almoxarifado__: [] };
     equipamentos.forEach(e => {
-      if (!e.obra_id) return;
-      if (!g[e.obra_id]) g[e.obra_id] = [];
-      g[e.obra_id].push(e);
+      if (!e.obra_id) {
+        g.__almoxarifado__.push(e);
+      } else {
+        if (!g[e.obra_id]) g[e.obra_id] = [];
+        g[e.obra_id].push(e);
+      }
     });
     return g;
   }, [equipamentos]);
@@ -184,6 +193,7 @@ export default function EquipamentosProprios() {
       toast({ title: "Selecione a empresa proprietária", variant: "destructive" });
       return;
     }
+    const valor = Number(formEquip.valor_aquisicao) || 0;
     const payload: any = {
       codigo: formEquip.codigo.trim(),
       descricao: formEquip.descricao.trim(),
@@ -192,7 +202,7 @@ export default function EquipamentosProprios() {
       modelo: formEquip.modelo?.trim() || null,
       numero_serie: formEquip.numero_serie?.trim() || null,
       data_aquisicao: formEquip.data_aquisicao || null,
-      valor_aquisicao: Number(formEquip.valor_aquisicao) || 0,
+      valor_aquisicao: valor,
       fornecedor: formEquip.fornecedor?.trim() || null,
       obra_id: formEquip.obra_id || null,
       empresa_id: formEquip.empresa_id,
@@ -207,11 +217,29 @@ export default function EquipamentosProprios() {
       toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
       return;
     }
+
+    // Lança despesa no Financeiro se for novo equipamento com valor + fornecedor + data
+    if (!editingEquip && valor > 0 && payload.fornecedor && payload.data_aquisicao) {
+      await supabase.from("contas_pagar").insert({
+        descricao: `Aquisição de equipamento: ${payload.codigo} - ${payload.descricao}`,
+        categoria: "Equipamentos",
+        valor: valor,
+        data_vencimento: payload.data_aquisicao,
+        empresa_id: payload.empresa_id,
+        obra_id: payload.obra_id,
+        status: "pendente",
+        observacoes: `Fornecedor: ${payload.fornecedor}`,
+      });
+      toast({ title: "Equipamento cadastrado!", description: "Despesa lançada no Financeiro." });
+    } else {
+      toast({ title: editingEquip ? "Equipamento atualizado!" : "Equipamento cadastrado!" });
+    }
+
     setShowEquipForm(false);
     setEditingEquip(null);
-    setFormEquip({ codigo: "", descricao: "", tipo: "Outros", marca: "", modelo: "", numero_serie: "", data_aquisicao: "", valor_aquisicao: 0, fornecedor: "", obra_id: "", empresa_id: "", status: "disponivel", observacoes: "", foto_url: "" });
+    const uberoId = empresas.find(e => /irm[aã]os?\s+ubero/i.test(e.razao_social))?.id || empresas[0]?.id || "";
+    setFormEquip({ codigo: "", descricao: "", tipo: "Outros", marca: "", modelo: "", numero_serie: "", data_aquisicao: "", valor_aquisicao: 0, fornecedor: "", obra_id: "", empresa_id: uberoId, status: "disponivel", observacoes: "", foto_url: "" });
     loadData();
-    toast({ title: editingEquip ? "Equipamento atualizado!" : "Equipamento cadastrado!" });
   }
 
   async function handleTransfer() {
@@ -239,6 +267,27 @@ export default function EquipamentosProprios() {
 
   async function updateManutStatus(id: string, status: string) {
     await supabase.from("manutencoes_equipamento").update({ status }).eq("id", id);
+    // Quando concluída, lança despesa no Financeiro e devolve equipamento ao almoxarifado
+    if (status === "concluido") {
+      const m = manutencoes.find(x => x.id === id);
+      if (m && (m.valor_aprovado || 0) > 0) {
+        const eq = equipamentos.find(e => e.id === m.equipamento_id);
+        await supabase.from("contas_pagar").insert({
+          descricao: `Manutenção ${m.tipo}: ${eq?.codigo || ""} - ${eq?.descricao || ""}`,
+          categoria: "Manutenção de Equipamentos",
+          valor: m.valor_aprovado,
+          data_vencimento: new Date().toISOString().slice(0, 10),
+          empresa_id: eq?.empresa_id,
+          status: "pendente",
+          observacoes: `Fornecedor: ${m.fornecedor || "—"} | ${m.descricao || ""}`,
+        });
+        toast({ title: "Manutenção concluída", description: "Despesa lançada no Financeiro." });
+      }
+      // Volta para disponível
+      if (m?.equipamento_id) {
+        await supabase.from("equipamentos_proprios").update({ status: "disponivel" }).eq("id", m.equipamento_id);
+      }
+    }
     loadData();
   }
 
@@ -378,9 +427,17 @@ export default function EquipamentosProprios() {
            <TabsList><TabsTrigger value="painel">Localizacoes</TabsTrigger><TabsTrigger value="cadastro">Catalogo</TabsTrigger><TabsTrigger value="manutencao">Manutencoes</TabsTrigger></TabsList>
            
            <TabsContent value="painel" className="mt-4 space-y-4">
-              {Object.entries(equipPorObra).map(([id, eqs]) => (
+              {Object.entries(equipPorObra).filter(([_, eqs]) => eqs.length > 0).map(([id, eqs]) => {
+                const isAlmox = id === "__almoxarifado__";
+                const obraInfo = obras.find(o => o.id === id);
+                return (
                 <Card key={id} className="overflow-hidden">
-                  <CardHeader className="py-2 px-4 bg-muted/40 border-b flex flex-row items-center justify-between"><CardTitle className="text-sm font-bold">{obras.find(o => o.id === id)?.nome || "Obra"}</CardTitle><Badge variant="outline">{eqs.length}</Badge></CardHeader>
+                  <CardHeader className={`py-2 px-4 border-b flex flex-row items-center justify-between ${isAlmox ? "bg-emerald-500/10" : "bg-muted/40"}`}>
+                    <CardTitle className={`text-sm font-bold flex items-center gap-2 ${isAlmox ? "text-emerald-700" : ""}`}>
+                      {isAlmox ? <><Package size={16} /> Almoxarifado / Disponíveis</> : (obraInfo ? `${obraInfo.codigo} — ${obraInfo.nome}` : "Obra")}
+                    </CardTitle>
+                    <Badge variant="outline">{eqs.length}</Badge>
+                  </CardHeader>
                   <CardContent className="p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {eqs.map(eq => (
                       <div key={eq.id} className="flex gap-3 p-3 border rounded-xl bg-card hover:shadow-sm transition-shadow">
@@ -399,7 +456,7 @@ export default function EquipamentosProprios() {
                     ))}
                   </CardContent>
                 </Card>
-              ))}
+              );})}
            </TabsContent>
 
            <TabsContent value="cadastro" className="mt-4 space-y-4">

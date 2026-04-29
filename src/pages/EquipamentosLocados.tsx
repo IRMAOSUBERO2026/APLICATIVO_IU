@@ -33,7 +33,7 @@ interface EquipLocado {
   quantidade: number;
   status: string;
   observacoes: string | null;
-  empresa_id: string;
+  empresa_id: string | null;
 }
 
 const TIPOS_EQUIP = ["Retroescavadeira", "Escavadeira", "Caminhão", "Guindaste", "Plataforma", "Andaime", "Container", "Gerador", "Compressor", "Betoneira", "Outros"];
@@ -138,15 +138,24 @@ export default function EquipamentosLocados() {
   }
 
   async function saveEquip() {
-    if (!form.descricao || !form.empresa_id || !form.data_inicio) {
-      toast({ title: "Preencha campos obrigatórios", variant: "destructive" }); return;
+    if (!form.descricao || !form.data_inicio) {
+      toast({ title: "Preencha descrição e data de início", variant: "destructive" }); return;
     }
-    const payload = { ...form, fornecedor_id: form.fornecedor_id || null, obra_id: form.obra_id || null, data_fim: form.data_fim || null, numero_oc: form.numero_oc || null };
+    const payload: any = {
+      ...form,
+      fornecedor_id: form.fornecedor_id || null,
+      obra_id: form.obra_id || null,
+      data_fim: form.data_fim || null,
+      numero_oc: form.numero_oc || null,
+      empresa_id: form.empresa_id || null, // opcional no início; obrigatório só no fechamento
+    };
     if (editing) {
-      await supabase.from("equipamentos_locados").update(payload).eq("id", editing.id);
+      const { error } = await supabase.from("equipamentos_locados").update(payload).eq("id", editing.id);
+      if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
       toast({ title: "Locação atualizada!" });
     } else {
-      await supabase.from("equipamentos_locados").insert(payload);
+      const { error } = await supabase.from("equipamentos_locados").insert(payload);
+      if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
       toast({ title: "Locação cadastrada!" });
     }
     setShowForm(false); setEditing(null); resetForm(); loadData();
@@ -360,21 +369,28 @@ export default function EquipamentosLocados() {
                         <TableHeader>
                           <TableRow className="bg-muted/20">
                             <TableHead>Equipamento</TableHead><TableHead>Obra</TableHead>
+                            <TableHead>CNPJ (NF)</TableHead>
                             <TableHead>OC</TableHead><TableHead>Qtd</TableHead>
                             <TableHead className="text-right">Unit.</TableHead><TableHead className="text-right">Subtotal</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {grupo.items.map(e => (
-                            <TableRow key={e.id} className="hover:bg-muted/20">
+                          {grupo.items.map(e => {
+                            const empNome = e.empresa_id ? (empresas.find(em => em.id === e.empresa_id)?.razao_social || "—") : null;
+                            return (
+                            <TableRow key={e.id} className={`hover:bg-muted/20 ${!e.empresa_id ? "bg-amber-50" : ""}`}>
                               <TableCell className="text-sm font-medium">{e.descricao}</TableCell>
                               <TableCell className="text-sm">{e.obra_id ? obraMap[e.obra_id] || "—" : "—"}</TableCell>
+                              <TableCell className="text-xs">
+                                {empNome ? <span className="text-foreground">{empNome}</span> : <span className="text-amber-600 font-bold">⚠ Pendente</span>}
+                              </TableCell>
                               <TableCell className="text-sm font-mono">{e.numero_oc || "—"}</TableCell>
                               <TableCell className="text-sm">{e.quantidade}</TableCell>
                               <TableCell className="text-right text-sm">R$ {e.valor_mensal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
                               <TableCell className="text-right text-sm font-bold text-primary">R$ {(e.valor_mensal * e.quantidade).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
                             </TableRow>
-                          ))}
+                            );
+                          })}
                         </TableBody>
                       </Table>
                     </CardContent>
@@ -446,11 +462,16 @@ export default function EquipamentosLocados() {
                 <SelectContent>{Object.entries(STATUS_LOC).map(([k, v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div><Label>Empresa *</Label>
-              <Select value={form.empresa_id} onValueChange={v => setForm(p => ({ ...p, empresa_id: v }))}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>{empresas.map(e => <SelectItem key={e.id} value={e.id}>{e.razao_social}</SelectItem>)}</SelectContent>
+            <div>
+              <Label>Empresa (CNPJ p/ NF) <span className="text-xs text-muted-foreground font-normal">(pode preencher depois)</span></Label>
+              <Select value={form.empresa_id || "__none__"} onValueChange={v => setForm(p => ({ ...p, empresa_id: v === "__none__" ? "" : v }))}>
+                <SelectTrigger><SelectValue placeholder="Definir depois" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— Definir depois —</SelectItem>
+                  {empresas.map(e => <SelectItem key={e.id} value={e.id}>{e.razao_social}</SelectItem>)}
+                </SelectContent>
               </Select>
+              <p className="text-[10px] text-muted-foreground mt-1">Obrigatório antes do fechamento mensal para emissão de NF.</p>
             </div>
             <div className="md:col-span-2"><Label>Observações</Label><Textarea value={form.observacoes} onChange={e => setForm(p => ({ ...p, observacoes: e.target.value }))} /></div>
           </div>
