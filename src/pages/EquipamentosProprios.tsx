@@ -113,6 +113,29 @@ export default function EquipamentosProprios() {
   const [formManut, setFormManut] = useState({ equipamento_id: "", tipo: "corretiva", descricao: "", fornecedor: "", valor_orcamento: 0, valor_aprovado: 0, observacoes: "" });
   const [transferObraId, setTransferObraId] = useState("");
   const [transferResponsavel, setTransferResponsavel] = useState("");
+  const [uploadingFoto, setUploadingFoto] = useState(false);
+
+  async function handleUploadFoto(file: File) {
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Imagem muito grande", description: "Máximo 5MB.", variant: "destructive" });
+      return;
+    }
+    setUploadingFoto(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `equipamentos/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+      const { error } = await supabase.storage.from("documentos").upload(path, file, { upsert: false, contentType: file.type });
+      if (error) throw error;
+      const { data } = supabase.storage.from("documentos").getPublicUrl(path);
+      setFormEquip(p => ({ ...p, foto_url: data.publicUrl }));
+      toast({ title: "Foto enviada!" });
+    } catch (e: any) {
+      toast({ title: "Erro no upload", description: e.message, variant: "destructive" });
+    } finally {
+      setUploadingFoto(false);
+    }
+  }
 
   const loadData = async () => {
     const [eq, mt, ob, em] = await Promise.all([
