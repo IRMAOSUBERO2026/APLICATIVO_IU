@@ -22,16 +22,27 @@ import { ScrollableTable } from "@/components/shared/ScrollableTable";
 
 type TabKey = "lista" | "exames_tab" | "exames_modulo";
 
-const STATUS_OPTIONS = ["Pré-Cadastro", "Ativo", "Experiência", "Desligado", "Abandono", "Atestado"] as const;
+const STATUS_OPTIONS = [
+  { value: "ativo", label: "Ativo" },
+  { value: "ferias", label: "Férias" },
+  { value: "afastado", label: "Afastado / Atestado" },
+  { value: "desligado", label: "Desligado / Abandono" },
+] as const;
+
+function normalizeStatusForDb(status: string) {
+  const s = String(status ?? "").toLowerCase().trim();
+  if (["atestado", "afastado"].includes(s)) return "afastado";
+  if (["abandono", "desligado"].includes(s)) return "desligado";
+  if (["ferias", "férias"].includes(s)) return "ferias";
+  return "ativo";
+}
 
 function getStatusColor(status: string) {
-  switch (status?.toLowerCase()) {
+  switch (normalizeStatusForDb(status)) {
     case "ativo": return "bg-success/10 text-success";
-    case "pré-cadastro": case "pre-cadastro": return "bg-warning/10 text-warning";
-    case "experiência": case "experiencia": return "bg-accent/10 text-accent";
+    case "ferias": return "bg-warning/10 text-warning";
+    case "afastado": return "bg-muted text-muted-foreground";
     case "desligado": return "bg-destructive/10 text-destructive";
-    case "abandono": return "bg-destructive/10 text-destructive";
-    case "atestado": return "bg-muted text-muted-foreground";
     default: return "bg-muted text-muted-foreground";
   }
 }
