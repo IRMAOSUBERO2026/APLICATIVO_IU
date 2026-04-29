@@ -252,10 +252,10 @@ export async function importarPlanilhaFuncionarios(
 
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
-    const cpf = normCPF(r["CPF"]);
-    const numeroRegistro = normRegistro(getCell(r, ["Nº REG", "N° REG", "Nº REGISTRO", "N° REGISTRO", "NUMERO REGISTRO", "NRO REG", "NRO_REG", "REGISTRO", "N REG"]));
-    const nome = String(r["NOME DO FUNCIONARIO"] ?? "").trim();
-    const dataNascimento = parseDate(r["DATA DE NASCIMENTO"]);
+    const cpf = normCPF(getCell(r, COL.cpf));
+    const numeroRegistro = normRegistro(getCell(r, COL.registro));
+    const nome = String(getCell(r, COL.nome) ?? "").trim();
+    const dataNascimento = parseDate(getCell(r, COL.nascimento));
 
     if (!nome) {
       result.ignorados++;
@@ -264,7 +264,7 @@ export async function importarPlanilhaFuncionarios(
     }
 
     // Resolve empresa antes do match por Nº Reg (registro é único por empresa)
-    const cnpjNorm = normCNPJ(r["CNPJ"]);
+    const cnpjNorm = normCNPJ(getCell(r, COL.cnpj));
     const empresa_id = empresasByCnpj.get(cnpjNorm) || empresaPadraoId;
     if (!empresa_id) {
       result.ignorados++;
@@ -300,7 +300,7 @@ export async function importarPlanilhaFuncionarios(
     }
 
     // Resolve obra
-    const obraTxt = String(r["OBRA"] ?? "").trim().toLowerCase();
+    const obraTxt = String(getCell(r, COL.obra) ?? "").trim().toLowerCase();
     let obra_id: string | null = null;
     if (obraTxt) {
       const obra = obrasByNome.get(obraTxt) || obrasByCodigo.get(obraTxt);
@@ -310,14 +310,15 @@ export async function importarPlanilhaFuncionarios(
 
     // Observações: ABANDONO + ATESTADO
     const obsParts: string[] = [];
-    const abandono = String(r["ABANDONO"] ?? "").trim();
-    const atestado = String(r["ATESTADO"] ?? "").trim();
+    const abandono = String(getCell(r, COL.abandono) ?? "").trim();
+    const atestado = String(getCell(r, COL.atestado) ?? "").trim();
     if (abandono && abandono.toLowerCase() !== "não" && abandono.toLowerCase() !== "nao")
       obsParts.push(`Abandono: ${abandono}`);
     if (atestado) obsParts.push(`Atestado: ${atestado}`);
     const observacoes = obsParts.length ? obsParts.join(" | ") : null;
 
-    const status = normStatus(r["STATUS"]);
+    const statusOriginal = getCell(r, COL.status);
+    const status = normStatus(statusOriginal);
 
     // Helper: só inclui no payload se houver valor (evita sobrescrever com vazio em UPDATE)
     const txt = (v: any) => {
