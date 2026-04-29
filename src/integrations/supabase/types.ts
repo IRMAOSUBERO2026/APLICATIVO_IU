@@ -798,7 +798,7 @@ export type Database = {
           data_fim: string | null
           data_inicio: string
           descricao: string
-          empresa_id: string
+          empresa_id: string | null
           fornecedor_id: string | null
           id: string
           numero_oc: string | null
@@ -817,7 +817,7 @@ export type Database = {
           data_fim?: string | null
           data_inicio: string
           descricao: string
-          empresa_id: string
+          empresa_id?: string | null
           fornecedor_id?: string | null
           id?: string
           numero_oc?: string | null
@@ -836,7 +836,7 @@ export type Database = {
           data_fim?: string | null
           data_inicio?: string
           descricao?: string
-          empresa_id?: string
+          empresa_id?: string | null
           fornecedor_id?: string | null
           id?: string
           numero_oc?: string | null
