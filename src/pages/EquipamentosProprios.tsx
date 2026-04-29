@@ -202,7 +202,88 @@ export default function EquipamentosProprios() {
     setShowHistorico(true);
   }
 
-  return (
+  function gerarPdfBase(titulo: string) {
+    const doc = new jsPDF();
+    doc.setFontSize(16); doc.setFont("helvetica", "bold");
+    doc.text("Irmãos Ubero Engenharia", 14, 15);
+    doc.setFontSize(12); doc.setFont("helvetica", "normal");
+    doc.text(titulo, 14, 22);
+    doc.setFontSize(9); doc.setTextColor(120);
+    doc.text(`Emitido em: ${new Date().toLocaleString("pt-BR")}`, 14, 28);
+    doc.setTextColor(0);
+    return doc;
+  }
+
+  function relatorioManutencoes() {
+    const doc = gerarPdfBase("Relatório de Manutenções");
+    autoTable(doc, {
+      startY: 33,
+      head: [["Equipamento", "Tipo", "Descrição", "Solicitação", "Realização", "Fornecedor", "Orçamento", "Aprovado", "Status"]],
+      body: manutencoes.map(m => {
+        const eq = equipamentos.find(e => e.id === m.equipamento_id);
+        return [
+          eq ? `${eq.codigo} - ${eq.descricao}` : "---",
+          m.tipo,
+          m.descricao || "",
+          m.data_solicitacao ? new Date(m.data_solicitacao).toLocaleDateString("pt-BR") : "",
+          m.data_realizacao ? new Date(m.data_realizacao).toLocaleDateString("pt-BR") : "-",
+          m.fornecedor || "-",
+          `R$ ${(m.valor_orcamento || 0).toLocaleString("pt-BR")}`,
+          `R$ ${(m.valor_aprovado || 0).toLocaleString("pt-BR")}`,
+          STATUS_MANUT[m.status]?.label || m.status,
+        ];
+      }),
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [60, 80, 45] },
+    });
+    const totalApr = manutencoes.reduce((s, m) => s + (m.valor_aprovado || 0), 0);
+    const y = (doc as any).lastAutoTable.finalY + 6;
+    doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+    doc.text(`Total Aprovado: R$ ${totalApr.toLocaleString("pt-BR")}`, 14, y);
+    doc.save(`relatorio-manutencoes-${new Date().toISOString().slice(0,10)}.pdf`);
+    toast({ title: "Relatório gerado!" });
+  }
+
+  function relatorioPorObra() {
+    const doc = gerarPdfBase("Ferramentas por Obra");
+    let y = 33;
+    Object.entries(equipPorObra).forEach(([obraId, eqs]) => {
+      const obra = obras.find(o => o.id === obraId);
+      doc.setFont("helvetica", "bold"); doc.setFontSize(11);
+      if (y > 270) { doc.addPage(); y = 15; }
+      doc.text(`${obra?.codigo || ""} - ${obra?.nome || "Obra"} (${eqs.length})`, 14, y);
+      autoTable(doc, {
+        startY: y + 3,
+        head: [["Código", "Descrição", "Tipo", "Marca/Modelo", "Status"]],
+        body: eqs.map(e => [e.codigo, e.descricao, e.tipo, `${e.marca || ""} ${e.modelo || ""}`.trim() || "-", STATUS_EQUIP[e.status]?.label || e.status]),
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [60, 80, 45] },
+      });
+      y = (doc as any).lastAutoTable.finalY + 8;
+    });
+    doc.save(`ferramentas-por-obra-${new Date().toISOString().slice(0,10)}.pdf`);
+    toast({ title: "Relatório gerado!" });
+  }
+
+  function relatorioDisponiveis() {
+    const doc = gerarPdfBase("Ferramentas Disponíveis (Almoxarifado)");
+    const lista = equipamentos.filter(e => e.status === "disponivel" && !e.obra_id);
+    autoTable(doc, {
+      startY: 33,
+      head: [["Código", "Descrição", "Tipo", "Marca", "Modelo", "Nº Série", "Valor"]],
+      body: lista.map(e => [
+        e.codigo, e.descricao, e.tipo, e.marca || "-", e.modelo || "-",
+        e.numero_serie || "-", `R$ ${(e.valor_aquisicao || 0).toLocaleString("pt-BR")}`,
+      ]),
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [60, 80, 45] },
+    });
+    const y = (doc as any).lastAutoTable.finalY + 6;
+    doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+    doc.text(`Total disponíveis: ${lista.length}`, 14, y);
+    doc.save(`ferramentas-disponiveis-${new Date().toISOString().slice(0,10)}.pdf`);
+    toast({ title: "Relatório gerado!" });
+  }
     <AppLayout>
       <div className="space-y-6 p-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
