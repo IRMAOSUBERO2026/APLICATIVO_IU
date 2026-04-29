@@ -427,9 +427,17 @@ export default function EquipamentosProprios() {
            <TabsList><TabsTrigger value="painel">Localizacoes</TabsTrigger><TabsTrigger value="cadastro">Catalogo</TabsTrigger><TabsTrigger value="manutencao">Manutencoes</TabsTrigger></TabsList>
            
            <TabsContent value="painel" className="mt-4 space-y-4">
-              {Object.entries(equipPorObra).map(([id, eqs]) => (
+              {Object.entries(equipPorObra).filter(([_, eqs]) => eqs.length > 0).map(([id, eqs]) => {
+                const isAlmox = id === "__almoxarifado__";
+                const obraInfo = obras.find(o => o.id === id);
+                return (
                 <Card key={id} className="overflow-hidden">
-                  <CardHeader className="py-2 px-4 bg-muted/40 border-b flex flex-row items-center justify-between"><CardTitle className="text-sm font-bold">{obras.find(o => o.id === id)?.nome || "Obra"}</CardTitle><Badge variant="outline">{eqs.length}</Badge></CardHeader>
+                  <CardHeader className={`py-2 px-4 border-b flex flex-row items-center justify-between ${isAlmox ? "bg-emerald-500/10" : "bg-muted/40"}`}>
+                    <CardTitle className={`text-sm font-bold flex items-center gap-2 ${isAlmox ? "text-emerald-700" : ""}`}>
+                      {isAlmox ? <><Package size={16} /> Almoxarifado / Disponíveis</> : (obraInfo ? `${obraInfo.codigo} — ${obraInfo.nome}` : "Obra")}
+                    </CardTitle>
+                    <Badge variant="outline">{eqs.length}</Badge>
+                  </CardHeader>
                   <CardContent className="p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {eqs.map(eq => (
                       <div key={eq.id} className="flex gap-3 p-3 border rounded-xl bg-card hover:shadow-sm transition-shadow">
