@@ -172,11 +172,14 @@ export default function EquipamentosProprios() {
   }, [equipamentos, busca]);
 
   const equipPorObra = useMemo(() => {
-    const g: Record<string, Equipamento[]> = {};
+    const g: Record<string, Equipamento[]> = { __almoxarifado__: [] };
     equipamentos.forEach(e => {
-      if (!e.obra_id) return;
-      if (!g[e.obra_id]) g[e.obra_id] = [];
-      g[e.obra_id].push(e);
+      if (!e.obra_id) {
+        g.__almoxarifado__.push(e);
+      } else {
+        if (!g[e.obra_id]) g[e.obra_id] = [];
+        g[e.obra_id].push(e);
+      }
     });
     return g;
   }, [equipamentos]);
