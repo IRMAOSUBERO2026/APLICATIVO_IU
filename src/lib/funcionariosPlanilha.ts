@@ -78,7 +78,7 @@ function normCPF(v: any): string {
   return digits.length >= 9 && digits.length < 11 ? digits.padStart(11, "0") : digits;
 }
 function normRegistro(v: any): string {
-  return String(v ?? "").trim().replace(/\.0$/, "");
+  return String(v ?? "").trim().replace(/\.0$/, "").replace(/,0$/, "");
 }
 function getCell(row: any, aliases: string[]): any {
   const entries = Object.entries(row);
@@ -118,7 +118,9 @@ function parseDate(v: any): string | null {
 }
 function parseNum(v: any): number {
   if (v === null || v === undefined || v === "") return 0;
-  const s = String(v).replace(/[R$\s.]/g, "").replace(",", ".");
+  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+  const raw = String(v).replace(/[R$\s]/g, "");
+  const s = raw.includes(",") ? raw.replace(/\./g, "").replace(",", ".") : raw;
   const n = Number(s);
   return isNaN(n) ? 0 : n;
 }
@@ -155,6 +157,33 @@ function chaveNomeNasc(nome: string, dataNasc: string | null): string {
   const n = String(nome ?? "").trim().toLowerCase().replace(/\s+/g, " ");
   return `${n}|${dataNasc ?? ""}`;
 }
+
+const COL = {
+  registro: ["Nº REG", "N° REG", "Nº REGISTRO", "N° REGISTRO", "NUMERO REGISTRO", "NRO REG", "NRO_REG", "REGISTRO", "N REG", "NREG"],
+  nome: ["NOME DO FUNCIONARIO", "NOME DO FUNCIONÁRIO", "FUNCIONARIO", "FUNCIONÁRIO", "NOME"],
+  cnpj: ["CNPJ", "CNPJ EMPRESA", "CNPJ DA EMPRESA"],
+  obra: ["OBRA", "NOME DA OBRA", "OBRA ATUAL", "ALOCAÇÃO", "ALOCACAO"],
+  admissao: ["DATA DE ADMISSAO", "DATA DE ADMISSÃO", "ADMISSAO", "ADMISSÃO"],
+  cargo: ["CARGO", "FUNCAO", "FUNÇÃO"],
+  nascimento: ["DATA DE NASCIMENTO", "NASCIMENTO", "DATA NASC"],
+  telefone: ["TELEFONE", "CELULAR", "FONE"],
+  rg: ["RG"],
+  cpf: ["CPF"],
+  pis: ["PIS", "PIS/PASEP", "PASEP"],
+  pix: ["CODIGO PIX", "CÓDIGO PIX", "PIX", "CHAVE PIX"],
+  salarioBase: ["SALARIO BASE", "SALÁRIO BASE", "SALARIO", "SALÁRIO"],
+  salarioCombinado: ["SALARIO COMBINADO", "SALÁRIO COMBINADO"],
+  clinica: ["CLINICA", "CLÍNICA", "CLINICA ASO", "CLÍNICA ASO"],
+  aso: ["ASO", "DATA ASO"],
+  nr6: ["NR6", "NR 6", "DATA NR6", "DATA NR 6"],
+  nr12: ["NR12", "NR 12", "DATA NR12", "DATA NR 12"],
+  nr18: ["NR18", "NR 18", "DATA NR18", "DATA NR 18"],
+  nr35: ["NR35", "NR 35", "DATA NR35", "DATA NR 35"],
+  rescisao: ["DATA DE RESCISAO", "DATA DE RESCISÃO", "RESCISAO", "RESCISÃO"],
+  status: ["STATUS", "SITUAÇÃO", "SITUACAO"],
+  abandono: ["ABANDONO"],
+  atestado: ["ATESTADO", "AFASTAMENTO", "ATESTADO PROLONGADO"],
+} as const;
 
 /** Lê o arquivo .xlsx e importa funcionários conforme o modo escolhido */
 export async function importarPlanilhaFuncionarios(
