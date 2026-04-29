@@ -78,9 +78,9 @@ function normCPF(v: any): string {
   return digits.length >= 9 && digits.length < 11 ? digits.padStart(11, "0") : digits;
 }
 function normRegistro(v: any): string {
-  return String(v ?? "").trim().replace(/\.0$/, "");
+  return String(v ?? "").trim().replace(/\.0$/, "").replace(/,0$/, "");
 }
-function getCell(row: any, aliases: string[]): any {
+function getCell(row: any, aliases: readonly string[]): any {
   const entries = Object.entries(row);
   const normalize = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/gi, "").toLowerCase();
   const wanted = new Set(aliases.map(normalize));
@@ -118,7 +118,9 @@ function parseDate(v: any): string | null {
 }
 function parseNum(v: any): number {
   if (v === null || v === undefined || v === "") return 0;
-  const s = String(v).replace(/[R$\s.]/g, "").replace(",", ".");
+  if (typeof v === "number") return Number.isFinite(v) ? v : 0;
+  const raw = String(v).replace(/[R$\s]/g, "");
+  const s = raw.includes(",") ? raw.replace(/\./g, "").replace(",", ".") : raw;
   const n = Number(s);
   return isNaN(n) ? 0 : n;
 }
@@ -155,6 +157,33 @@ function chaveNomeNasc(nome: string, dataNasc: string | null): string {
   const n = String(nome ?? "").trim().toLowerCase().replace(/\s+/g, " ");
   return `${n}|${dataNasc ?? ""}`;
 }
+
+const COL = {
+  registro: ["Nº REG", "N° REG", "Nº REGISTRO", "N° REGISTRO", "NUMERO REGISTRO", "NRO REG", "NRO_REG", "REGISTRO", "N REG", "NREG"],
+  nome: ["NOME DO FUNCIONARIO", "NOME DO FUNCIONÁRIO", "FUNCIONARIO", "FUNCIONÁRIO", "NOME"],
+  cnpj: ["CNPJ", "CNPJ EMPRESA", "CNPJ DA EMPRESA"],
+  obra: ["OBRA", "NOME DA OBRA", "OBRA ATUAL", "ALOCAÇÃO", "ALOCACAO"],
+  admissao: ["DATA DE ADMISSAO", "DATA DE ADMISSÃO", "ADMISSAO", "ADMISSÃO"],
+  cargo: ["CARGO", "FUNCAO", "FUNÇÃO"],
+  nascimento: ["DATA DE NASCIMENTO", "NASCIMENTO", "DATA NASC"],
+  telefone: ["TELEFONE", "CELULAR", "FONE"],
+  rg: ["RG"],
+  cpf: ["CPF"],
+  pis: ["PIS", "PIS/PASEP", "PASEP"],
+  pix: ["CODIGO PIX", "CÓDIGO PIX", "PIX", "CHAVE PIX"],
+  salarioBase: ["SALARIO BASE", "SALÁRIO BASE", "SALARIO", "SALÁRIO"],
+  salarioCombinado: ["SALARIO COMBINADO", "SALÁRIO COMBINADO"],
+  clinica: ["CLINICA", "CLÍNICA", "CLINICA ASO", "CLÍNICA ASO"],
+  aso: ["ASO", "DATA ASO"],
+  nr6: ["NR6", "NR 6", "DATA NR6", "DATA NR 6"],
+  nr12: ["NR12", "NR 12", "DATA NR12", "DATA NR 12"],
+  nr18: ["NR18", "NR 18", "DATA NR18", "DATA NR 18"],
+  nr35: ["NR35", "NR 35", "DATA NR35", "DATA NR 35"],
+  rescisao: ["DATA DE RESCISAO", "DATA DE RESCISÃO", "RESCISAO", "RESCISÃO"],
+  status: ["STATUS", "SITUAÇÃO", "SITUACAO"],
+  abandono: ["ABANDONO"],
+  atestado: ["ATESTADO", "AFASTAMENTO", "ATESTADO PROLONGADO"],
+} as const;
 
 /** Lê o arquivo .xlsx e importa funcionários conforme o modo escolhido */
 export async function importarPlanilhaFuncionarios(
@@ -198,20 +227,25 @@ export async function importarPlanilhaFuncionarios(
   // Carrega TODOS os funcionários existentes (com CPF, Nº Reg e nome+nascimento p/ matching de fallback)
   const { data: funcionariosExistentes, error: errFuncionarios } = await supabase
     .from("funcionarios")
-    .select("id, empresa_id, cpf, numero_registro, nome, data_nascimento, created_at")
+    .select("id, empresa_id, cpf, numero_registro, nome, data_nascimento, status, obra_id, telefone, data_aso, data_nr6, data_nr12, data_nr18, data_nr35, created_at")
     .range(0, 9999);
 
   if (errFuncionarios) {
     throw new Error(`Não foi possível conferir funcionários existentes: ${errFuncionarios.message}`);
   }
 
-  // Index por CPF normalizado, Nº Reg e nome+data_nascimento (apenas o mais antigo)
+  // Index por CPF normalizado, Nº Reg e nome+data_nascimento.
+  // Quando houver duplicado legado, usa o cadastro mais completo para atualizar em vez de criar outro.
   const funcionariosPorCpf = new Map<string, string>();
   const funcionariosPorRegistro = new Map<string, string>();
   const funcionariosPorNomeNasc = new Map<string, string>();
+  const qualidadeCadastro = (f: any) =>
+    ["numero_registro", "obra_id", "telefone", "data_aso", "data_nr6", "data_nr12", "data_nr18", "data_nr35"]
+      .reduce((score, key) => score + (f?.[key] ? 1 : 0), 0) +
+    (String(f?.status ?? "").toLowerCase() === "ativo" ? 2 : 0);
   (funcionariosExistentes ?? [])
     .slice()
-    .sort((a: any, b: any) => String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")))
+    .sort((a: any, b: any) => qualidadeCadastro(b) - qualidadeCadastro(a) || String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")))
     .forEach((f: any) => {
       const cpfN = normCPF(f.cpf);
       if (cpfN && !funcionariosPorCpf.has(`${f.empresa_id}|${cpfN}`)) funcionariosPorCpf.set(`${f.empresa_id}|${cpfN}`, f.id);
@@ -223,10 +257,10 @@ export async function importarPlanilhaFuncionarios(
 
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
-    const cpf = normCPF(r["CPF"]);
-    const numeroRegistro = normRegistro(getCell(r, ["Nº REG", "N° REG", "Nº REGISTRO", "N° REGISTRO", "NUMERO REGISTRO", "NRO REG", "NRO_REG", "REGISTRO", "N REG"]));
-    const nome = String(r["NOME DO FUNCIONARIO"] ?? "").trim();
-    const dataNascimento = parseDate(r["DATA DE NASCIMENTO"]);
+    const cpf = normCPF(getCell(r, COL.cpf));
+    const numeroRegistro = normRegistro(getCell(r, COL.registro));
+    const nome = String(getCell(r, COL.nome) ?? "").trim();
+    const dataNascimento = parseDate(getCell(r, COL.nascimento));
 
     if (!nome) {
       result.ignorados++;
@@ -235,7 +269,7 @@ export async function importarPlanilhaFuncionarios(
     }
 
     // Resolve empresa antes do match por Nº Reg (registro é único por empresa)
-    const cnpjNorm = normCNPJ(r["CNPJ"]);
+    const cnpjNorm = normCNPJ(getCell(r, COL.cnpj));
     const empresa_id = empresasByCnpj.get(cnpjNorm) || empresaPadraoId;
     if (!empresa_id) {
       result.ignorados++;
@@ -271,7 +305,7 @@ export async function importarPlanilhaFuncionarios(
     }
 
     // Resolve obra
-    const obraTxt = String(r["OBRA"] ?? "").trim().toLowerCase();
+    const obraTxt = String(getCell(r, COL.obra) ?? "").trim().toLowerCase();
     let obra_id: string | null = null;
     if (obraTxt) {
       const obra = obrasByNome.get(obraTxt) || obrasByCodigo.get(obraTxt);
@@ -281,14 +315,15 @@ export async function importarPlanilhaFuncionarios(
 
     // Observações: ABANDONO + ATESTADO
     const obsParts: string[] = [];
-    const abandono = String(r["ABANDONO"] ?? "").trim();
-    const atestado = String(r["ATESTADO"] ?? "").trim();
+    const abandono = String(getCell(r, COL.abandono) ?? "").trim();
+    const atestado = String(getCell(r, COL.atestado) ?? "").trim();
     if (abandono && abandono.toLowerCase() !== "não" && abandono.toLowerCase() !== "nao")
       obsParts.push(`Abandono: ${abandono}`);
     if (atestado) obsParts.push(`Atestado: ${atestado}`);
     const observacoes = obsParts.length ? obsParts.join(" | ") : null;
 
-    const status = normStatus(r["STATUS"]);
+    const statusOriginal = getCell(r, COL.status);
+    const status = normStatus(statusOriginal);
 
     // Helper: só inclui no payload se houver valor (evita sobrescrever com vazio em UPDATE)
     const txt = (v: any) => {
@@ -311,25 +346,25 @@ export async function importarPlanilhaFuncionarios(
       setIf("nome", nome);
       setIf("numero_registro", numeroRegistro);
       if (cpf) setIf("cpf", cpf);
-      setIf("rg", txt(r["RG"]));
-      setIf("pis", txt(r["PIS"]));
-      setIf("codigo_pix", txt(r["CODIGO PIX"]));
-      setIf("telefone", txt(r["TELEFONE"]));
-      setIf("cargo", txt(r["CARGO"]));
-      setIf("data_admissao", parseDate(r["DATA DE ADMISSAO"]));
+      setIf("rg", txt(getCell(r, COL.rg)));
+      setIf("pis", txt(getCell(r, COL.pis)));
+      setIf("codigo_pix", txt(getCell(r, COL.pix)));
+      setIf("telefone", txt(getCell(r, COL.telefone)));
+      setIf("cargo", txt(getCell(r, COL.cargo)));
+      setIf("data_admissao", parseDate(getCell(r, COL.admissao)));
       setIf("data_nascimento", dataNascimento);
-      setIf("data_rescisao", parseDate(r["DATA DE RESCISAO"]));
-      setIf("data_aso", parseDate(r["ASO"]));
-      setIf("data_nr6", parseDate(r["NR6"]));
-      setIf("data_nr12", parseDate(r["NR12"]));
-      setIf("data_nr18", parseDate(r["NR18"]));
-      setIf("data_nr35", parseDate(r["NR35"]));
-      setIf("clinica_aso", txt(r["CLINICA"]));
-      setIf("salario_base", num(r["SALARIO BASE"]));
-      setIf("salario_combinado", num(r["SALARIO COMBINADO"]));
+      setIf("data_rescisao", parseDate(getCell(r, COL.rescisao)));
+      setIf("data_aso", parseDate(getCell(r, COL.aso)));
+      setIf("data_nr6", parseDate(getCell(r, COL.nr6)));
+      setIf("data_nr12", parseDate(getCell(r, COL.nr12)));
+      setIf("data_nr18", parseDate(getCell(r, COL.nr18)));
+      setIf("data_nr35", parseDate(getCell(r, COL.nr35)));
+      setIf("clinica_aso", txt(getCell(r, COL.clinica)));
+      setIf("salario_base", num(getCell(r, COL.salarioBase)));
+      setIf("salario_combinado", num(getCell(r, COL.salarioCombinado)));
       // Status só se vier explicitamente preenchido na planilha
-      if (String(r["STATUS"] ?? "").trim()) setIf("status", status);
-      if (observacoes) updatePayload.observacoes = observacoes;
+      if (String(statusOriginal ?? "").trim()) setIf("status", status);
+      if (observacoes) setIf("motivo_rescisao", observacoes);
 
       if (Object.keys(updatePayload).length === 0) {
         result.pulados_existentes++;
@@ -345,6 +380,9 @@ export async function importarPlanilhaFuncionarios(
         result.ignorados++;
       } else {
         result.atualizados++;
+        if (cpf) funcionariosPorCpf.set(`${empresa_id}|${cpf}`, funcionarioExistenteId);
+        if (numeroRegistro) funcionariosPorRegistro.set(`${empresa_id}|${numeroRegistro.toUpperCase()}`, funcionarioExistenteId);
+        funcionariosPorNomeNasc.set(chaveNomeNasc(nome, dataNascimento), funcionarioExistenteId);
       }
     } else {
       // ===== INSERT: criar novo =====
@@ -354,25 +392,25 @@ export async function importarPlanilhaFuncionarios(
         nome,
         numero_registro: numeroRegistro || null,
         cpf,
-        rg: txt(r["RG"]),
-        pis: txt(r["PIS"]),
-        codigo_pix: txt(r["CODIGO PIX"]),
-        telefone: txt(r["TELEFONE"]),
-        cargo: txt(r["CARGO"]) || "Não informado",
-        data_admissao: parseDate(r["DATA DE ADMISSAO"]) || new Date().toISOString().slice(0, 10),
+        rg: txt(getCell(r, COL.rg)),
+        pis: txt(getCell(r, COL.pis)),
+        codigo_pix: txt(getCell(r, COL.pix)),
+        telefone: txt(getCell(r, COL.telefone)),
+        cargo: txt(getCell(r, COL.cargo)) || "Não informado",
+        data_admissao: parseDate(getCell(r, COL.admissao)) || new Date().toISOString().slice(0, 10),
         data_nascimento: dataNascimento,
-        data_rescisao: parseDate(r["DATA DE RESCISAO"]),
-        data_aso: parseDate(r["ASO"]),
-        data_nr6: parseDate(r["NR6"]),
-        data_nr12: parseDate(r["NR12"]),
-        data_nr18: parseDate(r["NR18"]),
-        data_nr35: parseDate(r["NR35"]),
-        clinica_aso: txt(r["CLINICA"]),
-        salario_base: parseNum(r["SALARIO BASE"]),
-        salario_combinado: r["SALARIO COMBINADO"] === "" ? null : parseNum(r["SALARIO COMBINADO"]),
+        data_rescisao: parseDate(getCell(r, COL.rescisao)),
+        data_aso: parseDate(getCell(r, COL.aso)),
+        data_nr6: parseDate(getCell(r, COL.nr6)),
+        data_nr12: parseDate(getCell(r, COL.nr12)),
+        data_nr18: parseDate(getCell(r, COL.nr18)),
+        data_nr35: parseDate(getCell(r, COL.nr35)),
+        clinica_aso: txt(getCell(r, COL.clinica)),
+        salario_base: parseNum(getCell(r, COL.salarioBase)),
+        salario_combinado: getCell(r, COL.salarioCombinado) === "" ? null : parseNum(getCell(r, COL.salarioCombinado)),
         status,
       };
-      if (observacoes) insertPayload.observacoes = observacoes;
+      if (observacoes) insertPayload.motivo_rescisao = observacoes;
 
       const { data: novoFuncionario, error } = await supabase
         .from("funcionarios")
