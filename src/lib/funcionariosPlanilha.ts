@@ -1,12 +1,13 @@
 // Helper para gerar/importar planilha modelo de Funcionários (RH/DP)
 // - Formato Excel (.xlsx)
-// - Importa fazendo UPSERT por CPF
+// - Importa fazendo deduplicação por CPF, Nº Reg e Nome+Nascimento
 // - Funcionários sem obra são alocados na obra global "SEM-OBRA"
 import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
 
 export const COLUNAS_MODELO = [
   "ID",
+  "Nº REG",
   "NOME DO FUNCIONARIO",
   "CNPJ",
   "EMPRESA",
@@ -37,83 +38,9 @@ export const COLUNAS_MODELO = [
 
 const SEM_OBRA_CODIGO = "SEM-OBRA";
 
-/** Gera e baixa o arquivo modelo .xlsx (com 1 linha de exemplo) */
+/** Gera e baixa o arquivo modelo .xlsx limpo (somente cabeçalhos, sem funcionários antigos) */
 export async function baixarModeloFuncionarios() {
-  // Carrega lista atual de funcionários para já preencher o modelo (facilita atualização)
-  const { data: funcs } = await supabase
-    .from("funcionarios")
-    .select(`
-      id, nome, cpf, rg, pis, codigo_pix, telefone, cargo,
-      data_admissao, data_nascimento, data_rescisao,
-      data_aso, data_nr6, data_nr12, data_nr18, data_nr35,
-      clinica_aso, salario_base, salario_combinado, status, observacoes,
-      empresas:empresa_id ( cnpj, razao_social ),
-      obras:obra_id ( codigo, nome, construtora, cidade )
-    `)
-    .order("nome", { ascending: true });
-
-  const rows = (funcs ?? []).map((f: any) => ({
-    "ID": f.id ?? "",
-    "NOME DO FUNCIONARIO": f.nome ?? "",
-    "CNPJ": f.empresas?.cnpj ?? "",
-    "EMPRESA": f.empresas?.razao_social ?? "",
-    "OBRA": f.obras?.nome ?? "",
-    "CONSTRUTORA": f.obras?.construtora ?? "",
-    "CIDADE DE TRABALHO": f.obras?.cidade ?? "",
-    "DATA DE ADMISSAO": f.data_admissao ?? "",
-    "CARGO": f.cargo ?? "",
-    "DATA DE NASCIMENTO": f.data_nascimento ?? "",
-    "TELEFONE": f.telefone ?? "",
-    "RG": f.rg ?? "",
-    "CPF": f.cpf ?? "",
-    "PIS": f.pis ?? "",
-    "CODIGO PIX": f.codigo_pix ?? "",
-    "SALARIO BASE": f.salario_base ?? 0,
-    "SALARIO COMBINADO": f.salario_combinado ?? "",
-    "CLINICA": f.clinica_aso ?? "",
-    "ASO": f.data_aso ?? "",
-    "NR6": f.data_nr6 ?? "",
-    "NR12": f.data_nr12 ?? "",
-    "NR18": f.data_nr18 ?? "",
-    "NR35": f.data_nr35 ?? "",
-    "DATA DE RESCISAO": f.data_rescisao ?? "",
-    "STATUS": f.status ?? "ativo",
-    "ABANDONO": "",
-    "ATESTADO": "",
-  }));
-
-  // Se não tem nenhum funcionário, cria 1 linha de exemplo para orientar o preenchimento
-  if (rows.length === 0) {
-    rows.push({
-      "ID": "",
-      "NOME DO FUNCIONARIO": "João da Silva",
-      "CNPJ": "12.345.678/0001-90",
-      "EMPRESA": "Irmãos Ubero Engenharia",
-      "OBRA": "SEM OBRA (Funcionários sem alocação)",
-      "CONSTRUTORA": "",
-      "CIDADE DE TRABALHO": "São Paulo",
-      "DATA DE ADMISSAO": "2024-01-15",
-      "CARGO": "Pedreiro",
-      "DATA DE NASCIMENTO": "1985-06-20",
-      "TELEFONE": "(11) 99999-0000",
-      "RG": "12.345.678-9",
-      "CPF": "123.456.789-00",
-      "PIS": "123.45678.90-1",
-      "CODIGO PIX": "123.456.789-00",
-      "SALARIO BASE": 2500,
-      "SALARIO COMBINADO": 3200,
-      "CLINICA": "MedWork",
-      "ASO": "2025-11-20",
-      "NR6": "2025-11-20",
-      "NR12": "",
-      "NR18": "2025-01-10",
-      "NR35": "",
-      "DATA DE RESCISAO": "",
-      "STATUS": "ativo",
-      "ABANDONO": "",
-      "ATESTADO": "",
-    });
-  }
+  const rows: Record<string, unknown>[] = [];
 
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(rows, { header: COLUNAS_MODELO as unknown as string[] });
@@ -128,13 +55,13 @@ export async function baixarModeloFuncionarios() {
     ["INSTRUÇÕES DE PREENCHIMENTO"],
     [""],
     ["1. NÃO altere os nomes das colunas da aba 'Funcionários'."],
-    ["2. CPF é a chave de identificação. Se já existir, o registro será atualizado; se não, será criado."],
+    ["2. CPF é a chave principal; se faltar/variar, o sistema também confere Nº Reg e Nome + Data de Nascimento."],
     ["3. Para deixar o funcionário SEM OBRA, preencha a coluna OBRA com: SEM OBRA (Funcionários sem alocação)."],
     ["4. Datas no formato AAAA-MM-DD (ex: 2024-01-15) ou DD/MM/AAAA."],
     ["5. STATUS aceitos: ativo, ferias, atestado, afastado, desligado, abandono, pre-cadastro."],
     ["6. ABANDONO: preencha 'sim' para marcar abandono. ATESTADO: período / texto livre."],
     ["7. CNPJ deve corresponder a uma empresa já cadastrada no sistema (Empresas > CNPJ)."],
-    ["8. ID: deixe em branco para novos cadastros. Não altere o ID dos existentes."],
+    ["8. ID: deixe em branco para novos cadastros. Nº REG será importado para o campo Nº Registro do funcionário."],
   ];
   const wsInstr = XLSX.utils.aoa_to_sheet(instrucoes);
   wsInstr["!cols"] = [{ wch: 100 }];
@@ -149,6 +76,16 @@ export async function baixarModeloFuncionarios() {
 function normCPF(v: any): string {
   const digits = String(v ?? "").replace(/\D/g, "");
   return digits.length >= 9 && digits.length < 11 ? digits.padStart(11, "0") : digits;
+}
+function normRegistro(v: any): string {
+  return String(v ?? "").trim().replace(/\.0$/, "");
+}
+function getCell(row: any, aliases: string[]): any {
+  const entries = Object.entries(row);
+  const normalize = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/gi, "").toLowerCase();
+  const wanted = new Set(aliases.map(normalize));
+  const found = entries.find(([key]) => wanted.has(normalize(key)));
+  return found?.[1] ?? "";
 }
 function normCNPJ(v: any): string {
   return String(v ?? "").replace(/\D/g, "");
@@ -258,25 +195,28 @@ export async function importarPlanilhaFuncionarios(
     erros: [],
   };
 
-  // Carrega TODOS os funcionários existentes (com nome e data_nascimento p/ matching de fallback)
+  // Carrega TODOS os funcionários existentes (com CPF, Nº Reg e nome+nascimento p/ matching de fallback)
   const { data: funcionariosExistentes, error: errFuncionarios } = await supabase
     .from("funcionarios")
-    .select("id, cpf, nome, data_nascimento, created_at")
+    .select("id, empresa_id, cpf, numero_registro, nome, data_nascimento, created_at")
     .range(0, 9999);
 
   if (errFuncionarios) {
     throw new Error(`Não foi possível conferir funcionários existentes: ${errFuncionarios.message}`);
   }
 
-  // Index por CPF normalizado (apenas o mais antigo) e por nome+data_nascimento (fallback)
+  // Index por CPF normalizado, Nº Reg e nome+data_nascimento (apenas o mais antigo)
   const funcionariosPorCpf = new Map<string, string>();
+  const funcionariosPorRegistro = new Map<string, string>();
   const funcionariosPorNomeNasc = new Map<string, string>();
   (funcionariosExistentes ?? [])
     .slice()
     .sort((a: any, b: any) => String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")))
     .forEach((f: any) => {
       const cpfN = normCPF(f.cpf);
-      if (cpfN && !funcionariosPorCpf.has(cpfN)) funcionariosPorCpf.set(cpfN, f.id);
+      if (cpfN && !funcionariosPorCpf.has(`${f.empresa_id}|${cpfN}`)) funcionariosPorCpf.set(`${f.empresa_id}|${cpfN}`, f.id);
+      const regN = normRegistro(f.numero_registro).toUpperCase();
+      if (regN && !funcionariosPorRegistro.has(`${f.empresa_id}|${regN}`)) funcionariosPorRegistro.set(`${f.empresa_id}|${regN}`, f.id);
       const k = chaveNomeNasc(f.nome, f.data_nascimento);
       if (!funcionariosPorNomeNasc.has(k)) funcionariosPorNomeNasc.set(k, f.id);
     });
@@ -284,6 +224,7 @@ export async function importarPlanilhaFuncionarios(
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
     const cpf = normCPF(r["CPF"]);
+    const numeroRegistro = normRegistro(getCell(r, ["Nº REG", "N° REG", "Nº REGISTRO", "N° REGISTRO", "NUMERO REGISTRO", "NRO REG", "NRO_REG", "REGISTRO", "N REG"]));
     const nome = String(r["NOME DO FUNCIONARIO"] ?? "").trim();
     const dataNascimento = parseDate(r["DATA DE NASCIMENTO"]);
 
@@ -293,8 +234,20 @@ export async function importarPlanilhaFuncionarios(
       continue;
     }
 
-    // Match: 1º por CPF, 2º por NOME+DATA_NASCIMENTO
-    let funcionarioExistenteId: string | undefined = cpf ? funcionariosPorCpf.get(cpf) : undefined;
+    // Resolve empresa antes do match por Nº Reg (registro é único por empresa)
+    const cnpjNorm = normCNPJ(r["CNPJ"]);
+    const empresa_id = empresasByCnpj.get(cnpjNorm) || empresaPadraoId;
+    if (!empresa_id) {
+      result.ignorados++;
+      result.erros.push({ linha: i + 2, cpf, erro: "Nenhuma empresa cadastrada no sistema" });
+      continue;
+    }
+
+    // Match: 1º por CPF, 2º por Nº REG dentro da empresa, 3º por NOME+DATA_NASCIMENTO
+    let funcionarioExistenteId: string | undefined = cpf ? funcionariosPorCpf.get(`${empresa_id}|${cpf}`) : undefined;
+    if (!funcionarioExistenteId && numeroRegistro) {
+      funcionarioExistenteId = funcionariosPorRegistro.get(`${empresa_id}|${numeroRegistro.toUpperCase()}`);
+    }
     if (!funcionarioExistenteId) {
       funcionarioExistenteId = funcionariosPorNomeNasc.get(chaveNomeNasc(nome, dataNascimento));
     }
@@ -310,19 +263,10 @@ export async function importarPlanilhaFuncionarios(
       continue;
     }
 
-    // Para CRIAR é obrigatório CPF
-    if (!funcionarioExistenteId && !cpf) {
+    // Para CRIAR é obrigatório CPF ou Nº Reg
+    if (!funcionarioExistenteId && !cpf && !numeroRegistro) {
       result.ignorados++;
-      result.erros.push({ linha: i + 2, cpf: "(vazio)", erro: "CPF obrigatório para novos cadastros" });
-      continue;
-    }
-
-    // Resolve empresa
-    const cnpjNorm = normCNPJ(r["CNPJ"]);
-    const empresa_id = empresasByCnpj.get(cnpjNorm) || empresaPadraoId;
-    if (!empresa_id) {
-      result.ignorados++;
-      result.erros.push({ linha: i + 2, cpf, erro: "Nenhuma empresa cadastrada no sistema" });
+      result.erros.push({ linha: i + 2, cpf: "(vazio)", erro: "CPF ou Nº Reg obrigatório para novos cadastros" });
       continue;
     }
 
@@ -365,6 +309,7 @@ export async function importarPlanilhaFuncionarios(
       setIf("empresa_id", empresa_id);
       setIf("obra_id", obra_id);
       setIf("nome", nome);
+      setIf("numero_registro", numeroRegistro);
       if (cpf) setIf("cpf", cpf);
       setIf("rg", txt(r["RG"]));
       setIf("pis", txt(r["PIS"]));
@@ -407,6 +352,7 @@ export async function importarPlanilhaFuncionarios(
         empresa_id,
         obra_id,
         nome,
+        numero_registro: numeroRegistro || null,
         cpf,
         rg: txt(r["RG"]),
         pis: txt(r["PIS"]),
@@ -439,7 +385,8 @@ export async function importarPlanilhaFuncionarios(
       } else {
         result.criados++;
         if (novoFuncionario?.id) {
-          funcionariosPorCpf.set(cpf, novoFuncionario.id);
+          if (cpf) funcionariosPorCpf.set(`${empresa_id}|${cpf}`, novoFuncionario.id);
+          if (numeroRegistro) funcionariosPorRegistro.set(`${empresa_id}|${numeroRegistro.toUpperCase()}`, novoFuncionario.id);
           funcionariosPorNomeNasc.set(chaveNomeNasc(nome, dataNascimento), novoFuncionario.id);
         }
       }
