@@ -214,7 +214,7 @@ export async function importarPlanilhaFuncionarios(
     .sort((a: any, b: any) => String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")))
     .forEach((f: any) => {
       const cpfN = normCPF(f.cpf);
-      if (cpfN && !funcionariosPorCpf.has(cpfN)) funcionariosPorCpf.set(cpfN, f.id);
+      if (cpfN && !funcionariosPorCpf.has(`${f.empresa_id}|${cpfN}`)) funcionariosPorCpf.set(`${f.empresa_id}|${cpfN}`, f.id);
       const regN = normRegistro(f.numero_registro).toUpperCase();
       if (regN && !funcionariosPorRegistro.has(`${f.empresa_id}|${regN}`)) funcionariosPorRegistro.set(`${f.empresa_id}|${regN}`, f.id);
       const k = chaveNomeNasc(f.nome, f.data_nascimento);
@@ -244,7 +244,7 @@ export async function importarPlanilhaFuncionarios(
     }
 
     // Match: 1º por CPF, 2º por Nº REG dentro da empresa, 3º por NOME+DATA_NASCIMENTO
-    let funcionarioExistenteId: string | undefined = cpf ? funcionariosPorCpf.get(cpf) : undefined;
+    let funcionarioExistenteId: string | undefined = cpf ? funcionariosPorCpf.get(`${empresa_id}|${cpf}`) : undefined;
     if (!funcionarioExistenteId && numeroRegistro) {
       funcionarioExistenteId = funcionariosPorRegistro.get(`${empresa_id}|${numeroRegistro.toUpperCase()}`);
     }
@@ -385,7 +385,7 @@ export async function importarPlanilhaFuncionarios(
       } else {
         result.criados++;
         if (novoFuncionario?.id) {
-          funcionariosPorCpf.set(cpf, novoFuncionario.id);
+          if (cpf) funcionariosPorCpf.set(`${empresa_id}|${cpf}`, novoFuncionario.id);
           if (numeroRegistro) funcionariosPorRegistro.set(`${empresa_id}|${numeroRegistro.toUpperCase()}`, novoFuncionario.id);
           funcionariosPorNomeNasc.set(chaveNomeNasc(nome, dataNascimento), novoFuncionario.id);
         }
