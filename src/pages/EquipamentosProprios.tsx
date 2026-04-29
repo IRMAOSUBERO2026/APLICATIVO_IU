@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { ScrollableTable } from "@/components/shared/ScrollableTable";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
