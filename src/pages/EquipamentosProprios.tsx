@@ -296,7 +296,21 @@ export default function EquipamentosProprios() {
                 <p className="text-sm text-muted-foreground">Controle de ativos IU e manutenções.</p>
              </div>
           </div>
-          <Button onClick={() => { setEditingEquip(null); setShowEquipForm(true); }} className="gap-2"><Plus size={18} /> Novo Equipamento</Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2"><FileBarChart size={18} /> Relatórios</Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel>Gerar PDF</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={relatorioManutencoes} className="gap-2"><Wrench size={14} /> Manutenções</DropdownMenuItem>
+                <DropdownMenuItem onClick={relatorioPorObra} className="gap-2"><MapPin size={14} /> Ferramentas por Obra</DropdownMenuItem>
+                <DropdownMenuItem onClick={relatorioDisponiveis} className="gap-2"><Package size={14} /> Ferramentas Disponíveis</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button onClick={() => { setEditingEquip(null); setShowEquipForm(true); }} className="gap-2"><Plus size={18} /> Novo Equipamento</Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
