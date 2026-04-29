@@ -23,26 +23,34 @@ import { ScrollableTable } from "@/components/shared/ScrollableTable";
 type TabKey = "lista" | "exames_tab" | "exames_modulo";
 
 const STATUS_OPTIONS = [
+  { value: "pre-cadastro", label: "Pré-Cadastro" },
   { value: "ativo", label: "Ativo" },
+  { value: "experiencia", label: "Experiência" },
   { value: "ferias", label: "Férias" },
-  { value: "afastado", label: "Afastado / Atestado" },
-  { value: "desligado", label: "Desligado / Abandono" },
+  { value: "afastado", label: "Afastado" },
+  { value: "desligado", label: "Desligado" },
+  { value: "abandono", label: "Abandono" },
+  { value: "atestado", label: "Atestado" },
 ] as const;
 
 function normalizeStatusForDb(status: string) {
   const s = String(status ?? "").toLowerCase().trim();
-  if (["atestado", "afastado"].includes(s)) return "afastado";
-  if (["abandono", "desligado"].includes(s)) return "desligado";
+  if (["pré-cadastro", "pré cadastro", "pre cadastro"].includes(s)) return "pre-cadastro";
+  if (["experiência"].includes(s)) return "experiencia";
   if (["ferias", "férias"].includes(s)) return "ferias";
-  return "ativo";
+  return STATUS_OPTIONS.some((option) => option.value === s) ? s : "ativo";
 }
 
 function getStatusColor(status: string) {
   switch (normalizeStatusForDb(status)) {
     case "ativo": return "bg-success/10 text-success";
+    case "pre-cadastro": return "bg-warning/10 text-warning";
+    case "experiencia": return "bg-accent/10 text-accent";
     case "ferias": return "bg-warning/10 text-warning";
     case "afastado": return "bg-muted text-muted-foreground";
     case "desligado": return "bg-destructive/10 text-destructive";
+    case "abandono": return "bg-destructive/10 text-destructive";
+    case "atestado": return "bg-muted text-muted-foreground";
     default: return "bg-muted text-muted-foreground";
   }
 }
