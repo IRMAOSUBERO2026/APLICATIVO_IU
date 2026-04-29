@@ -405,15 +405,15 @@ export default function RH() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 rounded-lg bg-muted p-1">
-          <button onClick={() => setTab("lista")} className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${tab === "lista" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+        <div className="flex gap-1 overflow-x-auto rounded-lg bg-muted p-1 scrollbar-thin">
+          <button onClick={() => setTab("lista")} className={`min-w-max flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${tab === "lista" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
             Lista de Funcionários
           </button>
-          <button onClick={() => setTab("exames_tab")} className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors relative ${tab === "exames_tab" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+          <button onClick={() => setTab("exames_tab")} className={`relative min-w-max flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${tab === "exames_tab" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
             Exames e Treinamentos
             {examesVencendo.length > 0 && <span className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">{examesVencendo.length}</span>}
           </button>
-          <button onClick={() => setTab("exames_modulo")} className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${tab === "exames_modulo" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+          <button onClick={() => setTab("exames_modulo")} className={`min-w-max flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${tab === "exames_modulo" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
             <span className="flex items-center justify-center gap-1.5"><Stethoscope className="h-3.5 w-3.5" /> Gestão de Exames</span>
           </button>
         </div>
@@ -427,7 +427,7 @@ export default function RH() {
               <p className="text-xs text-muted-foreground">Clique em <Pencil className="inline h-3 w-3" /> para editar as datas</p>
             </div>
             <ScrollableTable>
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[980px] text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50">
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Nº Reg</th>
@@ -520,7 +520,7 @@ export default function RH() {
                 <h3 className="text-sm font-semibold">Funcionários ({sorted.length})</h3>
               </div>
               <ScrollableTable>
-                <table className="w-full text-sm">
+                <table className="w-full min-w-[1180px] text-sm">
                   <thead>
                     <tr className="border-b bg-muted/50">
                       <th className="px-3 py-3 text-left font-medium text-muted-foreground">Nº Reg.</th>
