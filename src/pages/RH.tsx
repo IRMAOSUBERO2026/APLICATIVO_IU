@@ -274,7 +274,7 @@ export default function RH() {
                 }
               }}
               className="inline-flex items-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
-              title="Baixar planilha modelo (.xlsx) com todos os funcionários atuais"
+              title="Baixar planilha modelo (.xlsx) limpa, sem funcionários antigos"
             >
               <FileDown className="h-4 w-4" /> Baixar Modelo
             </button>
@@ -298,6 +298,7 @@ export default function RH() {
                 // Pergunta o MODO de importação para evitar duplicatas
                 const escolha = window.prompt(
                   "Como deseja importar a planilha?\n\n" +
+                  "O sistema compara por CPF, Nº Reg e Nome + Nascimento para evitar duplicados.\n\n" +
                   "1 = ATUALIZAR funcionários existentes E criar novos (padrão)\n" +
                   "2 = APENAS ATUALIZAR funcionários já cadastrados (não cria nada novo)\n" +
                   "3 = APENAS CRIAR novos (pula quem já existe)\n\n" +
