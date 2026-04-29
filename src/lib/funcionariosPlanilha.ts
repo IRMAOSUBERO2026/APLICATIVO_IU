@@ -80,7 +80,7 @@ function normCPF(v: any): string {
 function normRegistro(v: any): string {
   return String(v ?? "").trim().replace(/\.0$/, "").replace(/,0$/, "");
 }
-function getCell(row: any, aliases: string[]): any {
+function getCell(row: any, aliases: readonly string[]): any {
   const entries = Object.entries(row);
   const normalize = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/gi, "").toLowerCase();
   const wanted = new Set(aliases.map(normalize));
