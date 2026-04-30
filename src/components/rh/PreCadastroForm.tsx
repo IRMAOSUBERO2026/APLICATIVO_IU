@@ -175,6 +175,7 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
     onSave({});
     setForm(emptyForm);
     setDependentesList([]);
+    setBonificacoesPadrao([]);
     setStep("pessoal");
     onOpenChange(false);
     toast({ title: "Pré-cadastro salvo", description: `${form.nome} foi cadastrado com sucesso.` });
