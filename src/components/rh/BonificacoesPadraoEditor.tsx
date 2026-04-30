@@ -1,13 +1,11 @@
+import { forwardRef } from "react";
 import { Plus, Trash2, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import type { BonificacaoPadrao } from "@/lib/bonificacoesPadrao";
 
-export interface BonificacaoPadrao {
-  descricao: string;
-  valor: number;
-  tipo: "fixo" | "condicional";
-}
+export type { BonificacaoPadrao } from "@/lib/bonificacoesPadrao";
 
 const SUGESTOES = ["Assiduidade", "Sem Falta", "Meta", "Desempenho", "Produtividade"];
 
@@ -16,7 +14,10 @@ interface Props {
   onChange: (next: BonificacaoPadrao[]) => void;
 }
 
-export function BonificacoesPadraoEditor({ value, onChange }: Props) {
+export const BonificacoesPadraoEditor = forwardRef<HTMLDivElement, Props>(function BonificacoesPadraoEditor(
+  { value, onChange },
+  ref,
+) {
   const list = Array.isArray(value) ? value : [];
 
   const add = () =>
@@ -33,7 +34,7 @@ export function BonificacoesPadraoEditor({ value, onChange }: Props) {
     onChange(list.map((b, i) => (i === idx ? { ...b, [field]: val } : b)));
 
   return (
-    <div className="space-y-3 rounded-lg border bg-card/50 p-3">
+    <div ref={ref} className="space-y-3 rounded-lg border bg-card/50 p-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Gift className="h-4 w-4 text-primary" />
@@ -111,26 +112,5 @@ export function BonificacoesPadraoEditor({ value, onChange }: Props) {
       )}
     </div>
   );
-}
+});
 
-/**
- * Calcula os valores pré-preenchidos para os campos Meta e Assiduidade
- * a partir das bonificações padrão cadastradas para o funcionário.
- */
-export function calcularPrefillBonificacoes(
-  bons: BonificacaoPadrao[] | null | undefined,
-): { meta: number; assiduidade: number } {
-  const list = Array.isArray(bons) ? bons : [];
-  let meta = 0;
-  let assiduidade = 0;
-  for (const b of list) {
-    const desc = (b.descricao || "").toLowerCase();
-    const valor = Number(b.valor) || 0;
-    if (desc.includes("meta") || desc.includes("desempenho") || desc.includes("produtiv")) {
-      meta += valor;
-    } else {
-      assiduidade += valor;
-    }
-  }
-  return { meta, assiduidade };
-}

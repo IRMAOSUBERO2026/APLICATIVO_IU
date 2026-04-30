@@ -2,11 +2,11 @@ import { useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { Camera, Save, UserPlus, Plus, Trash2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useEmpresasObras } from "@/hooks/useEmpresasObras";
 import { EmpresaSelect, ObraSelect } from "@/components/shared/EmpresaObraSelects";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BonificacoesPadraoEditor, type BonificacaoPadrao } from "@/components/rh/BonificacoesPadraoEditor";
+import { inserirFuncionarioComBonificacoes } from "@/lib/bonificacoesPadrao";
 
 interface PreCadastroFormProps {
   open: boolean;
@@ -121,7 +121,7 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
       return;
     }
 
-    const { error } = await supabase.from("funcionarios").insert({
+    const { error } = await inserirFuncionarioComBonificacoes({
       nome: form.nome,
       cpf: form.cpf,
       cargo: form.cargo,
