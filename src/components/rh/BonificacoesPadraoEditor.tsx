@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { Plus, Trash2, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +14,10 @@ interface Props {
   onChange: (next: BonificacaoPadrao[]) => void;
 }
 
-export function BonificacoesPadraoEditor({ value, onChange }: Props) {
+export const BonificacoesPadraoEditor = forwardRef<HTMLDivElement, Props>(function BonificacoesPadraoEditor(
+  { value, onChange },
+  ref,
+) {
   const list = Array.isArray(value) ? value : [];
 
   const add = () =>
@@ -30,7 +34,7 @@ export function BonificacoesPadraoEditor({ value, onChange }: Props) {
     onChange(list.map((b, i) => (i === idx ? { ...b, [field]: val } : b)));
 
   return (
-    <div className="space-y-3 rounded-lg border bg-card/50 p-3">
+    <div ref={ref} className="space-y-3 rounded-lg border bg-card/50 p-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Gift className="h-4 w-4 text-primary" />
@@ -108,5 +112,5 @@ export function BonificacoesPadraoEditor({ value, onChange }: Props) {
       )}
     </div>
   );
-}
+});
 
