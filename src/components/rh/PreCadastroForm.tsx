@@ -164,6 +164,7 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
       rne: form.rne || null,
       data_entrada_pais: form.dataEntradaPais || null,
       dependentes_json: dependentesList.length > 0 ? JSON.stringify(dependentesList) : "[]",
+      bonificacoes_padrao: bonificacoesPadrao as any,
     });
 
     if (error) {
