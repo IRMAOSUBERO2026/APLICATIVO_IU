@@ -19,7 +19,7 @@ import autoTable from "jspdf-autotable";
 import { createBrandedPDF, addPDFFooter, getAutoTableStyles, type EmpresaBranding } from "@/lib/pdfTemplate";
 import { getDaysInMonth } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { calcularPrefillBonificacoes } from "@/components/rh/BonificacoesPadraoEditor";
+import { buscarFuncionariosFolha, calcularPrefillBonificacoes } from "@/lib/bonificacoesPadrao";
 
 interface FuncionarioFolha {
   id: string;
@@ -173,9 +173,7 @@ export default function Folha() {
     const domingos = countSundaysAndHolidays(ano, mes);
 
     Promise.all([
-      supabase.from("funcionarios")
-        .select("id, nome, cpf, cargo, salario_base, salario_combinado, tipo_remuneracao, escala, bonificacoes_padrao")
-        .eq("obra_id", selectedObraId).eq("status", "ativo").order("nome"),
+      buscarFuncionariosFolha(selectedObraId),
       supabase.from("folhas_pagamento").select("*")
         .eq("obra_id", selectedObraId).eq("mes", mes + 1).eq("ano", ano),
     ]).then(([funcRes, folhaRes]) => {
