@@ -174,7 +174,7 @@ export default function Folha() {
 
     Promise.all([
       supabase.from("funcionarios")
-        .select("id, nome, cpf, cargo, salario_base, salario_combinado, tipo_remuneracao, escala")
+        .select("id, nome, cpf, cargo, salario_base, salario_combinado, tipo_remuneracao, escala, bonificacoes_padrao")
         .eq("obra_id", selectedObraId).eq("status", "ativo").order("nome"),
       supabase.from("folhas_pagamento").select("*")
         .eq("obra_id", selectedObraId).eq("mes", mes + 1).eq("ano", ano),
