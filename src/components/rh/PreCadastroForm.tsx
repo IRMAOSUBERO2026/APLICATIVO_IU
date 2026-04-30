@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEmpresasObras } from "@/hooks/useEmpresasObras";
 import { EmpresaSelect, ObraSelect } from "@/components/shared/EmpresaObraSelects";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { BonificacoesPadraoEditor, type BonificacaoPadrao } from "@/components/rh/BonificacoesPadraoEditor";
 
 interface PreCadastroFormProps {
   open: boolean;
@@ -78,6 +79,7 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
   const [form, setForm] = useState(emptyForm);
   const [step, setStep] = useState<FormStep>("pessoal");
   const [dependentesList, setDependentesList] = useState<Dependente[]>([]);
+  const [bonificacoesPadrao, setBonificacoesPadrao] = useState<BonificacaoPadrao[]>([]);
   const photoRef = useRef<HTMLInputElement>(null);
   const { empresas, obras, obrasPorEmpresa } = useEmpresasObras();
 
@@ -162,6 +164,7 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
       rne: form.rne || null,
       data_entrada_pais: form.dataEntradaPais || null,
       dependentes_json: dependentesList.length > 0 ? JSON.stringify(dependentesList) : "[]",
+      bonificacoes_padrao: bonificacoesPadrao as any,
     });
 
     if (error) {
@@ -172,6 +175,7 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
     onSave({});
     setForm(emptyForm);
     setDependentesList([]);
+    setBonificacoesPadrao([]);
     setStep("pessoal");
     onOpenChange(false);
     toast({ title: "Pré-cadastro salvo", description: `${form.nome} foi cadastrado com sucesso.` });
@@ -318,6 +322,9 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
               <FieldInput label="Salário Base (Registro)" value={form.salarioBase} onChange={v => update("salarioBase", v)} type="number" />
               <FieldInput label="Salário Combinado" value={form.salarioCombinado} onChange={v => update("salarioCombinado", v)} type="number" />
               <FieldInput label="Clínica ASO" value={form.clinica} onChange={v => update("clinica", v)} />
+              <div className="sm:col-span-2 lg:col-span-3">
+                <BonificacoesPadraoEditor value={bonificacoesPadrao} onChange={setBonificacoesPadrao} />
+              </div>
             </>
           )}
           {step === "bancario" && (

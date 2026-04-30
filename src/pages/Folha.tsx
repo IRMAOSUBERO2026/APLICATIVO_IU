@@ -19,6 +19,7 @@ import autoTable from "jspdf-autotable";
 import { createBrandedPDF, addPDFFooter, getAutoTableStyles, type EmpresaBranding } from "@/lib/pdfTemplate";
 import { getDaysInMonth } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { calcularPrefillBonificacoes } from "@/components/rh/BonificacoesPadraoEditor";
 
 interface FuncionarioFolha {
   id: string;
@@ -173,7 +174,7 @@ export default function Folha() {
 
     Promise.all([
       supabase.from("funcionarios")
-        .select("id, nome, cpf, cargo, salario_base, salario_combinado, tipo_remuneracao, escala")
+        .select("id, nome, cpf, cargo, salario_base, salario_combinado, tipo_remuneracao, escala, bonificacoes_padrao")
         .eq("obra_id", selectedObraId).eq("status", "ativo").order("nome"),
       supabase.from("folhas_pagamento").select("*")
         .eq("obra_id", selectedObraId).eq("mes", mes + 1).eq("ano", ano),
@@ -220,12 +221,18 @@ export default function Folha() {
           };
         }
         const sc = f.salario_combinado ?? f.salario_base;
+        const prefill = calcularPrefillBonificacoes(f.bonificacoes_padrao);
+        const baseInput = makeDefaultInput(f.salario_base, sc, diasMes, domingos, f.tipo_remuneracao || "mensal");
         return {
           id: f.id, nome: f.nome, cpf: f.cpf, cargo: f.cargo,
           salario_base: f.salario_base, salario_combinado: f.salario_combinado,
           tipo_remuneracao: f.tipo_remuneracao || "mensal",
           escala: f.escala || "5x2",
-          input: makeDefaultInput(f.salario_base, sc, diasMes, domingos, f.tipo_remuneracao || "mensal"),
+          input: {
+            ...baseInput,
+            bonificacao_meta: prefill.meta,
+            bonificacao_assiduidade: prefill.assiduidade,
+          },
           result: null, saved: false,
         };
       });
