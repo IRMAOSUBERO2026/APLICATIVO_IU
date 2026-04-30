@@ -221,12 +221,18 @@ export default function Folha() {
           };
         }
         const sc = f.salario_combinado ?? f.salario_base;
+        const prefill = calcularPrefillBonificacoes(f.bonificacoes_padrao);
+        const baseInput = makeDefaultInput(f.salario_base, sc, diasMes, domingos, f.tipo_remuneracao || "mensal");
         return {
           id: f.id, nome: f.nome, cpf: f.cpf, cargo: f.cargo,
           salario_base: f.salario_base, salario_combinado: f.salario_combinado,
           tipo_remuneracao: f.tipo_remuneracao || "mensal",
           escala: f.escala || "5x2",
-          input: makeDefaultInput(f.salario_base, sc, diasMes, domingos, f.tipo_remuneracao || "mensal"),
+          input: {
+            ...baseInput,
+            bonificacao_meta: prefill.meta,
+            bonificacao_assiduidade: prefill.assiduidade,
+          },
           result: null, saved: false,
         };
       });
