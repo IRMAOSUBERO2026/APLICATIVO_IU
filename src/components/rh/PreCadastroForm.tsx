@@ -79,6 +79,7 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
   const [form, setForm] = useState(emptyForm);
   const [step, setStep] = useState<FormStep>("pessoal");
   const [dependentesList, setDependentesList] = useState<Dependente[]>([]);
+  const [bonificacoesPadrao, setBonificacoesPadrao] = useState<BonificacaoPadrao[]>([]);
   const photoRef = useRef<HTMLInputElement>(null);
   const { empresas, obras, obrasPorEmpresa } = useEmpresasObras();
 
