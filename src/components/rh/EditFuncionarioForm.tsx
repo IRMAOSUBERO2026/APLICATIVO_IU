@@ -93,6 +93,7 @@ export function EditFuncionarioForm({ open, onOpenChange, funcionarioId, onSaved
     });
     updateData.empresa_id = form.empresa_id;
     updateData.obra_id = form.obra_id && form.obra_id !== "__none__" ? form.obra_id : null;
+    updateData.bonificacoes_padrao = Array.isArray(form.bonificacoes_padrao) ? form.bonificacoes_padrao : [];
 
     const { error } = await supabase.from("funcionarios").update(updateData).eq("id", funcionarioId);
     if (error) {
