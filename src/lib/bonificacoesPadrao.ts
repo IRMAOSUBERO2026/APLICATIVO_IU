@@ -81,7 +81,7 @@ export function getBonificacoesFromFuncionario(funcionario: Record<string, unkno
 
 function isMissingBonificacoesColumnError(error: unknown): boolean {
   const err = error as { code?: string; message?: string } | null;
-  return err?.code === "PGRST204" && /bonificacoes_padrao|schema cache/i.test(err.message || "");
+  return (err?.code === "PGRST204" || err?.code === "42703") && /bonificacoes_padrao|schema cache/i.test(err.message || "");
 }
 
 export async function salvarFuncionarioComBonificacoes(
