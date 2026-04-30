@@ -322,6 +322,9 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
               <FieldInput label="Salário Base (Registro)" value={form.salarioBase} onChange={v => update("salarioBase", v)} type="number" />
               <FieldInput label="Salário Combinado" value={form.salarioCombinado} onChange={v => update("salarioCombinado", v)} type="number" />
               <FieldInput label="Clínica ASO" value={form.clinica} onChange={v => update("clinica", v)} />
+              <div className="sm:col-span-2 lg:col-span-3">
+                <BonificacoesPadraoEditor value={bonificacoesPadrao} onChange={setBonificacoesPadrao} />
+              </div>
             </>
           )}
           {step === "bancario" && (
