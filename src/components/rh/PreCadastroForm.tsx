@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEmpresasObras } from "@/hooks/useEmpresasObras";
 import { EmpresaSelect, ObraSelect } from "@/components/shared/EmpresaObraSelects";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { BonificacoesPadraoEditor, type BonificacaoPadrao } from "@/components/rh/BonificacoesPadraoEditor";
 
 interface PreCadastroFormProps {
   open: boolean;
