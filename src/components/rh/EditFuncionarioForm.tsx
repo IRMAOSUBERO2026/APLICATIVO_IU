@@ -158,6 +158,13 @@ export function EditFuncionarioForm({ open, onOpenChange, funcionarioId, onSaved
                 </div>
               ))}
             </div>
+
+            <div className="mt-4">
+              <BonificacoesPadraoEditor
+                value={(Array.isArray(form.bonificacoes_padrao) ? form.bonificacoes_padrao : []) as BonificacaoPadrao[]}
+                onChange={(next) => setForm(prev => ({ ...prev, bonificacoes_padrao: next }))}
+              />
+            </div>
             <div className="flex justify-end gap-2 pt-4 border-t mt-4">
               <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
               <Button onClick={handleSave} disabled={saving} className="gap-2">
