@@ -1270,6 +1270,7 @@ export type Database = {
           agencia: string | null
           bairro: string | null
           banco: string | null
+          bonificacoes_padrao: Json
           cargo: string
           categoria_cnh: string | null
           cep: string | null
@@ -1329,6 +1330,7 @@ export type Database = {
           agencia?: string | null
           bairro?: string | null
           banco?: string | null
+          bonificacoes_padrao?: Json
           cargo: string
           categoria_cnh?: string | null
           cep?: string | null
@@ -1388,6 +1390,7 @@ export type Database = {
           agencia?: string | null
           bairro?: string | null
           banco?: string | null
+          bonificacoes_padrao?: Json
           cargo?: string
           categoria_cnh?: string | null
           cep?: string | null
