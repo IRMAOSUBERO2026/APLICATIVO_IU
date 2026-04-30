@@ -19,6 +19,7 @@ import autoTable from "jspdf-autotable";
 import { createBrandedPDF, addPDFFooter, getAutoTableStyles, type EmpresaBranding } from "@/lib/pdfTemplate";
 import { getDaysInMonth } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { calcularPrefillBonificacoes } from "@/components/rh/BonificacoesPadraoEditor";
 
 interface FuncionarioFolha {
   id: string;
