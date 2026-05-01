@@ -607,22 +607,35 @@ export default function Medicoes() {
           </div>
 
           <div className="md:col-span-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card className="rounded-3xl border-none bg-slate-900 text-white shadow-lg"><CardContent className="p-5">
-              <p className="text-[10px] font-black uppercase text-slate-500 mb-1">Contrato</p>
-              <p className="text-sm font-black truncate">{fmtBRL(totalContrato)}</p>
-            </CardContent></Card>
-            <Card className="rounded-3xl border-none bg-emerald-50 text-emerald-800 shadow-sm"><CardContent className="p-5">
-              <p className="text-[10px] font-black uppercase text-emerald-400 mb-1">Total Medido</p>
-              <p className="text-sm font-black truncate">{fmtBRL(totalMedido)}</p>
-            </CardContent></Card>
-            <Card className="rounded-3xl border-none bg-amber-50 text-amber-800 shadow-sm"><CardContent className="p-5">
-              <p className="text-[10px] font-black uppercase text-amber-400 mb-1">Saldo Obra</p>
-              <p className="text-sm font-black truncate">{fmtBRL(totalContrato - totalMedido)}</p>
-            </CardContent></Card>
-            <Card className="rounded-3xl border bg-white shadow-sm"><CardContent className="p-5">
-              <p className="text-[10px] font-black uppercase text-slate-300 mb-1">Retenção Padrão</p>
-              <p className="text-sm font-black truncate">{Number(selectedObra?.percentual_retencao_padrao ?? 0)}%</p>
-            </CardContent></Card>
+            {(() => {
+              const isAtiva = (s?: string) => !["concluida", "encerrada", "cancelada", "paralisada"].includes(String(s || ""));
+              const obrasAtivasIds = obras.filter(o => isAtiva(o.status)).map(o => o.id);
+              const consolidadoContrato = obrasAtivasIds.reduce((s, id) => s + (totaisObras[id]?.contrato || 0), 0);
+              const consolidadoMedido = obrasAtivasIds.reduce((s, id) => s + (totaisObras[id]?.medido || 0), 0);
+              const cContrato = selectedObraId ? totalContrato : consolidadoContrato;
+              const cMedido = selectedObraId ? totalMedido : consolidadoMedido;
+              const labelSufixo = selectedObraId ? "" : " (Ativas)";
+              return (
+                <>
+                  <Card className="rounded-3xl border-none bg-slate-900 text-white shadow-lg"><CardContent className="p-5">
+                    <p className="text-[10px] font-black uppercase text-slate-500 mb-1">Contrato{labelSufixo}</p>
+                    <p className="text-sm font-black truncate">{fmtBRL(cContrato)}</p>
+                  </CardContent></Card>
+                  <Card className="rounded-3xl border-none bg-emerald-50 text-emerald-800 shadow-sm"><CardContent className="p-5">
+                    <p className="text-[10px] font-black uppercase text-emerald-400 mb-1">Total Medido{labelSufixo}</p>
+                    <p className="text-sm font-black truncate">{fmtBRL(cMedido)}</p>
+                  </CardContent></Card>
+                  <Card className="rounded-3xl border-none bg-amber-50 text-amber-800 shadow-sm"><CardContent className="p-5">
+                    <p className="text-[10px] font-black uppercase text-amber-400 mb-1">Saldo{labelSufixo}</p>
+                    <p className="text-sm font-black truncate">{fmtBRL(cContrato - cMedido)}</p>
+                  </CardContent></Card>
+                  <Card className="rounded-3xl border bg-white shadow-sm"><CardContent className="p-5">
+                    <p className="text-[10px] font-black uppercase text-slate-300 mb-1">Retenção Padrão</p>
+                    <p className="text-sm font-black truncate">{selectedObraId ? `${Number(selectedObra?.percentual_retencao_padrao ?? 0)}%` : `${obrasAtivasIds.length} obras`}</p>
+                  </CardContent></Card>
+                </>
+              );
+            })()}
           </div>
         </div>
 
