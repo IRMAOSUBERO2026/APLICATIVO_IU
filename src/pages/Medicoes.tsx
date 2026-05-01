@@ -348,7 +348,7 @@ export default function Medicoes() {
         descricao: `Medição #${String(m.numero).padStart(3, "0")} - ${selectedObra?.codigo} ${selectedObra?.nome}`,
         categoria: "Medição de Obra",
         valor: m.valor_liquido,
-        data_vencimento: m.periodo_fim,
+        data_vencimento: m.data_previsao_recebimento || sugerirDataPrevisao(m.periodo_fim) || m.periodo_fim,
         status: "pendente",
         documento: `MED-${String(m.numero).padStart(3, "0")}`,
         observacoes: m.observacoes || "",
