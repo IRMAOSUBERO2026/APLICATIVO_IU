@@ -28,7 +28,7 @@ import {
   UserCheck,
   Bell,
 } from "lucide-react";
-import logoPreto from "@/assets/logo-preto.png";
+import logoBranco from "@/assets/logo-branco.png";
 
 const menuSections = [
   {
@@ -97,27 +97,27 @@ export function AppSidebar({ onClose }: AppSidebarProps) {
   const location = useLocation();
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto scrollbar-sidebar">
-      <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border">
-        <div className="flex items-center gap-2.5">
-          <img src={logoPreto} alt="Irmãos Ubero" className="h-10 w-auto" />
-          <div>
-            <h1 className="text-xs font-bold text-sidebar-accent-foreground tracking-tight leading-tight">IRMÃOS UBERO</h1>
-            <p className="text-[9px] text-sidebar-muted leading-none">Engenharia</p>
+    <div className="flex h-full flex-col overflow-y-auto scrollbar-sidebar bg-sidebar-background border-r border-white/5">
+      <div className="flex h-20 items-center justify-between px-6 border-b border-white/5 bg-black/20">
+        <div className="flex items-center gap-3">
+          <img src={logoBranco} alt="Irmãos Ubero" className="h-12 w-auto brightness-110" />
+          <div className="hidden sm:block">
+            <h1 className="text-[10px] font-black text-white tracking-[0.15em] leading-tight uppercase">IRMÃOS UBERO</h1>
+            <p className="text-[8px] text-primary font-bold tracking-widest leading-none uppercase">Engenharia</p>
           </div>
         </div>
-        <button onClick={onClose} className="rounded-md p-1 text-sidebar-muted hover:text-sidebar-foreground lg:hidden">
+        <button onClick={onClose} className="rounded-md p-1.5 text-white/40 hover:text-white lg:hidden bg-white/5">
           <X className="h-4 w-4" />
         </button>
       </div>
 
-      <nav className="flex-1 px-3 py-4 space-y-6">
+      <nav className="flex-1 px-4 py-6 space-y-8">
         {menuSections.map((section) => (
           <div key={section.label}>
-            <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-sidebar-muted">
+            <p className="mb-3 px-3 text-[9px] font-bold uppercase tracking-[0.2em] text-white/30">
               {section.label}
             </p>
-            <ul className="space-y-0.5">
+            <ul className="space-y-1">
               {section.items.map((item) => {
                 const isActive = location.pathname === item.path;
                 return (
@@ -125,13 +125,13 @@ export function AppSidebar({ onClose }: AppSidebarProps) {
                     <Link
                       to={item.path}
                       onClick={onClose}
-                      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                      className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-all duration-300 ${
                         isActive
-                          ? "bg-sidebar-accent text-sidebar-primary"
-                          : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                          ? "bg-primary text-white shadow-[0_0_15px_rgba(45,106,4,0.3)] scale-[1.02]"
+                          : "text-white/60 hover:bg-white/5 hover:text-white"
                       }`}
                     >
-                      <item.icon className="h-4 w-4 flex-shrink-0" />
+                      <item.icon className={`h-4 w-4 flex-shrink-0 ${isActive ? "text-white" : "text-primary/70"}`} />
                       {item.label}
                     </Link>
                   </li>

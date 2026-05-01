@@ -44,44 +44,44 @@ interface HeroProps {
 function KpiHero({ label, value, delta, deltaLabel, invertColor, icon, series, accent = "primary" }: HeroProps) {
   const positiveGood = invertColor ? delta <= 0 : delta >= 0;
   const accentMap: Record<string, string> = {
-    primary: "text-primary bg-primary/10",
-    success: "text-success bg-success/10",
-    warning: "text-warning bg-warning/10",
-    destructive: "text-destructive bg-destructive/10",
+    primary: "text-primary bg-primary/10 border-primary/20",
+    success: "text-success bg-success/10 border-success/20",
+    warning: "text-warning bg-warning/10 border-warning/20",
+    destructive: "text-destructive bg-destructive/10 border-destructive/20",
   };
   const data = (series || []).map((v, i) => ({ i, v }));
 
   return (
-    <div className="relative overflow-hidden rounded-xl border bg-card p-5 shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1.5 min-w-0 flex-1">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
-          <p className="text-3xl font-bold tracking-tight leading-tight">{value}</p>
-          <div className="flex items-center gap-1.5 text-xs">
-            <span className={`inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 font-semibold ${
+    <div className="relative overflow-hidden rounded-2xl border border-white/5 bg-card p-6 shadow-xl hover:border-primary/30 transition-all duration-300 group">
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-2 min-w-0 flex-1">
+          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-white/40">{label}</p>
+          <p className="text-3xl font-black tracking-tighter leading-tight text-white">{value}</p>
+          <div className="flex items-center gap-2 text-xs">
+            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-bold ${
               positiveGood ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
             }`}>
               {delta >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
               {Math.abs(delta).toFixed(1)}%
             </span>
-            {deltaLabel && <span className="text-muted-foreground">{deltaLabel}</span>}
+            {deltaLabel && <span className="text-white/30 font-medium">{deltaLabel}</span>}
           </div>
         </div>
-        <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${accentMap[accent]}`}>
-          {icon}
+        <div className={`flex h-12 w-12 items-center justify-center rounded-xl border transition-transform group-hover:scale-110 duration-300 ${accentMap[accent]}`}>
+          {React.cloneElement(icon as React.ReactElement, { className: "h-6 w-6" })}
         </div>
       </div>
       {data.length > 1 && (
-        <div className="mt-3 -mx-1 h-12">
+        <div className="mt-4 -mx-1 h-14 opacity-50 group-hover:opacity-100 transition-opacity">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data}>
               <defs>
                 <linearGradient id={`g-${label}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.35} />
+                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
                   <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <Area type="monotone" dataKey="v" stroke="hsl(var(--primary))" strokeWidth={2} fill={`url(#g-${label})`} />
+              <Area type="monotone" dataKey="v" stroke="hsl(var(--primary))" strokeWidth={2.5} fill={`url(#g-${label})`} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -332,41 +332,48 @@ export default function Dashboard() {
   return (
     <AppLayout>
       <div className="space-y-6">
-      {/* ─── Hero Banner da Marca ─── */}
-        <div className="relative overflow-hidden rounded-2xl shadow-lg">
-          {/* Gradiente da marca: verde floresta → carvão preto (igual ao logo) */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#1a3a06] via-[#2D6A04] to-[#141414]" />
-          {/* Padrão de raios — alusão ao triângulo do logo */}
-          <div className="absolute inset-0 opacity-[0.07]" style={{
+      {/* ─── Hero Banner da Marca (Black Edition) ─── */}
+        <div className="relative overflow-hidden rounded-2xl shadow-2xl border border-white/5">
+          {/* Fundo preto absoluto com gradiente sutil para o verde da marca */}
+          <div className="absolute inset-0 bg-[#020202]" />
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-transparent" />
+          
+          {/* Padrão de raios do logo — mais visível no fundo preto */}
+          <div className="absolute inset-0 opacity-[0.12]" style={{
             backgroundImage: `repeating-linear-gradient(
               -45deg,
               #fff 0px, #fff 1px,
-              transparent 1px, transparent 28px
+              transparent 1px, transparent 32px
             )`
           }} />
-          {/* Brilho sutil verde no canto */}
-          <div className="absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-[#3a8a0a]/20 to-transparent" />
+          
+          {/* Brilho neon verde no canto superior direito */}
+          <div className="absolute -right-20 -top-20 h-64 w-64 bg-primary/30 blur-[100px] rounded-full" />
 
-          <div className="relative flex flex-col gap-4 px-6 py-5 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <div className="flex items-center gap-2 text-xs text-white/50 mb-1.5">
-                <Sparkles className="h-3.5 w-3.5 text-green-400" />
-                <span className="font-semibold tracking-wide uppercase">Centro de Comando</span>
-                <span className="text-white/30">•</span>
-                <span>{periodo}</span>
+          <div className="relative flex flex-col gap-5 px-8 py-7 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-[10px] font-bold tracking-[0.2em] text-primary uppercase">
+                <Sparkles className="h-3 w-3 animate-pulse" />
+                Centro de Comando
+                <span className="text-white/20">|</span>
+                <span className="text-white/40 font-medium tracking-normal">{periodo}</span>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white leading-tight">
-                Dashboard Executivo
+              <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white uppercase italic">
+                Dashboard <span className="text-primary not-italic">Executivo</span>
               </h1>
-              <p className="text-sm text-white/60 mt-1 flex items-center gap-1.5">
-                <HardHat className="h-3.5 w-3.5 text-green-400" />
+              <div className="flex items-center gap-2 text-white/50 text-sm font-medium bg-white/5 w-fit px-2.5 py-1 rounded-md border border-white/5">
+                <HardHat className="h-4 w-4 text-primary" />
                 {escopo}
-              </p>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 rounded-full border border-white/20 bg-black/30 px-3 py-1.5 text-xs text-white font-medium backdrop-blur-sm">
-                <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
-                Dados em tempo real
+            
+            <div className="flex items-center">
+              <div className="flex items-center gap-2.5 rounded-xl border border-primary/30 bg-black/60 px-4 py-2 text-xs text-white font-bold backdrop-blur-md shadow-[0_0_15px_rgba(45,106,4,0.2)]">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                </span>
+                <span className="tracking-wide uppercase">Dados em tempo real</span>
               </div>
             </div>
           </div>
@@ -618,34 +625,34 @@ interface MiniStatProps {
 }
 function MiniStat({ icon, label, value, sub, link, tone = "default" }: MiniStatProps) {
   const toneMap = {
-    default: "text-primary bg-primary/10",
-    success: "text-success bg-success/10",
-    warning: "text-warning bg-warning/10",
-    destructive: "text-destructive bg-destructive/10",
+    default: "text-primary bg-primary/10 border-primary/20",
+    success: "text-success bg-success/10 border-success/20",
+    warning: "text-warning bg-warning/10 border-warning/20",
+    destructive: "text-destructive bg-destructive/10 border-destructive/20",
   };
   return (
-    <Link to={link} className="group rounded-xl border bg-card p-4 shadow-sm hover:shadow-md hover:border-primary/30 transition-all flex items-center gap-3">
-      <div className={`flex h-10 w-10 items-center justify-center rounded-lg flex-shrink-0 ${toneMap[tone]}`}>
-        {icon}
+    <Link to={link} className="group rounded-2xl border border-white/5 bg-card p-5 shadow-lg hover:shadow-primary/5 hover:border-primary/40 transition-all duration-300 flex items-center gap-4">
+      <div className={`flex h-12 w-12 items-center justify-center rounded-xl border flex-shrink-0 transition-transform group-hover:rotate-6 ${toneMap[tone]}`}>
+        {React.cloneElement(icon as React.ReactElement, { className: "h-6 w-6" })}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{label}</p>
-        <p className="text-lg font-bold tabular-nums leading-tight">{value}</p>
-        <p className="text-[11px] text-muted-foreground truncate">{sub}</p>
+        <p className="text-[10px] uppercase tracking-[0.15em] text-white/30 font-bold">{label}</p>
+        <p className="text-xl font-black text-white tabular-nums leading-tight mt-0.5">{value}</p>
+        <p className="text-[11px] text-white/40 truncate font-medium">{sub}</p>
       </div>
-      <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary flex-shrink-0" />
+      <ChevronRight className="h-5 w-5 text-white/20 group-hover:text-primary group-hover:translate-x-1 transition-all" />
     </Link>
   );
 }
 
 /* ───────── PendenciasPanel ───────── */
 const CAT_META: Record<PendenciaItem["categoria"], { label: string; icon: React.ReactNode; tone: string }> = {
-  aviso: { label: "Aviso", icon: <Bell className="h-3.5 w-3.5" />, tone: "bg-warning/10 text-warning" },
-  solicitacao_diario: { label: "Diário", icon: <ClipboardList className="h-3.5 w-3.5" />, tone: "bg-primary/10 text-primary" },
-  solicitacao_compra: { label: "Compra", icon: <PackageSearch className="h-3.5 w-3.5" />, tone: "bg-accent/20 text-accent-foreground" },
-  solicitacao_exame: { label: "Exame", icon: <Stethoscope className="h-3.5 w-3.5" />, tone: "bg-destructive/10 text-destructive" },
-  manutencao: { label: "Manutenção", icon: <Wrench className="h-3.5 w-3.5" />, tone: "bg-warning/10 text-warning" },
-  tarefa: { label: "Tarefa", icon: <MessageSquare className="h-3.5 w-3.5" />, tone: "bg-primary/10 text-primary" },
+  aviso: { label: "Aviso", icon: <Bell className="h-3.5 w-3.5" />, tone: "bg-warning/10 text-warning border-warning/20" },
+  solicitacao_diario: { label: "Diário", icon: <ClipboardList className="h-3.5 w-3.5" />, tone: "bg-primary/10 text-primary border-primary/20" },
+  solicitacao_compra: { label: "Compra", icon: <PackageSearch className="h-3.5 w-3.5" />, tone: "bg-accent/20 text-accent-foreground border-accent/20" },
+  solicitacao_exame: { label: "Exame", icon: <Stethoscope className="h-3.5 w-3.5" />, tone: "bg-destructive/10 text-destructive border-destructive/20" },
+  manutencao: { label: "Manutenção", icon: <Wrench className="h-3.5 w-3.5" />, tone: "bg-warning/10 text-warning border-warning/20" },
+  tarefa: { label: "Tarefa", icon: <MessageSquare className="h-3.5 w-3.5" />, tone: "bg-primary/10 text-primary border-primary/20" },
 };
 
 function PendenciasPanel({ pendencias }: { pendencias: PendenciaItem[] }) {
@@ -668,26 +675,26 @@ function PendenciasPanel({ pendencias }: { pendencias: PendenciaItem[] }) {
   ];
 
   return (
-    <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-      <div className="flex items-center justify-between border-b px-5 py-4 gap-4 flex-wrap">
+    <div className="rounded-2xl border border-white/5 bg-card shadow-2xl overflow-hidden">
+      <div className="flex items-center justify-between border-b border-white/5 px-6 py-5 gap-4 flex-wrap bg-white/[0.02]">
         <div>
-          <h3 className="text-sm font-semibold flex items-center gap-2">
-            <Bell className="h-4 w-4 text-warning" /> Avisos, Solicitações e Pendências
+          <h3 className="text-base font-bold flex items-center gap-2 text-white uppercase tracking-tight">
+            <Bell className="h-5 w-5 text-primary" /> Central de Pendências
           </h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Tudo que precisa da sua atenção, consolidado de todos os módulos
-            {totalAlta > 0 && <span className="ml-2 font-semibold text-destructive">• {totalAlta} de alta prioridade</span>}
+          <p className="text-xs text-white/40 mt-1 font-medium">
+            Atividades consolidadas de todos os módulos
+            {totalAlta > 0 && <span className="ml-3 font-bold text-destructive animate-pulse">• {totalAlta} URGENTES</span>}
           </p>
         </div>
-        <div className="flex items-center gap-1.5 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
           {filtros.map(f => (
             <button
               key={f.key}
               onClick={() => setFiltro(f.key)}
-              className={`text-[11px] font-medium rounded-full px-2.5 py-1 transition-colors ${
+              className={`text-[10px] font-bold uppercase tracking-wider rounded-lg px-3 py-1.5 transition-all ${
                 filtro === f.key
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted-foreground/10"
+                  ? "bg-primary text-white shadow-lg shadow-primary/20"
+                  : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white"
               }`}
             >
               {f.label}
@@ -697,37 +704,37 @@ function PendenciasPanel({ pendencias }: { pendencias: PendenciaItem[] }) {
       </div>
 
       {lista.length === 0 ? (
-        <div className="px-5 py-12 text-center">
-          <Bell className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
-          <p className="text-sm text-muted-foreground">Nada pendente nesta categoria ✓</p>
+        <div className="px-6 py-16 text-center">
+          <Bell className="h-10 w-10 text-white/10 mx-auto mb-3" />
+          <p className="text-sm text-white/30 font-medium">Tudo em dia por aqui ✓</p>
         </div>
       ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-px bg-border">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-px bg-white/5">
           {lista.slice(0, 12).map(p => {
             const meta = CAT_META[p.categoria];
             return (
               <Link
                 key={p.id}
                 to={p.link}
-                className="bg-card p-3.5 hover:bg-muted/40 transition-colors group flex gap-3"
+                className="bg-card p-5 hover:bg-white/[0.04] transition-all group flex gap-4 border border-transparent hover:border-white/10"
               >
-                <div className={`flex h-8 w-8 items-center justify-center rounded-lg flex-shrink-0 ${meta.tone}`}>
+                <div className={`flex h-10 w-10 items-center justify-center rounded-xl border flex-shrink-0 transition-transform group-hover:scale-110 ${meta.tone}`}>
                   {meta.icon}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <span className="text-[9px] uppercase tracking-wider font-bold text-muted-foreground">{meta.label}</span>
-                    <span className={`h-1.5 w-1.5 rounded-full ${
-                      p.prioridade === "alta" ? "bg-destructive" : p.prioridade === "media" ? "bg-warning" : "bg-muted-foreground"
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="text-[9px] uppercase tracking-[0.2em] font-black text-white/30">{meta.label}</span>
+                    <span className={`h-2 w-2 rounded-full ${
+                      p.prioridade === "alta" ? "bg-destructive shadow-[0_0_8px_rgba(239,68,68,0.5)]" : p.prioridade === "media" ? "bg-warning" : "bg-white/20"
                     }`} />
-                    <span className="text-[10px] text-muted-foreground ml-auto">
+                    <span className="text-[10px] text-white/20 font-bold ml-auto tabular-nums">
                       {p.data ? new Date(p.data).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : ""}
                     </span>
                   </div>
-                  <p className="text-xs font-semibold leading-snug line-clamp-2">{p.titulo}</p>
-                  <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">{p.descricao}</p>
+                  <p className="text-sm font-bold text-white leading-tight line-clamp-2 group-hover:text-primary transition-colors">{p.titulo}</p>
+                  <p className="text-xs text-white/40 line-clamp-1 mt-1 font-medium">{p.descricao}</p>
                 </div>
-                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary flex-shrink-0 self-center" />
+                <ChevronRight className="h-4 w-4 text-white/10 group-hover:text-primary flex-shrink-0 self-center transition-all group-hover:translate-x-1" />
               </Link>
             );
           })}
@@ -735,8 +742,8 @@ function PendenciasPanel({ pendencias }: { pendencias: PendenciaItem[] }) {
       )}
 
       {lista.length > 12 && (
-        <div className="border-t px-5 py-2.5 text-center">
-          <span className="text-[11px] text-muted-foreground">+ {lista.length - 12} pendências adicionais</span>
+        <div className="border-t border-white/5 px-6 py-3 text-center bg-white/[0.01]">
+          <span className="text-[10px] font-bold text-white/20 uppercase tracking-widest">+ {lista.length - 12} pendências adicionais</span>
         </div>
       )}
     </div>
