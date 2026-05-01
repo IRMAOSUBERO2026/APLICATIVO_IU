@@ -45,6 +45,7 @@ interface Medicao {
   valor_retencao: number; valor_liquido: number; status: string;
   observacoes?: string; aprovado_em?: string; aprovado_por?: string;
   conta_receber_id?: string;
+  data_previsao_recebimento?: string | null;
 }
 interface BoletimItem {
   id?: string; medicao_id?: string; contrato_item_id: string;
