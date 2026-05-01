@@ -842,6 +842,60 @@ export default function Medicoes() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* ============ DIALOG PREVISÃO RECEBIMENTO ============ */}
+        <Dialog open={!!previsaoMedicao} onOpenChange={(o) => !o && setPrevisaoMedicao(null)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <CalendarClock className="text-amber-500" size={20} />
+                Previsão de Recebimento
+              </DialogTitle>
+            </DialogHeader>
+            {previsaoMedicao && (
+              <div className="space-y-4">
+                <div className="bg-slate-50 rounded-xl p-4 text-xs space-y-1">
+                  <p className="font-black text-slate-700">Medição #{String(previsaoMedicao.numero).padStart(3, "0")}</p>
+                  <p className="text-slate-500">
+                    Período: {format(new Date(previsaoMedicao.periodo_inicio + "T00:00:00"), "dd/MM/yyyy")} → {format(new Date(previsaoMedicao.periodo_fim + "T00:00:00"), "dd/MM/yyyy")}
+                  </p>
+                  <p className="text-slate-500">Valor líquido: <span className="font-black text-emerald-600">{fmtBRL(previsaoMedicao.valor_liquido)}</span></p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-slate-500">Data Prevista para Recebimento</Label>
+                  <Input type="date" value={previsaoData} onChange={e => setPrevisaoData(e.target.value)} className="h-12 rounded-xl font-bold" />
+                  <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3 text-[11px] text-amber-800">
+                    <span>💡</span>
+                    <div>
+                      <span className="font-black">Sugestão automática:</span> dia 10 do mês seguinte ao período da medição (
+                      <button
+                        type="button"
+                        onClick={() => setPrevisaoData(sugerirDataPrevisao(previsaoMedicao.periodo_fim))}
+                        className="underline font-black text-amber-900 hover:text-amber-700"
+                      >
+                        {format(new Date(sugerirDataPrevisao(previsaoMedicao.periodo_fim) + "T00:00:00"), "dd/MM/yyyy")}
+                      </button>
+                      ). Ajuste conforme contrato com o cliente.
+                    </div>
+                  </div>
+                  {previsaoMedicao.conta_receber_id && (
+                    <p className="text-[10px] text-slate-500 italic">
+                      ℹ️ Esta medição já foi aprovada — a data de vencimento da conta a receber será atualizada.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setPrevisaoMedicao(null)}>Cancelar</Button>
+              <Button onClick={salvarPrevisao} disabled={previsaoSaving} className="bg-amber-500 hover:bg-amber-600">
+                {previsaoSaving ? <RefreshCw className="animate-spin h-4 w-4 mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                Salvar Previsão
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   );
