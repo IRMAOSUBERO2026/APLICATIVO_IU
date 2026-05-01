@@ -626,7 +626,7 @@ export default function Medicoes() {
                     <TableBody>
                       {itensPrincipais.length > 0 && (
                         <TableRow className="bg-slate-100">
-                          <TableCell colSpan={9} className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600">📋 Itens Contratuais ({itensPrincipais.length})</TableCell>
+                          <TableCell colSpan={10} className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600">📋 Itens Contratuais ({itensPrincipais.length})</TableCell>
                         </TableRow>
                       )}
                       {itensPrincipais.map(ci => renderLancRow(ci))}
@@ -634,7 +634,7 @@ export default function Medicoes() {
                       {itensAditivos.length > 0 && (
                         <>
                           <TableRow className="bg-blue-50">
-                            <TableCell colSpan={9} className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-blue-700">➕ Itens Aditivos ({itensAditivos.length})</TableCell>
+                            <TableCell colSpan={10} className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-blue-700">➕ Itens Aditivos ({itensAditivos.length})</TableCell>
                           </TableRow>
                           {itensAditivos.map(ci => renderLancRow(ci, true))}
                         </>
