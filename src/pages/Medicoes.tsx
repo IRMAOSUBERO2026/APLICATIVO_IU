@@ -727,6 +727,18 @@ export default function Medicoes() {
                                 <p className="text-sm font-black text-emerald-600">{fmtBRL(m.valor_liquido)}</p>
                               </div>
                             </div>
+                            <button
+                              onClick={() => abrirPrevisao(m)}
+                              className={`w-full px-6 py-3 border-b text-left flex items-center justify-between gap-2 hover:bg-amber-50 transition-colors ${m.data_previsao_recebimento ? "bg-amber-50/40" : "bg-white"}`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <CalendarClock size={14} className="text-amber-600" />
+                                <Label className="text-[9px] font-black uppercase text-slate-500 cursor-pointer">Previsão Recebimento</Label>
+                              </div>
+                              <span className={`text-xs font-black ${m.data_previsao_recebimento ? "text-amber-700" : "text-slate-400 italic"}`}>
+                                {m.data_previsao_recebimento ? format(new Date(m.data_previsao_recebimento + "T00:00:00"), "dd/MM/yyyy") : "Definir →"}
+                              </span>
+                            </button>
                             <div className="p-3 bg-slate-100 grid grid-cols-2 gap-1">
                               {!aprovada && (
                                 <Button variant="ghost" size="sm" className="text-blue-600 font-bold text-[10px] gap-1" onClick={() => openEditMedicao(m)}>
