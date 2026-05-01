@@ -13,7 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Calculator, RefreshCw, Download, CheckCircle2, History, Save, Trash2, Edit, FileCheck2,
+  Calculator, RefreshCw, Download, CheckCircle2, History, Save, Trash2, Edit, FileCheck2, CalendarClock,
 } from "lucide-react";
 import { format } from "date-fns";
 import { gerarPlanilhaMedicaoPdf } from "@/lib/gerarPlanilhaMedicaoPdf";
