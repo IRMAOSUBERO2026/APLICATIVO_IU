@@ -138,13 +138,38 @@ export default function Medicoes() {
     }
   }, [selectedObraId]);
 
+  // Ordena por item_numero respeitando segmentos numéricos (1, 2, 10 em vez de 1, 10, 2)
+  const sortByItemNumero = (a: any, b: any) => {
+    const pa = String(a.item_numero || "").split(".").map((p: string) => {
+      const n = parseInt(p, 10);
+      return isNaN(n) ? p : n;
+    });
+    const pb = String(b.item_numero || "").split(".").map((p: string) => {
+      const n = parseInt(p, 10);
+      return isNaN(n) ? p : n;
+    });
+    const len = Math.max(pa.length, pb.length);
+    for (let i = 0; i < len; i++) {
+      const va = pa[i], vb = pb[i];
+      if (va === undefined) return -1;
+      if (vb === undefined) return 1;
+      if (typeof va === "number" && typeof vb === "number") {
+        if (va !== vb) return va - vb;
+      } else {
+        const sa = String(va), sb = String(vb);
+        if (sa !== sb) return sa.localeCompare(sb, "pt-BR", { numeric: true });
+      }
+    }
+    return 0;
+  };
+
   const loadData = async () => {
     const [c, m, r] = await Promise.all([
-      supabase.from("medicao_contrato_itens").select("*").eq("obra_id", selectedObraId).order("item_numero"),
+      supabase.from("medicao_contrato_itens").select("*").eq("obra_id", selectedObraId),
       supabase.from("medicoes").select("*").eq("obra_id", selectedObraId).order("numero", { ascending: false }),
       supabase.from("medicao_reajustes").select("*").eq("obra_id", selectedObraId).order("data_aplicacao"),
     ]);
-    if (c.data) setContratoItens(c.data as any[]);
+    if (c.data) setContratoItens(([...c.data] as any[]).sort(sortByItemNumero));
     if (r.data) setReajustes(r.data as Reajuste[]);
     if (m.data && m.data.length > 0) {
       setMedicoes(m.data as Medicao[]);
