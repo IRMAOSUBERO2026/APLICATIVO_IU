@@ -618,6 +618,7 @@ export default function Medicoes() {
                         <TableHead className="px-3 py-4 text-[10px] font-black uppercase tracking-widest text-right">V. Total</TableHead>
                         <TableHead className="px-3 py-4 text-[10px] font-black uppercase tracking-widest text-right bg-amber-50/50">Anterior</TableHead>
                         <TableHead className="px-3 py-4 text-[10px] font-black uppercase tracking-widest text-center bg-emerald-50/50 border-x border-emerald-100 min-w-[210px]">Medição Atual (UN ou %)</TableHead>
+                        <TableHead className="px-3 py-4 text-[10px] font-black uppercase tracking-widest text-right bg-emerald-50/30">Valor Medido</TableHead>
                         <TableHead className="px-3 py-4 text-[10px] font-black uppercase tracking-widest text-right">Saldo Qtd</TableHead>
                         <TableHead className="px-3 py-4 text-[10px] font-black uppercase tracking-widest text-right bg-rose-50/40">Saldo R$</TableHead>
                       </TableRow>
