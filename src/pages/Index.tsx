@@ -345,8 +345,8 @@ export default function Dashboard() {
             <p className="text-sm text-muted-foreground mt-0.5">{escopo}</p>
           </div>
           <div className="flex items-center gap-2 text-xs">
-            <div className="flex items-center gap-1.5 rounded-full bg-success/10 px-3 py-1.5 text-success font-medium">
-              <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
+            <div className="flex items-center gap-1.5 rounded-full bg-black px-3 py-1.5 text-white font-medium">
+              <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
               Dados em tempo real
             </div>
           </div>
