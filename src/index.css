@@ -3,16 +3,15 @@
 @tailwind utilities;
 
 @layer base {
-    :root {
-      --background: 0 0% 0%;
-      --foreground: 0 0% 98%;
-      --primary: 104 93% 22%;
-      --sidebar-background: 0 0% 4%;
-      --sidebar-foreground: 0 0% 98%;
-}
+  :root {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 98%;
+    --primary: 104 93% 22%;
+    --sidebar-background: 0 0% 4%;
+    --sidebar-foreground: 0 0% 98%;
+  }
 
   body {
-        @apply bg-background text-foreground;
+    @apply bg-background text-foreground;
   }
-  }
-    }
+}
