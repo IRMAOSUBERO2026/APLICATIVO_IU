@@ -332,22 +332,42 @@ export default function Dashboard() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        {/* ─── Header com escopo ─── */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
-              <Sparkles className="h-3.5 w-3.5 text-primary" />
-              <span className="font-medium">Centro de Comando</span>
-              <span>•</span>
-              <span>{periodo}</span>
+      {/* ─── Hero Banner da Marca ─── */}
+        <div className="relative overflow-hidden rounded-2xl shadow-lg">
+          {/* Gradiente da marca: verde floresta → carvão preto (igual ao logo) */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#1a3a06] via-[#2D6A04] to-[#141414]" />
+          {/* Padrão de raios — alusão ao triângulo do logo */}
+          <div className="absolute inset-0 opacity-[0.07]" style={{
+            backgroundImage: `repeating-linear-gradient(
+              -45deg,
+              #fff 0px, #fff 1px,
+              transparent 1px, transparent 28px
+            )`
+          }} />
+          {/* Brilho sutil verde no canto */}
+          <div className="absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-[#3a8a0a]/20 to-transparent" />
+
+          <div className="relative flex flex-col gap-4 px-6 py-5 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="flex items-center gap-2 text-xs text-white/50 mb-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-green-400" />
+                <span className="font-semibold tracking-wide uppercase">Centro de Comando</span>
+                <span className="text-white/30">•</span>
+                <span>{periodo}</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white leading-tight">
+                Dashboard Executivo
+              </h1>
+              <p className="text-sm text-white/60 mt-1 flex items-center gap-1.5">
+                <HardHat className="h-3.5 w-3.5 text-green-400" />
+                {escopo}
+              </p>
             </div>
-            <h1 className="text-3xl font-bold tracking-tight">Dashboard Executivo</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">{escopo}</p>
-          </div>
-          <div className="flex items-center gap-2 text-xs">
-            <div className="flex items-center gap-1.5 rounded-full bg-black px-3 py-1.5 text-white font-medium">
-              <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
-              Dados em tempo real
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 rounded-full border border-white/20 bg-black/30 px-3 py-1.5 text-xs text-white font-medium backdrop-blur-sm">
+                <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
+                Dados em tempo real
+              </div>
             </div>
           </div>
         </div>
