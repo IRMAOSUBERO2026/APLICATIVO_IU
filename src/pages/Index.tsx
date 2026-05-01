@@ -42,50 +42,49 @@ interface HeroProps {
   accent?: "primary" | "success" | "warning" | "destructive";
 }
 function KpiHero({ label, value, delta, deltaLabel, invertColor, icon, series, accent = "primary" }: HeroProps) {
-  const positiveGood = invertColor ? delta <= 0 : delta >= 0;
-  const accentMap: Record<string, string> = {
-    primary: "text-primary bg-primary/10 border-primary/20",
-    success: "text-success bg-success/10 border-success/20",
-    warning: "text-warning bg-warning/10 border-warning/20",
-    destructive: "text-destructive bg-destructive/10 border-destructive/20",
-  };
+  const isPositive = delta >= 0;
+  const isGoldValue = label.toLowerCase().includes("faturamento") || (label.toLowerCase().includes("obra") && !label.toLowerCase().includes("ativa"));
+  
+  // No style specs for series, but user said "linha verde #4A8C40, fundo transparente"
   const data = (series || []).map((v, i) => ({ i, v }));
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/5 bg-card p-6 shadow-xl hover:border-primary/30 transition-all duration-300 group">
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-2 min-w-0 flex-1">
-          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-white/40">{label}</p>
-          <p className="text-3xl font-black tracking-tighter leading-tight text-white">{value}</p>
-          <div className="flex items-center gap-2 text-xs">
-            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-bold ${
-              positiveGood ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"
-            }`}>
-              {delta >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-              {Math.abs(delta).toFixed(1)}%
+    <div className="relative overflow-hidden rounded-[10px] border-[0.5px] border-[#E0E0E0] bg-white p-[18px] pl-[20px] shadow-[0_1px_4px_rgba(0,0,0,0.06)] hover:shadow-md transition-shadow group">
+      <div className="flex flex-col h-full justify-between">
+        <div className="space-y-1">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-[#888888]">{label}</p>
+          <p className={`text-[28px] font-bold tracking-tight leading-none ${isGoldValue ? "text-[#C9A84C]" : "text-[#1A1A1A]"}`}>
+            {value}
+          </p>
+          <div className="flex items-center gap-1.5 pt-1">
+            <span className={`text-[12px] font-bold ${isPositive ? "text-[#2D7D1F]" : "text-[#B91C1C]"}`}>
+              {isPositive ? "+" : ""}{delta.toFixed(1)}%
             </span>
-            {deltaLabel && <span className="text-white/30 font-medium">{deltaLabel}</span>}
+            {deltaLabel && <span className="text-[12px] text-[#6B6B6B]">{deltaLabel}</span>}
           </div>
         </div>
-        <div className={`flex h-12 w-12 items-center justify-center rounded-xl border transition-transform group-hover:scale-110 duration-300 ${accentMap[accent]}`}>
-          {React.cloneElement(icon as React.ReactElement, { className: "h-6 w-6" })}
-        </div>
+        
+        {data.length > 1 && (
+          <div className="mt-4 h-[40px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={data}>
+                <Area 
+                  type="monotone" 
+                  dataKey="v" 
+                  stroke="#4A8C40" 
+                  strokeWidth={1.5} 
+                  fill="transparent" 
+                  dot={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
-      {data.length > 1 && (
-        <div className="mt-4 -mx-1 h-14 opacity-50 group-hover:opacity-100 transition-opacity">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data}>
-              <defs>
-                <linearGradient id={`g-${label}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
-                  <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <Area type="monotone" dataKey="v" stroke="hsl(var(--primary))" strokeWidth={2.5} fill={`url(#g-${label})`} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      )}
+      
+      <div className="absolute top-[18px] right-[20px] text-[#3A5C35] opacity-60">
+        {React.cloneElement(icon as React.ReactElement, { size: 20 })}
+      </div>
     </div>
   );
 }
@@ -327,285 +326,133 @@ export default function Dashboard() {
   }, [empresaId, obraId]);
 
   const saldoLiquido30d = contasReceber30d - contasPagar30d;
-  const sparkFat = faturamentoSerie.map(p => p.valor);
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-      {/* ─── Hero Banner da Marca (Black Edition) ─── */}
-        <div className="relative overflow-hidden rounded-2xl shadow-2xl border border-white/5">
-          {/* Fundo preto absoluto com gradiente sutil para o verde da marca */}
-          <div className="absolute inset-0 bg-[#020202]" />
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-transparent" />
-          
-          {/* Padrão de raios do logo — mais visível no fundo preto */}
-          <div className="absolute inset-0 opacity-[0.12]" style={{
-            backgroundImage: `repeating-linear-gradient(
-              -45deg,
-              #fff 0px, #fff 1px,
-              transparent 1px, transparent 32px
-            )`
-          }} />
-          
-          {/* Brilho neon verde no canto superior direito */}
-          <div className="absolute -right-20 -top-20 h-64 w-64 bg-primary/30 blur-[100px] rounded-full" />
-
-          <div className="relative flex flex-col gap-5 px-8 py-7 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-[10px] font-bold tracking-[0.2em] text-primary uppercase">
-                <Sparkles className="h-3 w-3 animate-pulse" />
-                Centro de Comando
-                <span className="text-white/20">|</span>
-                <span className="text-white/40 font-medium tracking-normal">{periodo}</span>
-              </div>
-              <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white uppercase italic">
-                Dashboard <span className="text-primary not-italic">Executivo</span>
-              </h1>
-              <div className="flex items-center gap-2 text-white/50 text-sm font-medium bg-white/5 w-fit px-2.5 py-1 rounded-md border border-white/5">
-                <HardHat className="h-4 w-4 text-primary" />
-                {escopo}
-              </div>
-            </div>
-            
-            <div className="flex items-center">
-              <div className="flex items-center gap-2.5 rounded-xl border border-primary/30 bg-black/60 px-4 py-2 text-xs text-white font-bold backdrop-blur-md shadow-[0_0_15px_rgba(45,106,4,0.2)]">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-                </span>
-                <span className="tracking-wide uppercase">Dados em tempo real</span>
-              </div>
-            </div>
+      <div className="max-w-[1600px] mx-auto space-y-8 pb-10">
+        {/* Cabeçalho da Página */}
+        <div className="flex flex-col gap-1">
+          <h1 className="text-[24px] font-semibold text-[#1A1A1A] tracking-tight">Dashboard Executivo</h1>
+          <div className="flex items-center gap-2 text-[#6B6B6B] text-[13px]">
+            <Building2 size={14} className="text-[#3A5C35]" />
+            <span>{escopo}</span>
+            <span className="mx-1 opacity-30">•</span>
+            <Calendar size={14} className="text-[#3A5C35]" />
+            <span>{periodo}</span>
           </div>
         </div>
 
-        {/* ─── KPIs Hero ─── */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Grade de KPIs */}
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           <KpiHero
-            label="Faturamento (mês)"
+            label="Faturamento do Mês"
             value={fmtCompact(kpis.faturamentoMes)}
             delta={pctDelta(kpis.faturamentoMes, kpis.faturamentoMesAnterior)}
             deltaLabel="vs mês ant."
-            icon={<DollarSign className="h-5 w-5" />}
-            series={sparkFat}
-            accent="primary"
+            icon={<DollarSign />}
+            series={faturamentoSerie.map(p => p.valor)}
           />
           <KpiHero
-            label="Custos totais"
+            label="Obras em Andamento"
+            value={String(kpis.obrasAtivas)}
+            delta={kpis.obrasNovasMes}
+            deltaLabel="novas obras"
+            icon={<HardHat />}
+          />
+          <KpiHero
+            label="Efetivo Total"
+            value={String(kpis.totalFuncionarios)}
+            delta={0}
+            deltaLabel="colaboradores"
+            icon={<Users />}
+          />
+          <KpiHero
+            label="Despesas Operacionais"
             value={fmtCompact(kpis.custosMes)}
             delta={pctDelta(kpis.custosMes, kpis.custosMesAnterior)}
             deltaLabel="vs mês ant."
-            invertColor
-            icon={<TrendingDown className="h-5 w-5" />}
-            accent="warning"
-          />
-          <KpiHero
-            label="Margem operacional"
-            value={`${kpis.margemPercentual.toFixed(1)}%`}
-            delta={kpis.margemPercentual - kpis.margemAnterior}
-            deltaLabel="pp vs ant."
-            icon={<TrendingUp className="h-5 w-5" />}
-            accent="success"
-          />
-          <KpiHero
-            label="Folha do mês"
-            value={fmtCompact(kpis.folhaTotal)}
-            delta={0}
-            deltaLabel={`${kpis.totalFuncionarios} funcionários`}
-            icon={<Users className="h-5 w-5" />}
-            accent="primary"
+            icon={<ArrowDownRight />}
           />
         </div>
 
-        {/* ─── Linha de mini-cards operacionais ─── */}
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <MiniStat icon={<HardHat />} label="Obras ativas" value={String(kpis.obrasAtivas)} sub={kpis.obrasNovasMes > 0 ? `+${kpis.obrasNovasMes} no mês` : "estáveis"} link="/obras" />
-          <MiniStat icon={<Wallet />} label="A receber (30d)" value={fmtCompact(contasReceber30d)} sub="próximos 30 dias" link="/financeiro" tone="success" />
-          <MiniStat icon={<ShoppingCart />} label="A pagar (30d)" value={fmtCompact(contasPagar30d)} sub="próximos 30 dias" link="/financeiro" tone="warning" />
-          <MiniStat icon={<AlertTriangle />} label="Estoque crítico" value={`${kpis.estoqueCritico}`} sub={kpis.estoqueCritico > 0 ? "ação necessária" : "tudo ok"} link="/estoque" tone={kpis.estoqueCritico > 0 ? "destructive" : "success"} />
-        </div>
-
-        {/* ─── Fluxo de caixa 30 dias + Alertas ─── */}
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2 rounded-xl border bg-card p-5 shadow-sm">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h3 className="text-sm font-semibold flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-primary" /> Fluxo de Caixa Projetado
-                </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">Próximos 30 dias • entradas vs saídas</p>
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Saldo previsto</p>
-                <p className={`text-xl font-bold ${saldoLiquido30d >= 0 ? "text-success" : "text-destructive"}`}>
-                  {fmtCompact(saldoLiquido30d)}
-                </p>
-              </div>
+        {/* Área Operacional e Financeira */}
+        <div className="grid gap-8 lg:grid-cols-12">
+          <div className="lg:col-span-8 space-y-8">
+            {/* Central de Pendências */}
+            <div className="bg-white rounded-[10px] border-[0.5px] border-[#E0E0E0] shadow-[0_1px_4px_rgba(0,0,0,0.06)] overflow-hidden">
+              <PendenciasPanel pendencias={pendencias} />
             </div>
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={fluxo} barGap={2}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                <XAxis dataKey="dia" tick={{ fontSize: 10 }} interval={3} />
-                <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}K` : `${v}`} />
-                <Tooltip
-                  formatter={(v: number, name: string) => [fmtCompact(v), name === "entrada" ? "Entradas" : name === "saida" ? "Saídas" : "Saldo"]}
-                  contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
-                />
-                <Bar dataKey="entrada" fill="hsl(var(--success))" radius={[3,3,0,0]} />
-                <Bar dataKey="saida" fill="hsl(var(--destructive))" radius={[3,3,0,0]} />
-              </BarChart>
-            </ResponsiveContainer>
-            <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-success" /> Entradas previstas</span>
-              <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-destructive" /> Saídas previstas</span>
-            </div>
-          </div>
-
-          <div className="rounded-xl border bg-card p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-warning" /> Alertas Operacionais
-              </h3>
-              <span className="text-xs font-semibold rounded-full bg-warning/10 text-warning px-2 py-0.5">{alertas.length}</span>
-            </div>
-            <div className="space-y-2 max-h-[280px] overflow-y-auto scrollbar-thin pr-1">
-              {alertas.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-8">Nenhum alerta no momento ✓</p>
-              )}
-              {alertas.map(a => (
-                <Link key={a.id} to={a.link} className="block rounded-lg border bg-background p-3 hover:bg-muted/50 transition-colors group">
-                  <div className="flex items-start gap-2.5">
-                    <span className={`mt-1 h-2 w-2 rounded-full flex-shrink-0 ${
-                      a.severidade === "alta" ? "bg-destructive" : a.severidade === "media" ? "bg-warning" : "bg-muted-foreground"
-                    }`} />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold truncate">{a.titulo}</p>
-                      <p className="text-[11px] text-muted-foreground">{a.descricao}</p>
-                    </div>
-                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary flex-shrink-0 mt-0.5" />
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* ─── Avisos, Solicitações e Pendências ─── */}
-        <PendenciasPanel pendencias={pendencias} />
-
-        {/* ─── Tendência de Faturamento (sparkline grande) ─── */}
-        <div className="rounded-xl border bg-card p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-sm font-semibold">Tendência de Faturamento</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Medições emitidas — últimos 6 meses</p>
-            </div>
-            <Link to="/medicoes" className="text-xs font-medium text-primary hover:underline flex items-center gap-1">
-              Ver medições <ChevronRight className="h-3 w-3" />
-            </Link>
-          </div>
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={faturamentoSerie}>
-              <defs>
-                <linearGradient id="grad-fat" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
-                  <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-              <XAxis dataKey="mes" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}K` : `${v}`} />
-              <Tooltip
-                formatter={(v: number) => [fmtCompact(v), "Faturamento"]}
-                contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+            
+            {/* Atalhos Rápidos e Resumo Financeiro */}
+            <div className="grid gap-6 sm:grid-cols-2">
+              <MiniStat 
+                icon={<Wallet />} 
+                label="CONTAS A RECEBER" 
+                value={fmtCompact(contasReceber30d)} 
+                sub="Previsão para 30 dias" 
+                link="/financeiro"
+                status="success"
               />
-              <Area type="monotone" dataKey="valor" stroke="hsl(var(--primary))" strokeWidth={2.5} fill="url(#grad-fat)" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
+              <MiniStat 
+                icon={<ShoppingCart />} 
+                label="CONTAS A PAGAR" 
+                value={fmtCompact(contasPagar30d)} 
+                sub="Pendentes e agendadas" 
+                link="/financeiro"
+                status="warning"
+              />
+            </div>
+          </div>
 
-        {/* ─── Ranking de obras + Atividade recente ─── */}
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2 rounded-xl border bg-card shadow-sm overflow-hidden">
-            <div className="flex items-center justify-between border-b px-5 py-4">
-              <div>
-                <h3 className="text-sm font-semibold flex items-center gap-2">
-                  <HardHat className="h-4 w-4 text-primary" /> Ranking de Obras em Execução
-                </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">Avanço físico baseado em medições</p>
+          <div className="lg:col-span-4 space-y-8">
+            {/* Alertas Críticos (RH/SST) */}
+            <div className="bg-white rounded-[10px] border-[0.5px] border-[#E0E0E0] shadow-[0_1px_4px_rgba(0,0,0,0.06)] p-6">
+              <h4 className="text-[11px] font-semibold text-[#888888] uppercase tracking-wider mb-6 flex items-center justify-between">
+                Alertas e Notificações
+                <Bell size={16} className="text-[#3A5C35]" />
+              </h4>
+              <div className="space-y-4">
+                {alertas.slice(0, 4).map((a, i) => (
+                  <Link key={i} to={a.link} className="flex items-start gap-3 p-3 rounded-lg hover:bg-[#F9FBF8] transition-colors border border-transparent hover:border-[#E8F5E1] group">
+                    <div className={`p-2 rounded-md ${
+                      a.severidade === "alta" ? "bg-[#FDECEA] text-[#B91C1C]" : "bg-[#F5F5F5] text-[#444444]"
+                    }`}>
+                      <AlertTriangle size={16} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[14px] font-medium text-[#1A1A1A] truncate">{a.titulo}</p>
+                      <p className="text-[12px] text-[#6B6B6B] line-clamp-1">{a.descricao}</p>
+                    </div>
+                  </Link>
+                ))}
+                {alertas.length === 0 && (
+                  <p className="text-[13px] text-[#AAAAAA] text-center py-4 italic">Nenhum alerta crítico no momento</p>
+                )}
               </div>
-              <Link to="/obras" className="text-xs font-medium text-primary hover:underline flex items-center gap-1">
-                Ver todas <ChevronRight className="h-3 w-3" />
+              <Link to="/solicitacoes" className="mt-6 block w-full py-2.5 text-center text-[12px] font-semibold text-[#3A5C35] bg-[#F9FBF8] border border-[#3A5C35]/20 rounded-md hover:bg-[#E8F5E1] transition-colors">
+                Ver todas as solicitações
               </Link>
             </div>
-            <div className="divide-y">
-              {loading && <p className="px-5 py-8 text-center text-xs text-muted-foreground">Carregando…</p>}
-              {!loading && obrasAndamento.length === 0 && (
-                <p className="px-5 py-8 text-center text-xs text-muted-foreground">Nenhuma obra ativa no escopo.</p>
-              )}
-              {obrasAndamento.map((obra, idx) => (
-                <Link
-                  key={obra.id}
-                  to="/obras"
-                  className="flex items-center gap-4 px-5 py-3.5 hover:bg-muted/40 transition-colors group"
-                >
-                  <span className="flex h-8 w-8 items-center justify-center rounded-md bg-muted text-xs font-bold text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                    {String(idx + 1).padStart(2, "0")}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <p className="text-sm font-semibold truncate">{obra.codigo} — {obra.nome}</p>
-                      <span className="text-[10px] uppercase tracking-wider rounded-full bg-success/10 text-success px-2 py-0.5 font-semibold flex-shrink-0">
-                        {obra.status.replace(/_/g, " ")}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-primary to-accent transition-all"
-                          style={{ width: `${obra.progresso}%` }}
-                        />
-                      </div>
-                      <span className="text-xs font-semibold text-muted-foreground tabular-nums w-10 text-right">{obra.progresso}%</span>
-                    </div>
-                  </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Contrato</p>
-                    <p className="text-sm font-bold tabular-nums">{fmtCompact(obra.valorContrato)}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
 
-          <div className="rounded-xl border bg-card p-5 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold flex items-center gap-2">
-                <Clock className="h-4 w-4 text-primary" /> Atividade Recente
-              </h3>
-            </div>
-            <div className="space-y-3">
-              {atividades.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-8">Sem atividades recentes.</p>
-              )}
-              {atividades.map(a => (
-                <div key={a.id} className="flex items-start gap-3 pb-3 border-b last:border-0 last:pb-0">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10 text-primary flex-shrink-0">
-                    {a.tipo === "Diário" && <FileText className="h-3.5 w-3.5" />}
-                    {a.tipo === "Compra" && <ShoppingCart className="h-3.5 w-3.5" />}
-                    {a.tipo === "Medição" && <Activity className="h-3.5 w-3.5" />}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{a.tipo}</span>
-                      <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                        <Calendar className="h-2.5 w-2.5" /> {a.quando.split("-").reverse().join("/")}
-                      </span>
+            {/* Atividade Recente do Sistema */}
+            <div className="bg-white rounded-[10px] border-[0.5px] border-[#E0E0E0] shadow-[0_1px_4px_rgba(0,0,0,0.06)] p-6">
+              <h4 className="text-[11px] font-semibold text-[#888888] uppercase tracking-wider mb-6 flex items-center justify-between">
+                Atividade Recente
+                <Activity size={16} className="text-[#3A5C35]" />
+              </h4>
+              <div className="space-y-5">
+                {atividades.map((a, i) => (
+                  <div key={i} className="flex gap-3">
+                    <div className="w-[1.5px] bg-[#EEEEEE] relative">
+                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-[#3A5C35] border-2 border-white" />
                     </div>
-                    <p className="text-xs font-medium truncate">{a.titulo}</p>
+                    <div className="flex-1 pb-1">
+                      <p className="text-[13px] font-medium text-[#1A1A1A] leading-tight">{a.titulo}</p>
+                      <p className="text-[11px] text-[#888888] mt-1">{a.quando.split("-").reverse().join("/")}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -621,129 +468,131 @@ interface MiniStatProps {
   value: string;
   sub: string;
   link: string;
-  tone?: "default" | "success" | "warning" | "destructive";
+  status?: "success" | "warning" | "destructive" | "neutral";
 }
-function MiniStat({ icon, label, value, sub, link, tone = "default" }: MiniStatProps) {
-  const toneMap = {
-    default: "text-primary bg-primary/10 border-primary/20",
-    success: "text-success bg-success/10 border-success/20",
-    warning: "text-warning bg-warning/10 border-warning/20",
-    destructive: "text-destructive bg-destructive/10 border-destructive/20",
+function MiniStat({ icon, label, value, sub, link, status = "neutral" }: MiniStatProps) {
+  const statusColors = {
+    success: "text-[#2D6A1F] bg-[#E8F5E1]",
+    warning: "text-[#A0660A] bg-[#FFF4E0]",
+    destructive: "text-[#B91C1C] bg-[#FDECEA]",
+    neutral: "text-[#555555] bg-[#F0F0F0]",
   };
+
   return (
-    <Link to={link} className="group rounded-2xl border border-white/5 bg-card p-5 shadow-lg hover:shadow-primary/5 hover:border-primary/40 transition-all duration-300 flex items-center gap-4">
-      <div className={`flex h-12 w-12 items-center justify-center rounded-xl border flex-shrink-0 transition-transform group-hover:rotate-6 ${toneMap[tone]}`}>
-        {React.cloneElement(icon as React.ReactElement, { className: "h-6 w-6" })}
+    <Link to={link} className="flex items-center gap-4 bg-white rounded-[10px] border-[0.5px] border-[#E0E0E0] p-5 shadow-[0_1px_4px_rgba(0,0,0,0.06)] hover:border-[#3A5C35] hover:shadow-md transition-all group">
+      <div className={`flex h-12 w-12 items-center justify-center rounded-lg flex-shrink-0 transition-transform group-hover:scale-105 ${statusColors[status]}`}>
+        {React.cloneElement(icon as React.ReactElement, { size: 24 })}
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-[10px] uppercase tracking-[0.15em] text-white/30 font-bold">{label}</p>
-        <p className="text-xl font-black text-white tabular-nums leading-tight mt-0.5">{value}</p>
-        <p className="text-[11px] text-white/40 truncate font-medium">{sub}</p>
+      <div className="flex-1 min-w-0">
+        <p className="text-[11px] uppercase font-semibold text-[#888888] tracking-wider">{label}</p>
+        <p className="text-[22px] font-bold text-[#1A1A1A] tracking-tight mt-0.5">{value}</p>
+        <p className="text-[12px] text-[#6B6B6B] truncate mt-0.5">{sub}</p>
       </div>
-      <ChevronRight className="h-5 w-5 text-white/20 group-hover:text-primary group-hover:translate-x-1 transition-all" />
+      <ChevronRight size={18} className="text-[#CCCCCC] group-hover:text-[#3A5C35] transition-colors" />
     </Link>
   );
 }
 
 /* ───────── PendenciasPanel ───────── */
-const CAT_META: Record<PendenciaItem["categoria"], { label: string; icon: React.ReactNode; tone: string }> = {
-  aviso: { label: "Aviso", icon: <Bell className="h-3.5 w-3.5" />, tone: "bg-warning/10 text-warning border-warning/20" },
-  solicitacao_diario: { label: "Diário", icon: <ClipboardList className="h-3.5 w-3.5" />, tone: "bg-primary/10 text-primary border-primary/20" },
-  solicitacao_compra: { label: "Compra", icon: <PackageSearch className="h-3.5 w-3.5" />, tone: "bg-accent/20 text-accent-foreground border-accent/20" },
-  solicitacao_exame: { label: "Exame", icon: <Stethoscope className="h-3.5 w-3.5" />, tone: "bg-destructive/10 text-destructive border-destructive/20" },
-  manutencao: { label: "Manutenção", icon: <Wrench className="h-3.5 w-3.5" />, tone: "bg-warning/10 text-warning border-warning/20" },
-  tarefa: { label: "Tarefa", icon: <MessageSquare className="h-3.5 w-3.5" />, tone: "bg-primary/10 text-primary border-primary/20" },
+const CAT_META: Record<PendenciaItem["categoria"], { label: string; icon: React.ReactNode; color: string }> = {
+  aviso: { label: "Aviso", icon: <Bell size={14} />, color: "text-[#A0660A]" },
+  solicitacao_diario: { label: "Diário", icon: <ClipboardList size={14} />, color: "text-[#3A5C35]" },
+  solicitacao_compra: { label: "Compra", icon: <ShoppingCart size={14} />, color: "text-[#2D6A1F]" },
+  solicitacao_exame: { label: "Exame", icon: <Stethoscope size={14} />, color: "text-[#B91C1C]" },
+  manutencao: { label: "Manutenção", icon: <Wrench size={14} />, color: "text-[#555555]" },
+  tarefa: { label: "Tarefa", icon: <MessageSquare size={14} />, color: "text-[#3A5C35]" },
 };
 
 function PendenciasPanel({ pendencias }: { pendencias: PendenciaItem[] }) {
   const [filtro, setFiltro] = useState<"todas" | PendenciaItem["categoria"]>("todas");
   const lista = filtro === "todas" ? pendencias : pendencias.filter(p => p.categoria === filtro);
+  
   const counts = pendencias.reduce((acc, p) => {
     acc[p.categoria] = (acc[p.categoria] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
-  const totalAlta = pendencias.filter(p => p.prioridade === "alta").length;
 
-  const filtros: Array<{ key: "todas" | PendenciaItem["categoria"]; label: string }> = [
-    { key: "todas", label: `Todas (${pendencias.length})` },
-    { key: "aviso", label: `Avisos (${counts.aviso || 0})` },
-    { key: "solicitacao_diario", label: `Diário (${counts.solicitacao_diario || 0})` },
-    { key: "solicitacao_compra", label: `Compras (${counts.solicitacao_compra || 0})` },
-    { key: "solicitacao_exame", label: `Exames (${counts.solicitacao_exame || 0})` },
-    { key: "manutencao", label: `Manutenção (${counts.manutencao || 0})` },
-    { key: "tarefa", label: `Tarefas (${counts.tarefa || 0})` },
-  ];
+  const totalUrgente = pendencias.filter(p => p.prioridade === "alta").length;
 
   return (
-    <div className="rounded-2xl border border-white/5 bg-card shadow-2xl overflow-hidden">
-      <div className="flex items-center justify-between border-b border-white/5 px-6 py-5 gap-4 flex-wrap bg-white/[0.02]">
+    <div className="flex flex-col">
+      <div className="bg-[#F5F5F5] border-b border-[#E0E0E0] px-6 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h3 className="text-base font-bold flex items-center gap-2 text-white uppercase tracking-tight">
-            <Bell className="h-5 w-5 text-primary" /> Central de Pendências
+          <h3 className="text-[15px] font-semibold text-[#1A1A1A] flex items-center gap-2">
+            FILA DE PROCESSAMENTO
+            {totalUrgente > 0 && (
+              <span className="text-[10px] bg-[#B91C1C] text-white px-2 py-0.5 rounded-full font-bold">
+                {totalUrgente} URGENTE(S)
+              </span>
+            )}
           </h3>
-          <p className="text-xs text-white/40 mt-1 font-medium">
-            Atividades consolidadas de todos os módulos
-            {totalAlta > 0 && <span className="ml-3 font-bold text-destructive animate-pulse">• {totalAlta} URGENTES</span>}
-          </p>
+          <p className="text-[12px] text-[#6B6B6B] mt-0.5">Pendências aguardando sua ação nos módulos</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          {filtros.map(f => (
+        <div className="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0 scrollbar-hide">
+          <button
+            onClick={() => setFiltro("todas")}
+            className={`whitespace-nowrap px-3 py-1.5 rounded-md text-[11px] font-semibold uppercase tracking-wider transition-colors ${
+              filtro === "todas" ? "bg-[#3A5C35] text-white" : "text-[#6B6B6B] hover:bg-[#E0E0E0]"
+            }`}
+          >
+            Todas ({pendencias.length})
+          </button>
+          {Object.entries(CAT_META).map(([cat, meta]) => (
             <button
-              key={f.key}
-              onClick={() => setFiltro(f.key)}
-              className={`text-[10px] font-bold uppercase tracking-wider rounded-lg px-3 py-1.5 transition-all ${
-                filtro === f.key
-                  ? "bg-primary text-white shadow-lg shadow-primary/20"
-                  : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white"
+              key={cat}
+              onClick={() => setFiltro(cat as any)}
+              className={`whitespace-nowrap px-3 py-1.5 rounded-md text-[11px] font-semibold uppercase tracking-wider transition-colors flex items-center gap-2 ${
+                filtro === cat ? "bg-[#3A5C35] text-white" : "text-[#6B6B6B] hover:bg-[#E0E0E0]"
               }`}
             >
-              {f.label}
+              {meta.label} ({counts[cat] || 0})
             </button>
           ))}
         </div>
       </div>
 
-      {lista.length === 0 ? (
-        <div className="px-6 py-16 text-center">
-          <Bell className="h-10 w-10 text-white/10 mx-auto mb-3" />
-          <p className="text-sm text-white/30 font-medium">Tudo em dia por aqui ✓</p>
-        </div>
-      ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-px bg-white/5">
-          {lista.slice(0, 12).map(p => {
+      <div className="divide-y divide-[#EEEEEE]">
+        {lista.length === 0 ? (
+          <div className="py-12 text-center text-[#AAAAAA] text-[13px] italic">
+            Nenhuma pendência registrada nesta categoria
+          </div>
+        ) : (
+          lista.slice(0, 10).map((p) => {
             const meta = CAT_META[p.categoria];
             return (
               <Link
                 key={p.id}
                 to={p.link}
-                className="bg-card p-5 hover:bg-white/[0.04] transition-all group flex gap-4 border border-transparent hover:border-white/10"
+                className="flex items-center gap-4 px-6 py-4 hover:bg-[#F9FBF8] transition-all group"
               >
-                <div className={`flex h-10 w-10 items-center justify-center rounded-xl border flex-shrink-0 transition-transform group-hover:scale-110 ${meta.tone}`}>
+                <div className={`flex h-10 w-10 items-center justify-center rounded-md border border-[#E0E0E0] bg-white shadow-sm ${meta.color}`}>
                   {meta.icon}
                 </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className="text-[9px] uppercase tracking-[0.2em] font-black text-white/30">{meta.label}</span>
-                    <span className={`h-2 w-2 rounded-full ${
-                      p.prioridade === "alta" ? "bg-destructive shadow-[0_0_8px_rgba(239,68,68,0.5)]" : p.prioridade === "media" ? "bg-warning" : "bg-white/20"
-                    }`} />
-                    <span className="text-[10px] text-white/20 font-bold ml-auto tabular-nums">
-                      {p.data ? new Date(p.data).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : ""}
-                    </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-[11px] font-semibold text-[#888888] uppercase tracking-wider">{meta.label}</span>
+                    <span className={`h-1.5 w-1.5 rounded-full ${p.prioridade === "alta" ? "bg-[#B91C1C]" : "bg-[#D0D5DD]"}`} />
                   </div>
-                  <p className="text-sm font-bold text-white leading-tight line-clamp-2 group-hover:text-primary transition-colors">{p.titulo}</p>
-                  <p className="text-xs text-white/40 line-clamp-1 mt-1 font-medium">{p.descricao}</p>
+                  <p className="text-[14px] font-medium text-[#1A1A1A] group-hover:text-[#3A5C35] transition-colors line-clamp-1">{p.titulo}</p>
+                  <p className="text-[12px] text-[#6B6B6B] truncate">{p.descricao}</p>
                 </div>
-                <ChevronRight className="h-4 w-4 text-white/10 group-hover:text-primary flex-shrink-0 self-center transition-all group-hover:translate-x-1" />
+                <div className="text-right hidden sm:block">
+                  <p className="text-[11px] font-medium text-[#888888]">{p.data.split("-").reverse().join("/")}</p>
+                  <div className="flex items-center justify-end mt-1">
+                    <ChevronRight size={14} className="text-[#CCCCCC] group-hover:text-[#3A5C35] group-hover:translate-x-1 transition-all" />
+                  </div>
+                </div>
               </Link>
             );
-          })}
-        </div>
-      )}
-
-      {lista.length > 12 && (
-        <div className="border-t border-white/5 px-6 py-3 text-center bg-white/[0.01]">
-          <span className="text-[10px] font-bold text-white/20 uppercase tracking-widest">+ {lista.length - 12} pendências adicionais</span>
+          })
+        )}
+      </div>
+      
+      {lista.length > 0 && (
+        <div className="bg-[#F9F9F9] px-6 py-3 border-t border-[#E0E0E0]">
+          <Link to="/relatorios" className="text-[12px] font-semibold text-[#3A5C35] hover:underline flex items-center gap-1">
+            Visualizar relatório completo de pendências <ChevronRight size={12} />
+          </Link>
         </div>
       )}
     </div>

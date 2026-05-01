@@ -97,27 +97,27 @@ export function AppSidebar({ onClose }: AppSidebarProps) {
   const location = useLocation();
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto scrollbar-sidebar bg-sidebar-background border-r border-white/5">
-      <div className="flex h-20 items-center justify-between px-6 border-b border-white/5 bg-black/20">
+    <div className="flex h-full flex-col overflow-y-auto scrollbar-saas bg-[#0D0D0D] w-[240px]">
+      <div className="flex h-20 items-center justify-between px-6 border-b border-[#2A2A2A]">
         <div className="flex items-center gap-3">
-          <img src={logoBranco} alt="Irmãos Ubero" className="h-12 w-auto brightness-110" />
+          <img src={logoBranco} alt="IU Engenharia" className="h-10 w-auto" />
           <div className="hidden sm:block">
-            <h1 className="text-[10px] font-black text-white tracking-[0.15em] leading-tight uppercase">IRMÃOS UBERO</h1>
-            <p className="text-[8px] text-primary font-bold tracking-widest leading-none uppercase">Engenharia</p>
+            <h1 className="text-[11px] font-black text-white tracking-[0.1em] leading-tight uppercase">IU ENGENHARIA</h1>
+            <p className="text-[9px] text-[#4A6741] font-bold leading-none uppercase">Engenharia</p>
           </div>
         </div>
-        <button onClick={onClose} className="rounded-md p-1.5 text-white/40 hover:text-white lg:hidden bg-white/5">
+        <button onClick={onClose} className="rounded-md p-1.5 text-white/40 hover:text-white lg:hidden">
           <X className="h-4 w-4" />
         </button>
       </div>
 
-      <nav className="flex-1 px-4 py-6 space-y-8">
+      <nav className="flex-1 px-0 py-6 space-y-6">
         {menuSections.map((section) => (
           <div key={section.label}>
-            <p className="mb-3 px-3 text-[9px] font-bold uppercase tracking-[0.2em] text-white/30">
+            <p className="mb-2 px-6 text-[10px] font-medium uppercase tracking-[0.15em] text-[#888888]">
               {section.label}
             </p>
-            <ul className="space-y-1">
+            <ul className="space-y-0.5">
               {section.items.map((item) => {
                 const isActive = location.pathname === item.path;
                 return (
@@ -125,31 +125,37 @@ export function AppSidebar({ onClose }: AppSidebarProps) {
                     <Link
                       to={item.path}
                       onClick={onClose}
-                      className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-xs font-semibold transition-all duration-300 ${
+                      className={`flex items-center gap-3 px-6 py-2.5 text-[13px] transition-all relative ${
                         isActive
-                          ? "bg-primary text-white shadow-[0_0_15px_rgba(45,106,4,0.3)] scale-[1.02]"
-                          : "text-white/60 hover:bg-white/5 hover:text-white"
+                          ? "bg-[#2F4A2A] text-white font-medium border-l-[3px] border-[#7AAE6E]"
+                          : "text-white hover:bg-[#1A2E18] font-normal"
                       }`}
                     >
-                      <item.icon className={`h-4 w-4 flex-shrink-0 ${isActive ? "text-white" : "text-primary/70"}`} />
+                      <item.icon 
+                        className={`h-4 w-4 flex-shrink-0 transition-colors ${
+                          isActive ? "text-white" : "text-[#4A6741]"
+                        }`} 
+                        style={{ width: '16px', height: '16px' }}
+                      />
                       {item.label}
                     </Link>
                   </li>
                 );
               })}
             </ul>
+            <div className="mx-6 mt-4 border-b-[0.5px] border-[#2A2A2A]" />
           </div>
         ))}
       </nav>
 
-      <div className="border-t border-sidebar-border p-4">
+      <div className="border-t border-[#2A2A2A] p-6 bg-[#090909]">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sidebar-accent text-xs font-bold text-sidebar-primary">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#3A5C35] text-xs font-bold text-white shadow-lg shadow-black/20">
             AD
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-sidebar-accent-foreground">Administrador</p>
-            <p className="truncate text-xs text-sidebar-muted">admin@irmaos ubero.com</p>
+            <p className="truncate text-sm font-medium text-white">Administrador</p>
+            <p className="truncate text-[11px] text-[#888888]">admin@iuengenharia.com.br</p>
           </div>
         </div>
       </div>
