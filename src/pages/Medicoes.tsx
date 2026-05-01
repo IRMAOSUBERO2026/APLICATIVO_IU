@@ -82,6 +82,43 @@ export default function Medicoes() {
   const [editLancamentos, setEditLancamentos] = useState<Record<string, { modo: ModoLanc; valor: number }>>({});
   const [editForm, setEditForm] = useState({ percentual_retencao: 5, observacoes: "" });
 
+  // Previsão de recebimento
+  const [previsaoMedicao, setPrevisaoMedicao] = useState<Medicao | null>(null);
+  const [previsaoData, setPrevisaoData] = useState("");
+  const [previsaoSaving, setPrevisaoSaving] = useState(false);
+
+  // Sugestão inteligente: dia 10 do mês posterior ao fim do período
+  const sugerirDataPrevisao = (periodoFim: string): string => {
+    if (!periodoFim) return "";
+    const d = new Date(periodoFim + "T00:00:00");
+    const prox = new Date(d.getFullYear(), d.getMonth() + 1, 10);
+    return format(prox, "yyyy-MM-dd");
+  };
+
+  const abrirPrevisao = (m: Medicao) => {
+    setPrevisaoMedicao(m);
+    setPrevisaoData(m.data_previsao_recebimento || sugerirDataPrevisao(m.periodo_fim));
+  };
+
+  const salvarPrevisao = async () => {
+    if (!previsaoMedicao) return;
+    setPrevisaoSaving(true);
+    try {
+      await supabase.from("medicoes").update({ data_previsao_recebimento: previsaoData || null }).eq("id", previsaoMedicao.id);
+      // Se já existe conta a receber vinculada, atualiza o vencimento
+      if (previsaoMedicao.conta_receber_id && previsaoData) {
+        await supabase.from("contas_receber").update({ data_vencimento: previsaoData }).eq("id", previsaoMedicao.conta_receber_id);
+      }
+      toast({ title: "Previsão de recebimento salva" });
+      setPrevisaoMedicao(null);
+      loadData();
+    } catch (err: any) {
+      toast({ title: "Erro ao salvar previsão", description: err.message, variant: "destructive" });
+    } finally {
+      setPrevisaoSaving(false);
+    }
+  };
+
   const selectedObra = obras.find(o => o.id === selectedObraId);
 
   const loadObrasEmExecucao = async () => {
