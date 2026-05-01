@@ -639,6 +639,105 @@ export default function Medicoes() {
           </div>
         </div>
 
+        {/* ============ PAINEL INICIAL: LISTA DE OBRAS ============ */}
+        {!selectedObraId && !isLoadingObras && obras.length > 0 && (() => {
+          const isAtiva = (s?: string) => !["concluida", "encerrada", "cancelada", "paralisada"].includes(String(s || ""));
+          const ativas = obras.filter(o => isAtiva(o.status));
+          const finalizadas = obras.filter(o => !isAtiva(o.status));
+
+          const ObraRow = ({ o, dim }: { o: Obra; dim?: boolean }) => {
+            const t = totaisObras[o.id] || { contrato: 0, medido: 0 };
+            const saldo = t.contrato - t.medido;
+            const pct = t.contrato > 0 ? Math.min(100, (t.medido / t.contrato) * 100) : 0;
+            return (
+              <button
+                onClick={() => setSelectedObraId(o.id)}
+                className={`w-full text-left bg-white rounded-3xl border shadow-sm hover:shadow-lg hover:border-emerald-300 transition-all p-5 ${dim ? "opacity-70" : ""}`}
+              >
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                  <div className="md:col-span-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-mono text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">{o.codigo}</span>
+                      <Badge className={`text-[9px] font-black uppercase border-none ${
+                        o.status === "em_execucao" ? "bg-emerald-100 text-emerald-700" :
+                        o.status === "paralisada" ? "bg-rose-100 text-rose-700" :
+                        ["concluida","encerrada"].includes(String(o.status)) ? "bg-slate-200 text-slate-600" :
+                        "bg-blue-100 text-blue-700"
+                      }`}>{String(o.status || "").replace("_"," ")}</Badge>
+                    </div>
+                    <p className="font-black text-slate-800 text-sm truncate">{o.nome}</p>
+                    {(o.construtora || o.cliente) && <p className="text-[10px] text-slate-500 truncate">{o.construtora || o.cliente}</p>}
+                  </div>
+                  <div className="md:col-span-2 text-right">
+                    <p className="text-[9px] font-black uppercase text-slate-400">Contrato</p>
+                    <p className="text-xs font-black text-slate-800">{fmtBRL(t.contrato)}</p>
+                  </div>
+                  <div className="md:col-span-2 text-right">
+                    <p className="text-[9px] font-black uppercase text-emerald-500">Medido</p>
+                    <p className="text-xs font-black text-emerald-700">{fmtBRL(t.medido)}</p>
+                  </div>
+                  <div className="md:col-span-2 text-right">
+                    <p className="text-[9px] font-black uppercase text-amber-500">Saldo</p>
+                    <p className={`text-xs font-black ${saldo < 0 ? "text-rose-600" : "text-amber-700"}`}>{fmtBRL(saldo)}</p>
+                  </div>
+                  <div className="md:col-span-2 text-right">
+                    <p className="text-[9px] font-black uppercase text-slate-400">Retenção</p>
+                    <p className="text-xs font-black text-slate-700">{Number(o.percentual_retencao_padrao ?? 0)}%</p>
+                  </div>
+                </div>
+                <div className="mt-3 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                </div>
+                <p className="text-[9px] font-bold text-slate-400 mt-1 text-right">{pct.toFixed(1)}% executado</p>
+              </button>
+            );
+          };
+
+          return (
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-700">📊 Obras Ativas ({ativas.length})</h2>
+                  <p className="text-[10px] text-slate-400 font-bold">Clique em uma obra para lançar/editar medições</p>
+                </div>
+                {ativas.length === 0 ? (
+                  <div className="bg-white p-8 rounded-3xl border text-center">
+                    <p className="text-slate-400 text-sm font-bold">Nenhuma obra ativa cadastrada.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {ativas.map(o => <ObraRow key={o.id} o={o} />)}
+                  </div>
+                )}
+              </div>
+
+              {finalizadas.length > 0 && (
+                <details className="group">
+                  <summary className="cursor-pointer list-none flex items-center gap-2 px-1 py-2 select-none">
+                    <span className="text-sm font-black uppercase tracking-widest text-slate-500 group-open:text-slate-800">
+                      📁 Obras Finalizadas / Encerradas ({finalizadas.length})
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-bold group-open:hidden">— clique para expandir</span>
+                  </summary>
+                  <div className="mt-3 space-y-3 pl-2 border-l-2 border-slate-200">
+                    <p className="text-[10px] text-slate-500 italic px-2">
+                      ⚠️ Estas obras estão finalizadas — abra para consultar o histórico ou registrar uma medição residual/retroativa.
+                    </p>
+                    {finalizadas.map(o => <ObraRow key={o.id} o={o} dim />)}
+                  </div>
+                </details>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ============ Botão Voltar quando obra selecionada ============ */}
+        {selectedObraId && (
+          <Button variant="outline" size="sm" onClick={() => setSelectedObraId("")} className="rounded-xl gap-2">
+            ← Voltar para lista de obras
+          </Button>
+        )}
+
         {selectedObraId && (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="bg-slate-100 p-1 mb-6 h-14 w-full max-w-md rounded-2xl border border-slate-200">
