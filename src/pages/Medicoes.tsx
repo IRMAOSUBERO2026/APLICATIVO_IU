@@ -13,7 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Calculator, RefreshCw, Download, CheckCircle2, History, Save, Trash2, Edit, FileCheck2,
+  Calculator, RefreshCw, Download, CheckCircle2, History, Save, Trash2, Edit, FileCheck2, CalendarClock,
 } from "lucide-react";
 import { format } from "date-fns";
 import { gerarPlanilhaMedicaoPdf } from "@/lib/gerarPlanilhaMedicaoPdf";
@@ -45,6 +45,7 @@ interface Medicao {
   valor_retencao: number; valor_liquido: number; status: string;
   observacoes?: string; aprovado_em?: string; aprovado_por?: string;
   conta_receber_id?: string;
+  data_previsao_recebimento?: string | null;
 }
 interface BoletimItem {
   id?: string; medicao_id?: string; contrato_item_id: string;
@@ -80,6 +81,43 @@ export default function Medicoes() {
   const [editingMedicao, setEditingMedicao] = useState<Medicao | null>(null);
   const [editLancamentos, setEditLancamentos] = useState<Record<string, { modo: ModoLanc; valor: number }>>({});
   const [editForm, setEditForm] = useState({ percentual_retencao: 5, observacoes: "" });
+
+  // Previsão de recebimento
+  const [previsaoMedicao, setPrevisaoMedicao] = useState<Medicao | null>(null);
+  const [previsaoData, setPrevisaoData] = useState("");
+  const [previsaoSaving, setPrevisaoSaving] = useState(false);
+
+  // Sugestão inteligente: dia 10 do mês posterior ao fim do período
+  const sugerirDataPrevisao = (periodoFim: string): string => {
+    if (!periodoFim) return "";
+    const d = new Date(periodoFim + "T00:00:00");
+    const prox = new Date(d.getFullYear(), d.getMonth() + 1, 10);
+    return format(prox, "yyyy-MM-dd");
+  };
+
+  const abrirPrevisao = (m: Medicao) => {
+    setPrevisaoMedicao(m);
+    setPrevisaoData(m.data_previsao_recebimento || sugerirDataPrevisao(m.periodo_fim));
+  };
+
+  const salvarPrevisao = async () => {
+    if (!previsaoMedicao) return;
+    setPrevisaoSaving(true);
+    try {
+      await supabase.from("medicoes").update({ data_previsao_recebimento: previsaoData || null }).eq("id", previsaoMedicao.id);
+      // Se já existe conta a receber vinculada, atualiza o vencimento
+      if (previsaoMedicao.conta_receber_id && previsaoData) {
+        await supabase.from("contas_receber").update({ data_vencimento: previsaoData }).eq("id", previsaoMedicao.conta_receber_id);
+      }
+      toast({ title: "Previsão de recebimento salva" });
+      setPrevisaoMedicao(null);
+      loadData();
+    } catch (err: any) {
+      toast({ title: "Erro ao salvar previsão", description: err.message, variant: "destructive" });
+    } finally {
+      setPrevisaoSaving(false);
+    }
+  };
 
   const selectedObra = obras.find(o => o.id === selectedObraId);
 
@@ -138,13 +176,38 @@ export default function Medicoes() {
     }
   }, [selectedObraId]);
 
+  // Ordena por item_numero respeitando segmentos numéricos (1, 2, 10 em vez de 1, 10, 2)
+  const sortByItemNumero = (a: any, b: any) => {
+    const pa = String(a.item_numero || "").split(".").map((p: string) => {
+      const n = parseInt(p, 10);
+      return isNaN(n) ? p : n;
+    });
+    const pb = String(b.item_numero || "").split(".").map((p: string) => {
+      const n = parseInt(p, 10);
+      return isNaN(n) ? p : n;
+    });
+    const len = Math.max(pa.length, pb.length);
+    for (let i = 0; i < len; i++) {
+      const va = pa[i], vb = pb[i];
+      if (va === undefined) return -1;
+      if (vb === undefined) return 1;
+      if (typeof va === "number" && typeof vb === "number") {
+        if (va !== vb) return va - vb;
+      } else {
+        const sa = String(va), sb = String(vb);
+        if (sa !== sb) return sa.localeCompare(sb, "pt-BR", { numeric: true });
+      }
+    }
+    return 0;
+  };
+
   const loadData = async () => {
     const [c, m, r] = await Promise.all([
-      supabase.from("medicao_contrato_itens").select("*").eq("obra_id", selectedObraId).order("item_numero"),
+      supabase.from("medicao_contrato_itens").select("*").eq("obra_id", selectedObraId),
       supabase.from("medicoes").select("*").eq("obra_id", selectedObraId).order("numero", { ascending: false }),
       supabase.from("medicao_reajustes").select("*").eq("obra_id", selectedObraId).order("data_aplicacao"),
     ]);
-    if (c.data) setContratoItens(c.data as any[]);
+    if (c.data) setContratoItens(([...c.data] as any[]).sort(sortByItemNumero));
     if (r.data) setReajustes(r.data as Reajuste[]);
     if (m.data && m.data.length > 0) {
       setMedicoes(m.data as Medicao[]);
@@ -285,7 +348,7 @@ export default function Medicoes() {
         descricao: `Medição #${String(m.numero).padStart(3, "0")} - ${selectedObra?.codigo} ${selectedObra?.nome}`,
         categoria: "Medição de Obra",
         valor: m.valor_liquido,
-        data_vencimento: m.periodo_fim,
+        data_vencimento: m.data_previsao_recebimento || sugerirDataPrevisao(m.periodo_fim) || m.periodo_fim,
         status: "pendente",
         documento: `MED-${String(m.numero).padStart(3, "0")}`,
         observacoes: m.observacoes || "",
@@ -479,6 +542,7 @@ export default function Medicoes() {
             </span>
           </div>
         </TableCell>
+        <TableCell className="px-3 py-4 text-right font-black text-emerald-700 text-xs bg-emerald-50/30">{fmtBRL(qtdAtual * vUnitEf)}</TableCell>
         <TableCell className={`px-3 py-4 text-right text-xs font-bold ${saldoQtd < 0 ? "text-rose-500" : "text-slate-500"}`}>{fmtNum(saldoQtd)}</TableCell>
         <TableCell className="px-3 py-4 text-right font-black text-rose-600 text-xs bg-rose-50/20">{fmtBRL(saldoR)}</TableCell>
       </TableRow>
@@ -592,6 +656,7 @@ export default function Medicoes() {
                         <TableHead className="px-3 py-4 text-[10px] font-black uppercase tracking-widest text-right">V. Total</TableHead>
                         <TableHead className="px-3 py-4 text-[10px] font-black uppercase tracking-widest text-right bg-amber-50/50">Anterior</TableHead>
                         <TableHead className="px-3 py-4 text-[10px] font-black uppercase tracking-widest text-center bg-emerald-50/50 border-x border-emerald-100 min-w-[210px]">Medição Atual (UN ou %)</TableHead>
+                        <TableHead className="px-3 py-4 text-[10px] font-black uppercase tracking-widest text-right bg-emerald-50/30">Valor Medido</TableHead>
                         <TableHead className="px-3 py-4 text-[10px] font-black uppercase tracking-widest text-right">Saldo Qtd</TableHead>
                         <TableHead className="px-3 py-4 text-[10px] font-black uppercase tracking-widest text-right bg-rose-50/40">Saldo R$</TableHead>
                       </TableRow>
@@ -599,7 +664,7 @@ export default function Medicoes() {
                     <TableBody>
                       {itensPrincipais.length > 0 && (
                         <TableRow className="bg-slate-100">
-                          <TableCell colSpan={9} className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600">📋 Itens Contratuais ({itensPrincipais.length})</TableCell>
+                          <TableCell colSpan={10} className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600">📋 Itens Contratuais ({itensPrincipais.length})</TableCell>
                         </TableRow>
                       )}
                       {itensPrincipais.map(ci => renderLancRow(ci))}
@@ -607,7 +672,7 @@ export default function Medicoes() {
                       {itensAditivos.length > 0 && (
                         <>
                           <TableRow className="bg-blue-50">
-                            <TableCell colSpan={9} className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-blue-700">➕ Itens Aditivos ({itensAditivos.length})</TableCell>
+                            <TableCell colSpan={10} className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-blue-700">➕ Itens Aditivos ({itensAditivos.length})</TableCell>
                           </TableRow>
                           {itensAditivos.map(ci => renderLancRow(ci, true))}
                         </>
@@ -662,6 +727,18 @@ export default function Medicoes() {
                                 <p className="text-sm font-black text-emerald-600">{fmtBRL(m.valor_liquido)}</p>
                               </div>
                             </div>
+                            <button
+                              onClick={() => abrirPrevisao(m)}
+                              className={`w-full px-6 py-3 border-b text-left flex items-center justify-between gap-2 hover:bg-amber-50 transition-colors ${m.data_previsao_recebimento ? "bg-amber-50/40" : "bg-white"}`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <CalendarClock size={14} className="text-amber-600" />
+                                <Label className="text-[9px] font-black uppercase text-slate-500 cursor-pointer">Previsão Recebimento</Label>
+                              </div>
+                              <span className={`text-xs font-black ${m.data_previsao_recebimento ? "text-amber-700" : "text-slate-400 italic"}`}>
+                                {m.data_previsao_recebimento ? format(new Date(m.data_previsao_recebimento + "T00:00:00"), "dd/MM/yyyy") : "Definir →"}
+                              </span>
+                            </button>
                             <div className="p-3 bg-slate-100 grid grid-cols-2 gap-1">
                               {!aprovada && (
                                 <Button variant="ghost" size="sm" className="text-blue-600 font-bold text-[10px] gap-1" onClick={() => openEditMedicao(m)}>
@@ -762,6 +839,60 @@ export default function Medicoes() {
             <DialogFooter>
               <Button variant="outline" onClick={() => setEditingMedicao(null)}>Cancelar</Button>
               <Button onClick={handleSalvarEdicao}>Salvar Alterações</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* ============ DIALOG PREVISÃO RECEBIMENTO ============ */}
+        <Dialog open={!!previsaoMedicao} onOpenChange={(o) => !o && setPrevisaoMedicao(null)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <CalendarClock className="text-amber-500" size={20} />
+                Previsão de Recebimento
+              </DialogTitle>
+            </DialogHeader>
+            {previsaoMedicao && (
+              <div className="space-y-4">
+                <div className="bg-slate-50 rounded-xl p-4 text-xs space-y-1">
+                  <p className="font-black text-slate-700">Medição #{String(previsaoMedicao.numero).padStart(3, "0")}</p>
+                  <p className="text-slate-500">
+                    Período: {format(new Date(previsaoMedicao.periodo_inicio + "T00:00:00"), "dd/MM/yyyy")} → {format(new Date(previsaoMedicao.periodo_fim + "T00:00:00"), "dd/MM/yyyy")}
+                  </p>
+                  <p className="text-slate-500">Valor líquido: <span className="font-black text-emerald-600">{fmtBRL(previsaoMedicao.valor_liquido)}</span></p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase text-slate-500">Data Prevista para Recebimento</Label>
+                  <Input type="date" value={previsaoData} onChange={e => setPrevisaoData(e.target.value)} className="h-12 rounded-xl font-bold" />
+                  <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3 text-[11px] text-amber-800">
+                    <span>💡</span>
+                    <div>
+                      <span className="font-black">Sugestão automática:</span> dia 10 do mês seguinte ao período da medição (
+                      <button
+                        type="button"
+                        onClick={() => setPrevisaoData(sugerirDataPrevisao(previsaoMedicao.periodo_fim))}
+                        className="underline font-black text-amber-900 hover:text-amber-700"
+                      >
+                        {format(new Date(sugerirDataPrevisao(previsaoMedicao.periodo_fim) + "T00:00:00"), "dd/MM/yyyy")}
+                      </button>
+                      ). Ajuste conforme contrato com o cliente.
+                    </div>
+                  </div>
+                  {previsaoMedicao.conta_receber_id && (
+                    <p className="text-[10px] text-slate-500 italic">
+                      ℹ️ Esta medição já foi aprovada — a data de vencimento da conta a receber será atualizada.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setPrevisaoMedicao(null)}>Cancelar</Button>
+              <Button onClick={salvarPrevisao} disabled={previsaoSaving} className="bg-amber-500 hover:bg-amber-600">
+                {previsaoSaving ? <RefreshCw className="animate-spin h-4 w-4 mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                Salvar Previsão
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
