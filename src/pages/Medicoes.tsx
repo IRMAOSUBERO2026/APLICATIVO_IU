@@ -504,6 +504,7 @@ export default function Medicoes() {
             </span>
           </div>
         </TableCell>
+        <TableCell className="px-3 py-4 text-right font-black text-emerald-700 text-xs bg-emerald-50/30">{fmtBRL(qtdAtual * vUnitEf)}</TableCell>
         <TableCell className={`px-3 py-4 text-right text-xs font-bold ${saldoQtd < 0 ? "text-rose-500" : "text-slate-500"}`}>{fmtNum(saldoQtd)}</TableCell>
         <TableCell className="px-3 py-4 text-right font-black text-rose-600 text-xs bg-rose-50/20">{fmtBRL(saldoR)}</TableCell>
       </TableRow>
