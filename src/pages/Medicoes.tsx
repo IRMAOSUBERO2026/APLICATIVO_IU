@@ -121,25 +121,25 @@ export default function Medicoes() {
 
   const selectedObra = obras.find(o => o.id === selectedObraId);
 
+  // Totais por obra para o painel inicial
+  const [totaisObras, setTotaisObras] = useState<Record<string, { contrato: number; medido: number }>>({});
+
   const loadObrasEmExecucao = async () => {
     setIsLoadingObras(true);
     setObrasError("");
 
-    // Tentativa 1: traz colunas extras (retenção/impostos). Se a coluna não existir
-    // (cache de schema, projeto antigo etc.), faz fallback para colunas básicas.
     const fullCols = "id,nome,codigo,empresa_id,status,construtora,cliente,cidade,uf,endereco,percentual_retencao_padrao,impostos_padrao";
     const baseCols = "id,nome,codigo,empresa_id,status,construtora,cliente,cidade,uf,endereco";
 
+    // Carrega TODAS as obras (ativas + finalizadas) para o painel inicial.
     let { data, error } = await supabase.from("obras")
       .select(fullCols)
-      .eq("status", "em_execucao")
       .order("codigo", { ascending: true });
 
     if (error) {
       console.warn("[Medicoes] Fallback para colunas básicas de obras:", error.message);
       const fb = await supabase.from("obras")
         .select(baseCols)
-        .eq("status", "em_execucao")
         .order("codigo", { ascending: true });
       data = fb.data as any;
       error = fb.error;
@@ -147,15 +147,38 @@ export default function Medicoes() {
 
     if (error) {
       setObras([]);
-      setObrasError("Não foi possível carregar as obras em execução.");
+      setObrasError("Não foi possível carregar as obras.");
     } else {
-      const obrasAtivas = (data || []) as Obra[];
-      setObras(obrasAtivas);
-      setSelectedObraId(prev => obrasAtivas.some(o => o.id === prev) ? prev : "");
+      const all = (data || []) as Obra[];
+      setObras(all);
+      setSelectedObraId(prev => all.some(o => o.id === prev) ? prev : "");
+      // Busca totais agregados em paralelo
+      loadTotaisObras(all.map(o => o.id));
     }
 
     setIsLoadingObras(false);
   };
+
+  const loadTotaisObras = async (obraIds: string[]) => {
+    if (obraIds.length === 0) { setTotaisObras({}); return; }
+    const [itensRes, medRes] = await Promise.all([
+      supabase.from("medicao_contrato_itens").select("obra_id,quantidade,valor_unitario,valor_total,quantidade_acumulada_inicial").in("obra_id", obraIds),
+      supabase.from("medicoes").select("obra_id,valor_bruto").in("obra_id", obraIds),
+    ]);
+    const tot: Record<string, { contrato: number; medido: number }> = {};
+    obraIds.forEach(id => tot[id] = { contrato: 0, medido: 0 });
+    (itensRes.data || []).forEach((i: any) => {
+      const v = Number(i.valor_total) || (Number(i.quantidade) || 0) * (Number(i.valor_unitario) || 0);
+      tot[i.obra_id].contrato += v;
+      // Acumulado inicial conta como já medido
+      tot[i.obra_id].medido += (Number(i.quantidade_acumulada_inicial) || 0) * (Number(i.valor_unitario) || 0);
+    });
+    (medRes.data || []).forEach((m: any) => {
+      tot[m.obra_id].medido += Number(m.valor_bruto) || 0;
+    });
+    setTotaisObras(tot);
+  };
+
 
   useEffect(() => { loadObrasEmExecucao(); }, []);
 
