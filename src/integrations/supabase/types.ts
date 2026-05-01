@@ -1831,6 +1831,7 @@ export type Database = {
           conta_receber_id: string | null
           created_at: string
           data_emissao: string
+          data_previsao_recebimento: string | null
           empresa_id: string
           id: string
           numero: number
@@ -1851,6 +1852,7 @@ export type Database = {
           conta_receber_id?: string | null
           created_at?: string
           data_emissao?: string
+          data_previsao_recebimento?: string | null
           empresa_id: string
           id?: string
           numero: number
@@ -1871,6 +1873,7 @@ export type Database = {
           conta_receber_id?: string | null
           created_at?: string
           data_emissao?: string
+          data_previsao_recebimento?: string | null
           empresa_id?: string
           id?: string
           numero?: number
