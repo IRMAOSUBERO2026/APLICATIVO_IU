@@ -125,28 +125,24 @@ export default function Medicoes() {
     }
   };
 
-  const selectedObra = obras.find(o => o.id === selectedObraId);
+  const selectedObra = useMemo(() => obras.find(o => o.id === selectedObraId), [obras, selectedObraId]);
   const [totaisObras, setTotaisObras] = useState<Record<string, { contrato: number; medido: number }>>({});
 
   const loadObrasEmExecucao = async () => {
     setIsLoadingObras(true);
     setObrasError("");
-    const fullCols = "id,nome,codigo,empresa_id,status,construtora,cliente,cidade,uf,endereco,percentual_retencao_padrao,impostos_padrao";
-    let { data, error } = await supabase.from("obras").select(fullCols).order("codigo", { ascending: true });
-    if (error) {
-       const fb = await supabase.from("obras").select("id,nome,codigo,empresa_id,status,construtora,cliente,cidade,uf,endereco").order("codigo", { ascending: true });
-       data = fb.data as any;
-       error = fb.error;
-    }
-    if (error) {
-      setObras([]);
-      setObrasError("Não foi possível carregar as obras.");
-    } else {
+    try {
+      const { data, error } = await supabase.from("obras").select("*").order("codigo", { ascending: true });
+      if (error) throw error;
       const all = (data || []) as Obra[];
       setObras(all);
       loadTotaisObras(all.map(o => o.id));
+    } catch (err) {
+      setObras([]);
+      setObrasError("Não foi possível carregar as obras.");
+    } finally {
+      setIsLoadingObras(false);
     }
-    setIsLoadingObras(false);
   };
 
   const loadTotaisObras = async (obraIds: string[]) => {
@@ -159,11 +155,11 @@ export default function Medicoes() {
     obraIds.forEach(id => tot[id] = { contrato: 0, medido: 0 });
     (itensRes.data || []).forEach((i: any) => {
       const v = Number(i.valor_total) || (Number(i.quantidade) || 0) * (Number(i.valor_unitario) || 0);
-      tot[i.obra_id].contrato += v;
-      tot[i.obra_id].medido += (Number(i.quantidade_acumulada_inicial) || 0) * (Number(i.valor_unitario) || 0);
+      if (tot[i.obra_id]) tot[i.obra_id].contrato += v;
+      if (tot[i.obra_id]) tot[i.obra_id].medido += (Number(i.quantidade_acumulada_inicial) || 0) * (Number(i.valor_unitario) || 0);
     });
     (medRes.data || []).forEach((m: any) => {
-      tot[m.obra_id].medido += Number(m.valor_bruto) || 0;
+      if (tot[m.obra_id]) tot[m.obra_id].medido += Number(m.valor_bruto) || 0;
     });
     setTotaisObras(tot);
   };
@@ -173,11 +169,12 @@ export default function Medicoes() {
   useEffect(() => {
     if (!selectedObraId) return;
     loadData();
-    if (selectedObra) {
-      setMedicaoForm(p => ({ ...p, percentual_retencao: Number(selectedObra.percentual_retencao_padrao ?? 5) }));
-      supabase.from("empresas").select("*").eq("id", selectedObra.empresa_id).maybeSingle().then(({ data }) => setEmpresa(data));
+    const obra = obras.find(o => o.id === selectedObraId);
+    if (obra) {
+      setMedicaoForm(p => ({ ...p, percentual_retencao: Number(obra.percentual_retencao_padrao ?? 5) }));
+      supabase.from("empresas").select("*").eq("id", obra.empresa_id).maybeSingle().then(({ data }) => setEmpresa(data));
     }
-  }, [selectedObraId]);
+  }, [selectedObraId, obras]);
 
   const sortByItemNumero = (a: any, b: any) => {
     const pa = String(a.item_numero || "").split(".").map((p: string) => parseInt(p, 10) || p);
@@ -238,8 +235,8 @@ export default function Medicoes() {
     }, 0);
   }, [lancamentosAtuais, contratoItens]);
 
-  const totalContrato = contratoItens.reduce((s, i) => s + (i.quantidade * i.valor_unitario), 0);
-  const totalMedido = Object.values(boletimItens).reduce((s, itens) => s + itens.reduce((ss, i) => ss + i.valor_medido, 0), 0);
+  const totalContrato = useMemo(() => contratoItens.reduce((s, i) => s + (i.quantidade * i.valor_unitario), 0), [contratoItens]);
+  const totalMedido = useMemo(() => Object.values(boletimItens).reduce((s, itens) => s + itens.reduce((ss, i) => ss + i.valor_medido, 0), 0), [boletimItens]);
 
   const handleQtyChange = (itemId: string, qty: number) => {
     setLancamentosAtuais(prev => ({ ...prev, [itemId]: qty }));
@@ -484,7 +481,7 @@ export default function Medicoes() {
                           {contratoItens.map(ci => {
                             const prev = acumuladoAnterior[ci.id] || { qtd: 0, etiquetas: [] };
                             const agoraQtd = lancamentosAtuais[ci.id] || 0;
-                            const agoraPct = (agoraQtd / (ci.quantidade || 1)) * 100;
+                            const agoraPct = ci.quantidade > 0 ? (agoraQtd / ci.quantidade) * 100 : 0;
                             const saldo = ci.quantidade - (prev.qtd + agoraQtd);
                             const milestones = ci.condicoes_medicao || [];
 
@@ -525,7 +522,7 @@ export default function Medicoes() {
                                   </TableCell>
                                   <TableCell className="px-6 py-4 text-right">
                                      <p className="text-xs font-bold text-amber-600">{fNum(prev.qtd)}</p>
-                                     <p className="text-[8px] font-black text-amber-200 uppercase">{fPct((prev.qtd / ci.quantidade) * 100)}</p>
+                                     <p className="text-[8px] font-black text-amber-200 uppercase">{fPct(ci.quantidade > 0 ? (prev.qtd / ci.quantidade) * 100 : 0)}</p>
                                   </TableCell>
                                   <TableCell className="px-6 py-4 bg-emerald-50/5">
                                      <div className="flex items-center gap-2 max-w-xs mx-auto">
