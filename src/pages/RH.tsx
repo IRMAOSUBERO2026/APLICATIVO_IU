@@ -26,13 +26,15 @@ const STATUS_OPTIONS = [
   { value: "ativo", label: "Ativo" },
   { value: "ferias", label: "Férias" },
   { value: "afastado", label: "Afastado / Atestado" },
-  { value: "desligado", label: "Desligado / Abandono" },
+  { value: "abandono", label: "Abandono" },
+  { value: "desligado", label: "Desligado" },
 ] as const;
 
 function normalizeStatusForDb(status: string) {
   const s = String(status ?? "").toLowerCase().trim();
   if (["atestado", "afastado"].includes(s)) return "afastado";
-  if (["abandono", "desligado"].includes(s)) return "desligado";
+  if (["desligado"].includes(s)) return "desligado";
+  if (["abandono"].includes(s)) return "abandono";
   if (["ferias", "férias"].includes(s)) return "ferias";
   return "ativo";
 }
@@ -42,6 +44,7 @@ function getStatusColor(status: string) {
     case "ativo": return "bg-success/10 text-success";
     case "ferias": return "bg-warning/10 text-warning";
     case "afastado": return "bg-muted text-muted-foreground";
+    case "abandono": return "bg-[#F97316]/10 text-[#F97316]"; // Laranja para abandono
     case "desligado": return "bg-destructive/10 text-destructive";
     default: return "bg-muted text-muted-foreground";
   }

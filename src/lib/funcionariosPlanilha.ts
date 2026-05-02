@@ -140,7 +140,7 @@ function normStatus(s: any): string {
     "férias": "ferias", "ferias": "ferias",
     "atestado": "afastado", "afastamento": "afastado", "afastado": "afastado",
     "desligado": "desligado", "desligada": "desligado",
-    "abandono": "ativo", // MUDANÇA: Abandono é tratado como ATIVO para ficar no radar
+    "abandono": "abandono", // Abandono agora é um status oficial
     "pré-cadastro": "ativo", "pre-cadastro": "ativo", "pré cadastro": "ativo",
     "experiência": "ativo", "experiencia": "ativo",
   };
@@ -373,7 +373,7 @@ export async function importarPlanilhaFuncionarios(
     const statusOriginal = getCell(r, COL.status);
     const isAbandono = abandono && abandono.toLowerCase() !== "não" && abandono.toLowerCase() !== "nao";
     const statusForcado = isAbandono
-      ? "ativo" // Abandono fica ATIVO no radar
+      ? "abandono" // Força o status de Abandono
       : atestado
         ? "afastado"
         : "";
