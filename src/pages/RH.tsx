@@ -662,7 +662,7 @@ export default function RH() {
                       );
                     })}
                     {sorted.length === 0 && (
-                      <tr><td colSpan={11} className="px-4 py-8 text-center text-muted-foreground">Nenhum funcionário encontrado</td></tr>
+                      <tr><td colSpan={12} className="px-4 py-8 text-center text-muted-foreground">Nenhum funcionário encontrado</td></tr>
                     )}
                   </tbody>
                 </table>
