@@ -21,16 +21,16 @@ export function AppLayout({ children }: AppLayoutProps) {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 transform bg-sidebar transition-transform duration-300 lg:relative lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 w-60 transform bg-sidebar transition-transform duration-300 lg:relative lg:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         <AppSidebar onClose={() => setSidebarOpen(false)} />
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        {/* Header desktop + mobile com seletor de contexto */}
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background/95 backdrop-blur px-4">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
+        {/* Header */}
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border bg-card px-4">
           <button
             onClick={() => setSidebarOpen(true)}
             className="rounded-md p-2 text-muted-foreground hover:bg-secondary lg:hidden"

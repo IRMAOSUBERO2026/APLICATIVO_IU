@@ -24,7 +24,6 @@ import {
   Ruler,
   CalendarDays,
   PenLine,
-  BarChart3,
   UserCheck,
   Bell,
 } from "lucide-react";
@@ -64,7 +63,7 @@ const menuSections = [
     ],
   },
   {
-    label: "Operacional",
+    label: "Suprimentos",
     items: [
       { icon: ShoppingCart, label: "Compras", path: "/compras" },
       { icon: Package, label: "Estoque", path: "/estoque" },
@@ -97,13 +96,14 @@ export function AppSidebar({ onClose }: AppSidebarProps) {
   const location = useLocation();
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto scrollbar-sidebar">
-      <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border">
+    <div className="flex h-full flex-col overflow-y-auto scrollbar-sidebar bg-sidebar">
+      {/* Topo: logo */}
+      <div className="flex h-16 items-center justify-between px-5 border-b border-sidebar-border">
         <div className="flex items-center gap-2.5">
-          <img src={logoPreto} alt="Irmãos Ubero" className="h-10 w-auto" />
+          <img src={logoPreto} alt="Irmãos Ubero" className="h-9 w-auto" />
           <div>
-            <h1 className="text-xs font-bold text-sidebar-accent-foreground tracking-tight leading-tight">IRMÃOS UBERO</h1>
-            <p className="text-[9px] text-sidebar-muted leading-none">Engenharia</p>
+            <h1 className="text-[12px] font-bold text-sidebar-foreground tracking-tight leading-tight">IRMÃOS UBERO</h1>
+            <p className="text-[9px] text-sidebar-muted leading-none uppercase tracking-wider">Engenharia</p>
           </div>
         </div>
         <button onClick={onClose} className="rounded-md p-1 text-sidebar-muted hover:text-sidebar-foreground lg:hidden">
@@ -111,28 +111,40 @@ export function AppSidebar({ onClose }: AppSidebarProps) {
         </button>
       </div>
 
-      <nav className="flex-1 px-3 py-4 space-y-6">
-        {menuSections.map((section) => (
-          <div key={section.label}>
-            <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-widest text-sidebar-muted">
+      {/* Navegação */}
+      <nav className="flex-1 px-2 py-4">
+        {menuSections.map((section, sIdx) => (
+          <div
+            key={section.label}
+            className={sIdx > 0 ? "mt-5 pt-5 border-t border-sidebar-border" : ""}
+          >
+            <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-sidebar-muted">
               {section.label}
             </p>
-            <ul className="space-y-0.5">
+            <ul className="space-y-px">
               {section.items.map((item) => {
                 const isActive = location.pathname === item.path;
                 return (
-                  <li key={item.path}>
+                  <li key={item.path} className="relative">
+                    {isActive && (
+                      <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-r bg-sidebar-active-border" />
+                    )}
                     <Link
                       to={item.path}
                       onClick={onClose}
-                      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                      className={`group flex items-center gap-3 rounded-md pl-4 pr-3 py-2 text-[13px] font-normal transition-colors ${
                         isActive
-                          ? "bg-sidebar-accent text-sidebar-primary"
-                          : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                          ? "bg-sidebar-accent text-sidebar-foreground"
+                          : "text-sidebar-foreground/90 hover:bg-sidebar-hover"
                       }`}
                     >
-                      <item.icon className="h-4 w-4 flex-shrink-0" />
-                      {item.label}
+                      <item.icon
+                        className={`h-4 w-4 flex-shrink-0 ${
+                          isActive ? "text-sidebar-foreground" : "text-sidebar-icon"
+                        }`}
+                        strokeWidth={1.75}
+                      />
+                      <span className="truncate">{item.label}</span>
                     </Link>
                   </li>
                 );
@@ -142,14 +154,15 @@ export function AppSidebar({ onClose }: AppSidebarProps) {
         ))}
       </nav>
 
+      {/* Rodapé: usuário */}
       <div className="border-t border-sidebar-border p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sidebar-accent text-xs font-bold text-sidebar-primary">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">
             AD
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-sidebar-accent-foreground">Administrador</p>
-            <p className="truncate text-xs text-sidebar-muted">admin@irmaos ubero.com</p>
+            <p className="truncate text-[13px] font-medium text-sidebar-foreground">Administrador</p>
+            <p className="truncate text-[11px] text-sidebar-muted">admin@irmaosubero.com</p>
           </div>
         </div>
       </div>
