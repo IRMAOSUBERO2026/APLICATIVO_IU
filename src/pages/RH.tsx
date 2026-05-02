@@ -457,7 +457,7 @@ export default function RH() {
                         <td className="px-4 py-3.5 text-center">{f.data_nr35 ? <ExamBadge date={f.data_nr35} validityYears={2} label="NR35" /> : <span className="text-[10px] text-muted-foreground">—</span>}</td>
                         <td className="px-4 py-3.5 text-center">
                           {(() => {
-                            const bons = f.bonificacoes_padrao;
+                            const bons = f.bonificacoes_padrao as any[];
                             if (!Array.isArray(bons) || bons.length === 0) return <span className="text-[10px] text-muted-foreground">—</span>;
                             const total = bons.reduce((acc: number, b: any) => acc + (Number(b.valor) || 0), 0);
                             return (
@@ -628,7 +628,7 @@ export default function RH() {
                           </td>
                           <td className="px-3 py-2.5 text-center">
                             {(() => {
-                              const bons = f.bonificacoes_padrao;
+                              const bons = f.bonificacoes_padrao as any[];
                               if (!Array.isArray(bons) || bons.length === 0) return <span className="text-[10px] text-muted-foreground">—</span>;
                               const total = bons.reduce((acc: number, b: any) => acc + (Number(b.valor) || 0), 0);
                               return (
