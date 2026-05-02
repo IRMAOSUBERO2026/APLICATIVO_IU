@@ -16,7 +16,7 @@ import {
   Palmtree,
   Calculator,
   Building2,
-  HandshakeIcon,
+  Handshake,
   FileText,
   Home,
   MessageCircle,
@@ -77,7 +77,7 @@ const menuSections = [
     items: [
       { icon: Building2, label: "Empresas", path: "/empresas" },
       { icon: UserCheck, label: "Clientes", path: "/clientes" },
-      { icon: HandshakeIcon, label: "Fornecedores", path: "/fornecedores" },
+      { icon: Handshake, label: "Fornecedores", path: "/fornecedores" },
       { icon: Home, label: "Contratos Locação", path: "/contratos-locacao" },
       { icon: Bell, label: "Solicitações", path: "/solicitacoes" },
       { icon: MessageCircle, label: "Comunicações", path: "/comunicacoes" },
