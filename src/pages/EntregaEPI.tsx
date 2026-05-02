@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import FichasEPIPanel from "@/components/epi/FichasEPIPanel";
 import { ScrollableTable } from "@/components/shared/ScrollableTable";
+import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 
 export default function EntregaEPI() {
   const [entregas, setEntregas] = useState<any[]>([]);
@@ -43,7 +44,7 @@ export default function EntregaEPI() {
         supabase.from("entregas_epi").select("*, funcionarios(nome), produtos(descricao), obras(nome, codigo)").order("data_entrega", { ascending: false }).limit(200),
         supabase.from("produtos").select("*").order("descricao"),
         supabase.from("movimentacoes_estoque").select("produto_id, tipo, quantidade"),
-        supabase.from("obras").select("id, nome, codigo").eq("status", "em_andamento"),
+        supabase.from("obras").select("id, nome, codigo").in("status", OBRA_STATUS_ATIVOS_ARR),
         supabase.from("funcionarios").select("id, nome, obra_id, empresa_id").eq("status", "ativo").order("nome"),
       ]);
 

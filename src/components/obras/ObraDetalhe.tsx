@@ -41,7 +41,7 @@ interface ContratoItem {
   id: string; obra_id: string; empresa_id: string; item_numero: string; descricao: string;
   unidade: string; quantidade: number; valor_unitario: number; valor_total: number;
   is_aditivo: boolean; aditivo_numero?: number; aditivo_data?: string; observacoes?: string;
-  categoria?: string;
+  categoria?: string; quantidade_acumulada_inicial?: number;
 }
 interface Reajuste {
   id: string; obra_id: string; data_aplicacao: string; percentual: number;
@@ -103,7 +103,7 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
   // Item dialog
   const [showItemDialog, setShowItemDialog] = useState(false);
   const [editingItem, setEditingItem] = useState<ContratoItem | null>(null);
-  const [itemForm, setItemForm] = useState({ item_numero: "", descricao: "", unidade: "un", quantidade: 0, valor_unitario: 0, is_aditivo: false, aditivo_numero: 0, observacoes: "", categoria: "servico" });
+  const [itemForm, setItemForm] = useState({ item_numero: "", descricao: "", unidade: "un", quantidade: 0, valor_unitario: 0, is_aditivo: false, aditivo_numero: 0, observacoes: "", categoria: "servico", quantidade_acumulada_inicial: 0 });
 
   // Reajuste dialog
   const [showReajusteDialog, setShowReajusteDialog] = useState(false);

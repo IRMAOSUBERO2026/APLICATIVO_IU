@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useEmpresasObras } from "@/hooks/useEmpresasObras";
 import { EmpresaSelect, ObraSelect } from "@/components/shared/EmpresaObraSelects";
+import { BonificacoesPadraoEditor, type BonificacaoPadrao } from "@/components/rh/BonificacoesPadraoEditor";
+import { getBonificacoesFromFuncionario, salvarFuncionarioComBonificacoes, stripBonificacoesFromObservacoes } from "@/lib/bonificacoesPadrao";
 
 interface Props {
   open: boolean;
@@ -70,7 +72,13 @@ export function EditFuncionarioForm({ open, onOpenChange, funcionarioId, onSaved
     setLoading(true);
     supabase.from("funcionarios").select("*").eq("id", funcionarioId).single()
       .then(({ data }) => {
-        if (data) setForm(data);
+        if (data) {
+          setForm({
+            ...data,
+            observacoes: stripBonificacoesFromObservacoes((data as any).observacoes),
+            bonificacoes_padrao: getBonificacoesFromFuncionario(data as any),
+          });
+        }
         setLoading(false);
       });
   }, [open, funcionarioId]);
@@ -92,8 +100,10 @@ export function EditFuncionarioForm({ open, onOpenChange, funcionarioId, onSaved
     });
     updateData.empresa_id = form.empresa_id;
     updateData.obra_id = form.obra_id && form.obra_id !== "__none__" ? form.obra_id : null;
+    updateData.observacoes = stripBonificacoesFromObservacoes(form.observacoes);
+    updateData.bonificacoes_padrao = Array.isArray(form.bonificacoes_padrao) ? form.bonificacoes_padrao : [];
 
-    const { error } = await supabase.from("funcionarios").update(updateData).eq("id", funcionarioId);
+    const { error } = await salvarFuncionarioComBonificacoes(funcionarioId, updateData);
     if (error) {
       toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
     } else {
@@ -155,6 +165,13 @@ export function EditFuncionarioForm({ open, onOpenChange, funcionarioId, onSaved
                   )}
                 </div>
               ))}
+            </div>
+
+            <div className="mt-4">
+              <BonificacoesPadraoEditor
+                value={(Array.isArray(form.bonificacoes_padrao) ? form.bonificacoes_padrao : []) as BonificacaoPadrao[]}
+                onChange={(next) => setForm(prev => ({ ...prev, bonificacoes_padrao: next }))}
+              />
             </div>
             <div className="flex justify-end gap-2 pt-4 border-t mt-4">
               <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>

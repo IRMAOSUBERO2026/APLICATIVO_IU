@@ -1,5 +1,6 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Search, Upload, MessageCircle, UserPlus, FolderOpen, Stethoscope, ArrowRightLeft, Save, Filter, Calendar, LogOut, Pencil } from "lucide-react";
+import { Search, Upload, MessageCircle, UserPlus, FolderOpen, Stethoscope, ArrowRightLeft, Save, Filter, Calendar, LogOut, Pencil, FileSpreadsheet, FileDown } from "lucide-react";
+import { baixarModeloFuncionarios, importarPlanilhaFuncionarios } from "@/lib/funcionariosPlanilha";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { toast } from "@/hooks/use-toast";
 import { Funcionario, funcionariosData, getExamStatus } from "@/components/rh/types";
@@ -21,16 +22,27 @@ import { ScrollableTable } from "@/components/shared/ScrollableTable";
 
 type TabKey = "lista" | "exames_tab" | "exames_modulo";
 
-const STATUS_OPTIONS = ["Pré-Cadastro", "Ativo", "Experiência", "Desligado", "Abandono", "Atestado"] as const;
+const STATUS_OPTIONS = [
+  { value: "ativo", label: "Ativo" },
+  { value: "ferias", label: "Férias" },
+  { value: "afastado", label: "Afastado / Atestado" },
+  { value: "desligado", label: "Desligado / Abandono" },
+] as const;
+
+function normalizeStatusForDb(status: string) {
+  const s = String(status ?? "").toLowerCase().trim();
+  if (["atestado", "afastado"].includes(s)) return "afastado";
+  if (["abandono", "desligado"].includes(s)) return "desligado";
+  if (["ferias", "férias"].includes(s)) return "ferias";
+  return "ativo";
+}
 
 function getStatusColor(status: string) {
-  switch (status?.toLowerCase()) {
+  switch (normalizeStatusForDb(status)) {
     case "ativo": return "bg-success/10 text-success";
-    case "pré-cadastro": case "pre-cadastro": return "bg-warning/10 text-warning";
-    case "experiência": case "experiencia": return "bg-accent/10 text-accent";
+    case "ferias": return "bg-warning/10 text-warning";
+    case "afastado": return "bg-muted text-muted-foreground";
     case "desligado": return "bg-destructive/10 text-destructive";
-    case "abandono": return "bg-destructive/10 text-destructive";
-    case "atestado": return "bg-muted text-muted-foreground";
     default: return "bg-muted text-muted-foreground";
   }
 }
@@ -50,10 +62,12 @@ function calcExperiencia(admissao: string): string | null {
 export default function RH() {
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<TabKey>("lista");
-  const [sortBy, setSortBy] = useState<"nome" | "admissao" | "obra" | "status">("nome");
+  const [sortBy, setSortBy] = useState<"nome" | "admissao" | "obra" | "status" | "registro">("nome");
+  const [editingExamFunc, setEditingExamFunc] = useState<any>(null);
   const [filterObra, setFilterObra] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const xlsxInputRef = useRef<HTMLInputElement>(null);
   const [funcionarios] = useState(funcionariosData);
   const [whatsOpen, setWhatsOpen] = useState(false);
   const [preCadastroOpen, setPreCadastroOpen] = useState(false);
@@ -85,7 +99,9 @@ export default function RH() {
 
   useEffect(() => {
     loadDbFuncionarios();
-    supabase.from("obras").select("id, nome, codigo").eq("status", "em_andamento")
+    supabase.from("obras").select("id, nome, codigo, status")
+      .in("status", ["em_andamento", "em_execucao", "ativa", "ativo"])
+      .order("codigo")
       .then(({ data }) => { if (data) setObras(data); });
     supabase.from("empresas").select("id, razao_social, nome_fantasia, cnpj")
       .then(({ data }) => { if (data) setEmpresas(data); });
@@ -138,9 +154,28 @@ export default function RH() {
       case "admissao": return (a.data_admissao || "").localeCompare(b.data_admissao || "");
       case "obra": return (a.obraNome || "").localeCompare(b.obraNome || "");
       case "status": return (a.status || "").localeCompare(b.status || "");
+      case "registro": {
+        const na = parseInt(String(a.numero_registro || "").replace(/\D/g, ""), 10);
+        const nb = parseInt(String(b.numero_registro || "").replace(/\D/g, ""), 10);
+        if (isNaN(na) && isNaN(nb)) return 0;
+        if (isNaN(na)) return 1;
+        if (isNaN(nb)) return -1;
+        return na - nb;
+      }
       default: return 0;
     }
   });
+
+  const saveExames = async (funcId: string, data: { data_aso?: string | null; data_nr6?: string | null; data_nr12?: string | null; data_nr18?: string | null; data_nr35?: string | null }) => {
+    const { error } = await supabase.from("funcionarios").update(data).eq("id", funcId);
+    if (error) {
+      toast({ title: "Erro ao salvar exames", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Exames/Treinamentos atualizados" });
+      setEditingExamFunc(null);
+      loadDbFuncionarios();
+    }
+  };
 
   const examesVencendo = funcionarios.filter(f =>
     getExamStatus(f.aso, 1) !== "ok" || getExamStatus(f.nr6, 1) !== "ok" ||
@@ -184,9 +219,10 @@ export default function RH() {
   };
 
   const saveStatus = async (funcId: string, newStatus: string) => {
-    const updateData: any = { status: newStatus.toLowerCase() };
+    const statusDb = normalizeStatusForDb(newStatus);
+    const updateData: any = { status: statusDb };
     // If desligado and no rescisao date, set today
-    if (newStatus.toLowerCase() === "desligado") {
+    if (statusDb === "desligado") {
       const f = dbFuncionarios.find(x => x.id === funcId);
       if (!f?.data_rescisao) {
         updateData.data_rescisao = format(new Date(), "yyyy-MM-dd");
@@ -240,6 +276,85 @@ export default function RH() {
               <Upload className="h-4 w-4" /> Importar CSV
             </button>
             <input ref={fileInputRef} type="file" accept=".csv,.txt" className="hidden" onChange={handleFileUpload} />
+            <button
+              onClick={async () => {
+                try {
+                  await baixarModeloFuncionarios();
+                  toast({ title: "Modelo gerado", description: "Arquivo .xlsx baixado." });
+                } catch (e: any) {
+                  toast({ title: "Erro", description: e?.message ?? "Falha ao gerar modelo", variant: "destructive" });
+                }
+              }}
+              className="inline-flex items-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+              title="Baixar planilha modelo (.xlsx) limpa, sem funcionários antigos"
+            >
+              <FileDown className="h-4 w-4" /> Baixar Modelo
+            </button>
+            <button
+              onClick={() => xlsxInputRef.current?.click()}
+              className="inline-flex items-center gap-2 rounded-lg bg-success/90 px-4 py-2.5 text-sm font-medium text-success-foreground shadow-sm hover:bg-success transition-colors"
+              title="Importar planilha .xlsx para criar/atualizar funcionários"
+            >
+              <FileSpreadsheet className="h-4 w-4" /> Importar Planilha
+            </button>
+            <input
+              ref={xlsxInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                e.target.value = "";
+
+                // Pergunta o MODO de importação para evitar duplicatas
+                const escolha = window.prompt(
+                  "Como deseja importar a planilha?\n\n" +
+                  "O sistema compara por CPF, Nº Reg e Nome + Nascimento para evitar duplicados.\n\n" +
+                  "1 = ATUALIZAR funcionários existentes E criar novos (padrão)\n" +
+                  "2 = APENAS ATUALIZAR funcionários já cadastrados (não cria nada novo)\n" +
+                  "3 = APENAS CRIAR novos (pula quem já existe)\n\n" +
+                  "Digite 1, 2 ou 3:",
+                  "1",
+                );
+                if (escolha === null) return; // cancelou
+                const modo: "atualizar_e_criar" | "atualizar_somente" | "criar_somente" =
+                  escolha.trim() === "2" ? "atualizar_somente"
+                  : escolha.trim() === "3" ? "criar_somente"
+                  : "atualizar_e_criar";
+
+                const labelModo =
+                  modo === "atualizar_somente" ? "Apenas atualização"
+                  : modo === "criar_somente" ? "Apenas novos"
+                  : "Atualizar + criar novos";
+
+                toast({ title: `Importando (${labelModo})...`, description: "Processando planilha, aguarde." });
+                try {
+                  const r = await importarPlanilhaFuncionarios(file, modo);
+                  setSearch("");
+                  setFilterObra("");
+                  setFilterStatus("");
+                  setSortBy("nome");
+                  setTab("lista");
+                  loadDbFuncionarios();
+                  const msg =
+                    `${r.criados} criados, ${r.atualizados} atualizados, ` +
+                    `${r.pulados_existentes} pulados, ${r.ignorados} ignorados (de ${r.total}).`;
+                  if (r.erros.length > 0) {
+                    console.warn("Erros de importação:", r.erros);
+                    toast({
+                      title: "Importação concluída com avisos",
+                      description: msg + ` ${r.erros.length} erro(s) — veja o console.`,
+                      variant: r.criados + r.atualizados === 0 ? "destructive" : "default",
+                    });
+                  } else {
+                    toast({ title: `Importação concluída — ${labelModo}`, description: msg });
+                  }
+                } catch (err: any) {
+                  toast({ title: "Erro na importação", description: err?.message ?? String(err), variant: "destructive" });
+                }
+              }}
+            />
             <button onClick={() => setPreCadastroOpen(true)} className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors">
               <UserPlus className="h-4 w-4" /> Pré-Cadastro
             </button>
@@ -290,15 +405,15 @@ export default function RH() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 rounded-lg bg-muted p-1">
-          <button onClick={() => setTab("lista")} className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${tab === "lista" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+        <div className="flex gap-1 overflow-x-auto rounded-lg bg-muted p-1 scrollbar-thin">
+          <button onClick={() => setTab("lista")} className={`min-w-max flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${tab === "lista" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
             Lista de Funcionários
           </button>
-          <button onClick={() => setTab("exames_tab")} className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors relative ${tab === "exames_tab" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+          <button onClick={() => setTab("exames_tab")} className={`relative min-w-max flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${tab === "exames_tab" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
             Exames e Treinamentos
             {examesVencendo.length > 0 && <span className="ml-2 inline-flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">{examesVencendo.length}</span>}
           </button>
-          <button onClick={() => setTab("exames_modulo")} className={`flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${tab === "exames_modulo" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+          <button onClick={() => setTab("exames_modulo")} className={`min-w-max flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${tab === "exames_modulo" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
             <span className="flex items-center justify-center gap-1.5"><Stethoscope className="h-3.5 w-3.5" /> Gestão de Exames</span>
           </button>
         </div>
@@ -307,10 +422,15 @@ export default function RH() {
           <ExamesModule />
         ) : tab === "exames_tab" ? (
           <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+            <div className="px-4 py-3 border-b bg-muted/30 flex items-center justify-between">
+              <h3 className="text-sm font-semibold">Exames e Treinamentos ({sorted.length} funcionários)</h3>
+              <p className="text-xs text-muted-foreground">Clique em <Pencil className="inline h-3 w-3" /> para editar as datas</p>
+            </div>
             <ScrollableTable>
-              <table className="w-full text-sm">
+              <table className="w-full min-w-[980px] text-sm">
                 <thead>
                   <tr className="border-b bg-muted/50">
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Nº Reg</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Nome</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Empresa</th>
                     <th className="px-4 py-3 text-center font-medium text-muted-foreground">ASO</th>
@@ -318,20 +438,33 @@ export default function RH() {
                     <th className="px-4 py-3 text-center font-medium text-muted-foreground">NR12</th>
                     <th className="px-4 py-3 text-center font-medium text-muted-foreground">NR18</th>
                     <th className="px-4 py-3 text-center font-medium text-muted-foreground">NR35</th>
+                    <th className="px-4 py-3 text-center font-medium text-muted-foreground">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {funcionarios.map((f) => (
-                    <tr key={f.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3.5"><div className="flex items-center gap-3"><FuncionarioAvatar nome={f.nome} foto={f.foto} size="sm" /><span className="font-medium">{f.nome}</span></div></td>
-                      <td className="px-4 py-3.5 text-xs text-muted-foreground">{f.empresa}</td>
-                      <td className="px-4 py-3.5 text-center"><ExamBadge date={f.aso} validityYears={1} label="ASO" /></td>
-                      <td className="px-4 py-3.5 text-center"><ExamBadge date={f.nr6} validityYears={1} label="NR6" /></td>
-                      <td className="px-4 py-3.5 text-center"><ExamBadge date={f.nr12} validityYears={2} label="NR12" /></td>
-                      <td className="px-4 py-3.5 text-center"><ExamBadge date={f.nr18} validityYears={2} label="NR18" /></td>
-                      <td className="px-4 py-3.5 text-center"><ExamBadge date={f.nr35} validityYears={2} label="NR35" /></td>
-                    </tr>
-                  ))}
+                  {sorted.map((f) => {
+                    const empInfo = getEmpresaInfo(f.empresa_id);
+                    return (
+                      <tr key={f.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                        <td className="px-4 py-3.5 text-xs font-mono text-muted-foreground">{f.numero_registro || "—"}</td>
+                        <td className="px-4 py-3.5"><div className="flex items-center gap-3"><FuncionarioAvatar nome={f.nome} foto={f.foto_url} size="sm" /><span className="font-medium">{f.nome}</span></div></td>
+                        <td className="px-4 py-3.5 text-xs text-muted-foreground">{empInfo.nome}</td>
+                        <td className="px-4 py-3.5 text-center">{f.data_aso ? <ExamBadge date={f.data_aso} validityYears={1} label="ASO" /> : <span className="text-[10px] text-muted-foreground">—</span>}</td>
+                        <td className="px-4 py-3.5 text-center">{f.data_nr6 ? <ExamBadge date={f.data_nr6} validityYears={1} label="NR6" /> : <span className="text-[10px] text-muted-foreground">—</span>}</td>
+                        <td className="px-4 py-3.5 text-center">{f.data_nr12 ? <ExamBadge date={f.data_nr12} validityYears={2} label="NR12" /> : <span className="text-[10px] text-muted-foreground">—</span>}</td>
+                        <td className="px-4 py-3.5 text-center">{f.data_nr18 ? <ExamBadge date={f.data_nr18} validityYears={2} label="NR18" /> : <span className="text-[10px] text-muted-foreground">—</span>}</td>
+                        <td className="px-4 py-3.5 text-center">{f.data_nr35 ? <ExamBadge date={f.data_nr35} validityYears={2} label="NR35" /> : <span className="text-[10px] text-muted-foreground">—</span>}</td>
+                        <td className="px-4 py-3.5 text-center">
+                          <button onClick={() => setEditingExamFunc(f)} className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors" title="Editar Exames/Treinamentos">
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {sorted.length === 0 && (
+                    <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">Nenhum funcionário encontrado</td></tr>
+                  )}
                 </tbody>
               </table>
             </ScrollableTable>
@@ -350,10 +483,11 @@ export default function RH() {
               </select>
               <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="rounded-lg border bg-card px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
                 <option value="">Todos os Status</option>
-                {STATUS_OPTIONS.map(s => <option key={s} value={s.toLowerCase()}>{s}</option>)}
+                {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
               <select value={sortBy} onChange={e => setSortBy(e.target.value as any)} className="rounded-lg border bg-card px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
                 <option value="nome">Ordenar por Nome</option>
+                <option value="registro">Ordenar por Nº Reg.</option>
                 <option value="admissao">Ordenar por Admissão</option>
                 <option value="obra">Ordenar por Obra</option>
                 <option value="status">Ordenar por Status</option>
@@ -386,7 +520,7 @@ export default function RH() {
                 <h3 className="text-sm font-semibold">Funcionários ({sorted.length})</h3>
               </div>
               <ScrollableTable>
-                <table className="w-full text-sm">
+                <table className="w-full min-w-[1180px] text-sm">
                   <thead>
                     <tr className="border-b bg-muted/50">
                       <th className="px-3 py-3 text-left font-medium text-muted-foreground">Nº Reg.</th>
@@ -408,20 +542,31 @@ export default function RH() {
                       const empInfo = getEmpresaInfo(f.empresa_id);
                       return (
                         <tr key={f.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                          {/* Nº Registro */}
+                          {/* Nº Registro - limpo, edita ao clicar no lápis */}
                           <td className="px-3 py-2.5">
-                            <div className="flex items-center gap-1">
-                              <input
-                                type="text"
-                                value={editingRegistro[f.id] ?? f.numero_registro ?? ""}
-                                onChange={e => setEditingRegistro(prev => ({ ...prev, [f.id]: e.target.value }))}
-                                placeholder="—"
-                                className="w-20 rounded border bg-background px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
-                              />
-                              {editingRegistro[f.id] !== undefined && editingRegistro[f.id] !== (f.numero_registro ?? "") && (
-                                <button onClick={() => saveRegistro(f.id)} className="p-0.5 text-primary hover:text-primary/80"><Save className="h-3 w-3" /></button>
-                              )}
-                            </div>
+                            {editingRegistro[f.id] !== undefined ? (
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="text"
+                                  autoFocus
+                                  value={editingRegistro[f.id]}
+                                  onChange={e => setEditingRegistro(prev => ({ ...prev, [f.id]: e.target.value }))}
+                                  onKeyDown={e => { if (e.key === "Enter") saveRegistro(f.id); if (e.key === "Escape") setEditingRegistro(prev => { const n = { ...prev }; delete n[f.id]; return n; }); }}
+                                  placeholder="Nº"
+                                  className="w-16 rounded border bg-background px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                                />
+                                <button onClick={() => saveRegistro(f.id)} className="p-0.5 text-primary hover:text-primary/80" title="Salvar"><Save className="h-3 w-3" /></button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setEditingRegistro(prev => ({ ...prev, [f.id]: f.numero_registro ?? "" }))}
+                                className="group inline-flex items-center gap-1.5 text-xs font-mono text-foreground hover:text-primary transition-colors"
+                                title="Clique para editar"
+                              >
+                                <span className="min-w-[2.5rem] text-left">{f.numero_registro || <span className="text-muted-foreground">—</span>}</span>
+                                <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-60 transition-opacity" />
+                              </button>
+                            )}
                           </td>
                           {/* Nome */}
                           <td className="px-3 py-2.5 font-medium">{f.nome}</td>
@@ -442,14 +587,18 @@ export default function RH() {
                           <td className="px-3 py-2.5 text-xs text-muted-foreground">
                             {f.data_admissao ? format(parseISO(f.data_admissao), "dd/MM/yyyy") : "—"}
                           </td>
-                          {/* Status */}
+                          {/* Status - select que aceita o valor atual mesmo que diferente */}
                           <td className="px-3 py-2.5">
                             <select
-                              value={f.status}
+                              value={normalizeStatusForDb(f.status)}
                               onChange={e => saveStatus(f.id, e.target.value)}
-                              className={`rounded-full px-2 py-0.5 text-xs font-medium border-0 cursor-pointer ${getStatusColor(f.status)}`}
+                              className={`rounded-full px-2 py-1 text-xs font-medium border cursor-pointer outline-none focus:ring-2 focus:ring-ring ${getStatusColor(f.status)}`}
                             >
-                              {STATUS_OPTIONS.map(s => <option key={s} value={s.toLowerCase()}>{s}</option>)}
+                              {/* opção fallback se o status atual não estiver no enum */}
+                              {f.status && !STATUS_OPTIONS.some(s => s.value === normalizeStatusForDb(f.status)) && (
+                                <option value={normalizeStatusForDb(f.status)}>{f.status}</option>
+                              )}
+                              {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                             </select>
                           </td>
                           {/* Experiência */}
@@ -547,6 +696,64 @@ export default function RH() {
                 </Button>
               </div>
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Editar Exames/Treinamentos */}
+      <Dialog open={!!editingExamFunc} onOpenChange={(o) => !o && setEditingExamFunc(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Stethoscope className="h-5 w-5 text-primary" /> Exames e Treinamentos
+            </DialogTitle>
+          </DialogHeader>
+          {editingExamFunc && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const fd = new FormData(e.currentTarget);
+                saveExames(editingExamFunc.id, {
+                  data_aso: (fd.get("data_aso") as string) || null,
+                  data_nr6: (fd.get("data_nr6") as string) || null,
+                  data_nr12: (fd.get("data_nr12") as string) || null,
+                  data_nr18: (fd.get("data_nr18") as string) || null,
+                  data_nr35: (fd.get("data_nr35") as string) || null,
+                });
+              }}
+              className="space-y-4"
+            >
+              <div className="rounded-lg border bg-muted/30 p-3">
+                <p className="font-medium">{editingExamFunc.nome}</p>
+                <p className="text-xs text-muted-foreground">{editingExamFunc.cargo} • Nº Reg: {editingExamFunc.numero_registro || "—"}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium mb-1 block">ASO (validade 1 ano)</label>
+                  <Input type="date" name="data_aso" defaultValue={editingExamFunc.data_aso || ""} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">NR6 (validade 1 ano)</label>
+                  <Input type="date" name="data_nr6" defaultValue={editingExamFunc.data_nr6 || ""} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">NR12 (validade 2 anos)</label>
+                  <Input type="date" name="data_nr12" defaultValue={editingExamFunc.data_nr12 || ""} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium mb-1 block">NR18 (validade 2 anos)</label>
+                  <Input type="date" name="data_nr18" defaultValue={editingExamFunc.data_nr18 || ""} />
+                </div>
+                <div className="col-span-2">
+                  <label className="text-xs font-medium mb-1 block">NR35 (validade 2 anos)</label>
+                  <Input type="date" name="data_nr35" defaultValue={editingExamFunc.data_nr35 || ""} />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button type="button" variant="outline" onClick={() => setEditingExamFunc(null)}>Cancelar</Button>
+                <Button type="submit"><Save className="h-4 w-4 mr-1" /> Salvar</Button>
+              </div>
+            </form>
           )}
         </DialogContent>
       </Dialog>

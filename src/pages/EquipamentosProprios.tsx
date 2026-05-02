@@ -15,9 +15,13 @@ import { toast } from "@/hooks/use-toast";
 import {
   Wrench, Plus, Search, MapPin, ShoppingCart, Settings, History,
   Trash2, Edit, HardHat, Zap, Wind, Hammer, Box, Layers,
-  CheckCircle2, AlertTriangle, Clock, XCircle, Package, ArrowRightLeft, Camera, DollarSign
+  CheckCircle2, AlertTriangle, Clock, XCircle, Package, ArrowRightLeft, Camera, DollarSign, FileText, FileBarChart
 } from "lucide-react";
 import { ScrollableTable } from "@/components/shared/ScrollableTable";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 interface Equipamento {
   id: string;
@@ -106,22 +110,50 @@ export default function EquipamentosProprios() {
   const [selectedEquip, setSelectedEquip] = useState<Equipamento | null>(null);
   const [historicoAlocacao, setHistoricoAlocacao] = useState<HistoricoAlocacao[]>([]);
   
-  const [formEquip, setFormEquip] = useState({ codigo: "", descricao: "", tipo: "Outros", marca: "", modelo: "", numero_serie: "", data_aquisicao: "", valor_aquisicao: 0, obra_id: "", empresa_id: "", status: "disponivel", observacoes: "", foto_url: "" });
+  const [formEquip, setFormEquip] = useState({ codigo: "", descricao: "", tipo: "Outros", marca: "", modelo: "", numero_serie: "", data_aquisicao: "", valor_aquisicao: 0, fornecedor: "", obra_id: "", empresa_id: "", status: "disponivel", observacoes: "", foto_url: "" });
   const [formManut, setFormManut] = useState({ equipamento_id: "", tipo: "corretiva", descricao: "", fornecedor: "", valor_orcamento: 0, valor_aprovado: 0, observacoes: "" });
   const [transferObraId, setTransferObraId] = useState("");
   const [transferResponsavel, setTransferResponsavel] = useState("");
+  const [uploadingFoto, setUploadingFoto] = useState(false);
+
+  async function handleUploadFoto(file: File) {
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: "Imagem muito grande", description: "Máximo 5MB.", variant: "destructive" });
+      return;
+    }
+    setUploadingFoto(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `equipamentos/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+      const { error } = await supabase.storage.from("documentos").upload(path, file, { upsert: false, contentType: file.type });
+      if (error) throw error;
+      const { data } = supabase.storage.from("documentos").getPublicUrl(path);
+      setFormEquip(p => ({ ...p, foto_url: data.publicUrl }));
+      toast({ title: "Foto enviada!" });
+    } catch (e: any) {
+      toast({ title: "Erro no upload", description: e.message, variant: "destructive" });
+    } finally {
+      setUploadingFoto(false);
+    }
+  }
 
   const loadData = async () => {
     const [eq, mt, ob, em] = await Promise.all([
       supabase.from("equipamentos_proprios").select("*").order("codigo"),
       supabase.from("manutencoes_equipamento").select("*").order("data_solicitacao", { ascending: false }),
-      supabase.from("obras").select("id, nome, codigo"),
-      supabase.from("empresas").select("id, razao_social"),
+      supabase.from("obras").select("id, nome, codigo, status").in("status", OBRA_STATUS_ATIVOS_ARR).order("codigo"),
+      supabase.from("empresas").select("id, razao_social").eq("ativo", true).order("razao_social"),
     ]);
     if (eq.data) setEquipamentos(eq.data);
     if (mt.data) setManutencoes(mt.data);
     if (ob.data) setObras(ob.data);
-    if (em.data) setEmpresas(em.data);
+    if (em.data) {
+      setEmpresas(em.data);
+      // Auto-seleciona Irmãos Ubero (todas as ferramentas pertencem ao grupo)
+      const ubero = em.data.find(e => /irm[aã]os?\s+ubero/i.test(e.razao_social)) || em.data[0];
+      if (ubero && !formEquip.empresa_id) setFormEquip(p => ({ ...p, empresa_id: ubero.id }));
+    }
   };
 
   useEffect(() => { loadData(); }, []);
@@ -140,21 +172,74 @@ export default function EquipamentosProprios() {
   }, [equipamentos, busca]);
 
   const equipPorObra = useMemo(() => {
-    const g: Record<string, Equipamento[]> = {};
+    const g: Record<string, Equipamento[]> = { __almoxarifado__: [] };
     equipamentos.forEach(e => {
-      if (!e.obra_id) return;
-      if (!g[e.obra_id]) g[e.obra_id] = [];
-      g[e.obra_id].push(e);
+      if (!e.obra_id) {
+        g.__almoxarifado__.push(e);
+      } else {
+        if (!g[e.obra_id]) g[e.obra_id] = [];
+        g[e.obra_id].push(e);
+      }
     });
     return g;
   }, [equipamentos]);
 
   async function saveEquip() {
-    if (!formEquip.codigo || !formEquip.descricao) return;
-    const p = { ...formEquip, obra_id: formEquip.obra_id || null, empresa_id: formEquip.empresa_id || null };
-    if (editingEquip) await supabase.from("equipamentos_proprios").update(p).eq("id", editingEquip.id);
-    else await supabase.from("equipamentos_proprios").insert(p);
-    setShowEquipForm(false); loadData(); toast({ title: "Salvo!" });
+    if (!formEquip.codigo.trim() || !formEquip.descricao.trim()) {
+      toast({ title: "Preencha código e descrição", variant: "destructive" });
+      return;
+    }
+    if (!formEquip.empresa_id) {
+      toast({ title: "Selecione a empresa proprietária", variant: "destructive" });
+      return;
+    }
+    const valor = Number(formEquip.valor_aquisicao) || 0;
+    const payload: any = {
+      codigo: formEquip.codigo.trim(),
+      descricao: formEquip.descricao.trim(),
+      tipo: formEquip.tipo || "Outros",
+      marca: formEquip.marca?.trim() || null,
+      modelo: formEquip.modelo?.trim() || null,
+      numero_serie: formEquip.numero_serie?.trim() || null,
+      data_aquisicao: formEquip.data_aquisicao || null,
+      valor_aquisicao: valor,
+      fornecedor: formEquip.fornecedor?.trim() || null,
+      obra_id: formEquip.obra_id || null,
+      empresa_id: formEquip.empresa_id,
+      status: formEquip.status || "disponivel",
+      observacoes: formEquip.observacoes?.trim() || null,
+      foto_url: formEquip.foto_url?.trim() || null,
+    };
+    const { error } = editingEquip
+      ? await supabase.from("equipamentos_proprios").update(payload).eq("id", editingEquip.id)
+      : await supabase.from("equipamentos_proprios").insert(payload);
+    if (error) {
+      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    // Lança despesa no Financeiro se for novo equipamento com valor + fornecedor + data
+    if (!editingEquip && valor > 0 && payload.fornecedor && payload.data_aquisicao) {
+      await supabase.from("contas_pagar").insert({
+        descricao: `Aquisição de equipamento: ${payload.codigo} - ${payload.descricao}`,
+        categoria: "Equipamentos",
+        valor: valor,
+        data_vencimento: payload.data_aquisicao,
+        empresa_id: payload.empresa_id,
+        obra_id: payload.obra_id,
+        status: "pendente",
+        observacoes: `Fornecedor: ${payload.fornecedor}`,
+      });
+      toast({ title: "Equipamento cadastrado!", description: "Despesa lançada no Financeiro." });
+    } else {
+      toast({ title: editingEquip ? "Equipamento atualizado!" : "Equipamento cadastrado!" });
+    }
+
+    setShowEquipForm(false);
+    setEditingEquip(null);
+    const uberoId = empresas.find(e => /irm[aã]os?\s+ubero/i.test(e.razao_social))?.id || empresas[0]?.id || "";
+    setFormEquip({ codigo: "", descricao: "", tipo: "Outros", marca: "", modelo: "", numero_serie: "", data_aquisicao: "", valor_aquisicao: 0, fornecedor: "", obra_id: "", empresa_id: uberoId, status: "disponivel", observacoes: "", foto_url: "" });
+    loadData();
   }
 
   async function handleTransfer() {
@@ -182,6 +267,27 @@ export default function EquipamentosProprios() {
 
   async function updateManutStatus(id: string, status: string) {
     await supabase.from("manutencoes_equipamento").update({ status }).eq("id", id);
+    // Quando concluída, lança despesa no Financeiro e devolve equipamento ao almoxarifado
+    if (status === "concluido") {
+      const m = manutencoes.find(x => x.id === id);
+      if (m && (m.valor_aprovado || 0) > 0) {
+        const eq = equipamentos.find(e => e.id === m.equipamento_id);
+        await supabase.from("contas_pagar").insert({
+          descricao: `Manutenção ${m.tipo}: ${eq?.codigo || ""} - ${eq?.descricao || ""}`,
+          categoria: "Manutenção de Equipamentos",
+          valor: m.valor_aprovado,
+          data_vencimento: new Date().toISOString().slice(0, 10),
+          empresa_id: eq?.empresa_id,
+          status: "pendente",
+          observacoes: `Fornecedor: ${m.fornecedor || "—"} | ${m.descricao || ""}`,
+        });
+        toast({ title: "Manutenção concluída", description: "Despesa lançada no Financeiro." });
+      }
+      // Volta para disponível
+      if (m?.equipamento_id) {
+        await supabase.from("equipamentos_proprios").update({ status: "disponivel" }).eq("id", m.equipamento_id);
+      }
+    }
     loadData();
   }
 
@@ -199,6 +305,89 @@ export default function EquipamentosProprios() {
     setShowHistorico(true);
   }
 
+  function gerarPdfBase(titulo: string) {
+    const doc = new jsPDF();
+    doc.setFontSize(16); doc.setFont("helvetica", "bold");
+    doc.text("Irmãos Ubero Engenharia", 14, 15);
+    doc.setFontSize(12); doc.setFont("helvetica", "normal");
+    doc.text(titulo, 14, 22);
+    doc.setFontSize(9); doc.setTextColor(120);
+    doc.text(`Emitido em: ${new Date().toLocaleString("pt-BR")}`, 14, 28);
+    doc.setTextColor(0);
+    return doc;
+  }
+
+  function relatorioManutencoes() {
+    const doc = gerarPdfBase("Relatório de Manutenções");
+    autoTable(doc, {
+      startY: 33,
+      head: [["Equipamento", "Tipo", "Descrição", "Solicitação", "Realização", "Fornecedor", "Orçamento", "Aprovado", "Status"]],
+      body: manutencoes.map(m => {
+        const eq = equipamentos.find(e => e.id === m.equipamento_id);
+        return [
+          eq ? `${eq.codigo} - ${eq.descricao}` : "---",
+          m.tipo,
+          m.descricao || "",
+          m.data_solicitacao ? new Date(m.data_solicitacao).toLocaleDateString("pt-BR") : "",
+          m.data_realizacao ? new Date(m.data_realizacao).toLocaleDateString("pt-BR") : "-",
+          m.fornecedor || "-",
+          `R$ ${(m.valor_orcamento || 0).toLocaleString("pt-BR")}`,
+          `R$ ${(m.valor_aprovado || 0).toLocaleString("pt-BR")}`,
+          STATUS_MANUT[m.status]?.label || m.status,
+        ];
+      }),
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [60, 80, 45] },
+    });
+    const totalApr = manutencoes.reduce((s, m) => s + (m.valor_aprovado || 0), 0);
+    const y = (doc as any).lastAutoTable.finalY + 6;
+    doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+    doc.text(`Total Aprovado: R$ ${totalApr.toLocaleString("pt-BR")}`, 14, y);
+    doc.save(`relatorio-manutencoes-${new Date().toISOString().slice(0,10)}.pdf`);
+    toast({ title: "Relatório gerado!" });
+  }
+
+  function relatorioPorObra() {
+    const doc = gerarPdfBase("Ferramentas por Obra");
+    let y = 33;
+    Object.entries(equipPorObra).forEach(([obraId, eqs]) => {
+      const obra = obras.find(o => o.id === obraId);
+      doc.setFont("helvetica", "bold"); doc.setFontSize(11);
+      if (y > 270) { doc.addPage(); y = 15; }
+      doc.text(`${obra?.codigo || ""} - ${obra?.nome || "Obra"} (${eqs.length})`, 14, y);
+      autoTable(doc, {
+        startY: y + 3,
+        head: [["Código", "Descrição", "Tipo", "Marca/Modelo", "Status"]],
+        body: eqs.map(e => [e.codigo, e.descricao, e.tipo, `${e.marca || ""} ${e.modelo || ""}`.trim() || "-", STATUS_EQUIP[e.status]?.label || e.status]),
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [60, 80, 45] },
+      });
+      y = (doc as any).lastAutoTable.finalY + 8;
+    });
+    doc.save(`ferramentas-por-obra-${new Date().toISOString().slice(0,10)}.pdf`);
+    toast({ title: "Relatório gerado!" });
+  }
+
+  function relatorioDisponiveis() {
+    const doc = gerarPdfBase("Ferramentas Disponíveis (Almoxarifado)");
+    const lista = equipamentos.filter(e => e.status === "disponivel" && !e.obra_id);
+    autoTable(doc, {
+      startY: 33,
+      head: [["Código", "Descrição", "Tipo", "Marca", "Modelo", "Nº Série", "Valor"]],
+      body: lista.map(e => [
+        e.codigo, e.descricao, e.tipo, e.marca || "-", e.modelo || "-",
+        e.numero_serie || "-", `R$ ${(e.valor_aquisicao || 0).toLocaleString("pt-BR")}`,
+      ]),
+      styles: { fontSize: 8 },
+      headStyles: { fillColor: [60, 80, 45] },
+    });
+    const y = (doc as any).lastAutoTable.finalY + 6;
+    doc.setFont("helvetica", "bold"); doc.setFontSize(10);
+    doc.text(`Total disponíveis: ${lista.length}`, 14, y);
+    doc.save(`ferramentas-disponiveis-${new Date().toISOString().slice(0,10)}.pdf`);
+    toast({ title: "Relatório gerado!" });
+  }
+
   return (
     <AppLayout>
       <div className="space-y-6 p-4">
@@ -210,7 +399,21 @@ export default function EquipamentosProprios() {
                 <p className="text-sm text-muted-foreground">Controle de ativos IU e manutenções.</p>
              </div>
           </div>
-          <Button onClick={() => { setEditingEquip(null); setShowEquipForm(true); }} className="gap-2"><Plus size={18} /> Novo Equipamento</Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2"><FileBarChart size={18} /> Relatórios</Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel>Gerar PDF</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={relatorioManutencoes} className="gap-2"><Wrench size={14} /> Manutenções</DropdownMenuItem>
+                <DropdownMenuItem onClick={relatorioPorObra} className="gap-2"><MapPin size={14} /> Ferramentas por Obra</DropdownMenuItem>
+                <DropdownMenuItem onClick={relatorioDisponiveis} className="gap-2"><Package size={14} /> Ferramentas Disponíveis</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button onClick={() => { setEditingEquip(null); setShowEquipForm(true); }} className="gap-2"><Plus size={18} /> Novo Equipamento</Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -224,9 +427,17 @@ export default function EquipamentosProprios() {
            <TabsList><TabsTrigger value="painel">Localizacoes</TabsTrigger><TabsTrigger value="cadastro">Catalogo</TabsTrigger><TabsTrigger value="manutencao">Manutencoes</TabsTrigger></TabsList>
            
            <TabsContent value="painel" className="mt-4 space-y-4">
-              {Object.entries(equipPorObra).map(([id, eqs]) => (
+              {Object.entries(equipPorObra).filter(([_, eqs]) => eqs.length > 0).map(([id, eqs]) => {
+                const isAlmox = id === "__almoxarifado__";
+                const obraInfo = obras.find(o => o.id === id);
+                return (
                 <Card key={id} className="overflow-hidden">
-                  <CardHeader className="py-2 px-4 bg-muted/40 border-b flex flex-row items-center justify-between"><CardTitle className="text-sm font-bold">{obras.find(o => o.id === id)?.nome || "Obra"}</CardTitle><Badge variant="outline">{eqs.length}</Badge></CardHeader>
+                  <CardHeader className={`py-2 px-4 border-b flex flex-row items-center justify-between ${isAlmox ? "bg-emerald-500/10" : "bg-muted/40"}`}>
+                    <CardTitle className={`text-sm font-bold flex items-center gap-2 ${isAlmox ? "text-emerald-700" : ""}`}>
+                      {isAlmox ? <><Package size={16} /> Almoxarifado / Disponíveis</> : (obraInfo ? `${obraInfo.codigo} — ${obraInfo.nome}` : "Obra")}
+                    </CardTitle>
+                    <Badge variant="outline">{eqs.length}</Badge>
+                  </CardHeader>
                   <CardContent className="p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {eqs.map(eq => (
                       <div key={eq.id} className="flex gap-3 p-3 border rounded-xl bg-card hover:shadow-sm transition-shadow">
@@ -245,7 +456,7 @@ export default function EquipamentosProprios() {
                     ))}
                   </CardContent>
                 </Card>
-              ))}
+              );})}
            </TabsContent>
 
            <TabsContent value="cadastro" className="mt-4 space-y-4">
@@ -272,10 +483,11 @@ export default function EquipamentosProprios() {
                               </div>
                            </div>
                            <div className="flex gap-1 border-t pt-3">
-                              <Button size="sm" variant="ghost" className="h-8 flex-1" onClick={() => openHistorico(eq)}><History size={16} /></Button>
-                              <Button size="sm" variant="ghost" className="h-8 flex-1 text-amber-600" onClick={() => quickMaintenance(eq)}><Wrench size={16} /></Button>
-                              <Button size="sm" variant="ghost" className="h-8 flex-1" onClick={() => { setEditingEquip(eq); setFormEquip({ ...eq, marca: eq.marca || "", modelo: eq.modelo || "", numero_serie: eq.numero_serie || "", data_aquisicao: eq.data_aquisicao || "", foto_url: eq.foto_url || "", empresa_id: eq.empresa_id || "", obra_id: eq.obra_id || "", observacoes: eq.observacoes || "" }); setShowEquipForm(true); }}><Edit size={16} /></Button>
-                              <Button size="sm" variant="ghost" className="h-8 flex-1 text-rose-500" onClick={async () => { if(confirm("Excluir?")) { await supabase.from("equipamentos_proprios").delete().eq("id", eq.id); loadData(); } }}><Trash2 size={16} /></Button>
+                              <Button size="sm" variant="ghost" className="h-8 flex-1 text-primary" title="Transferir / Disponibilizar para obra" onClick={() => { setSelectedEquip(eq); setTransferObraId(eq.obra_id || "estoque"); setTransferResponsavel(""); setShowTransferForm(true); }}><ArrowRightLeft size={16} /></Button>
+                              <Button size="sm" variant="ghost" className="h-8 flex-1" title="Histórico" onClick={() => openHistorico(eq)}><History size={16} /></Button>
+                              <Button size="sm" variant="ghost" className="h-8 flex-1 text-amber-600" title="Enviar para oficina" onClick={() => quickMaintenance(eq)}><Wrench size={16} /></Button>
+                              <Button size="sm" variant="ghost" className="h-8 flex-1" title="Editar" onClick={() => { setEditingEquip(eq); setFormEquip({ ...eq, marca: eq.marca || "", modelo: eq.modelo || "", numero_serie: eq.numero_serie || "", data_aquisicao: eq.data_aquisicao || "", foto_url: eq.foto_url || "", empresa_id: eq.empresa_id || "", obra_id: eq.obra_id || "", observacoes: eq.observacoes || "", fornecedor: (eq as any).fornecedor || "" }); setShowEquipForm(true); }}><Edit size={16} /></Button>
+                              <Button size="sm" variant="ghost" className="h-8 flex-1 text-rose-500" title="Excluir" onClick={async () => { if(confirm("Excluir?")) { await supabase.from("equipamentos_proprios").delete().eq("id", eq.id); loadData(); } }}><Trash2 size={16} /></Button>
                            </div>
                         </CardContent>
                       </Card>
@@ -317,12 +529,46 @@ export default function EquipamentosProprios() {
          <DialogContent className="max-w-2xl">
             <DialogHeader><DialogTitle>{editingEquip ? "Editar Equipamento" : "Novo Cadastro"}</DialogTitle></DialogHeader>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-               <div className="md:col-span-2"><Label>URL Foto</Label><Input value={formEquip.foto_url} onChange={e => setFormEquip({...formEquip, foto_url: e.target.value})} placeholder="https://..." /></div>
+               <div className="md:col-span-2 space-y-2">
+                  <Label>Foto do Equipamento</Label>
+                  <div className="flex items-start gap-3">
+                    <div className="w-24 h-24 rounded-lg border-2 border-dashed bg-muted flex items-center justify-center overflow-hidden shrink-0">
+                      {formEquip.foto_url ? (
+                        <img src={formEquip.foto_url} className="w-full h-full object-cover" alt="Prévia" />
+                      ) : (
+                        <Camera className="text-muted-foreground/40" size={28} />
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <div className="flex flex-wrap gap-2">
+                        <label className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-md border bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer">
+                          <Camera size={14} />
+                          {uploadingFoto ? "Enviando..." : (formEquip.foto_url ? "Trocar foto" : "Enviar foto do dispositivo")}
+                          <input type="file" accept="image/*" className="hidden" disabled={uploadingFoto} onChange={e => { const f = e.target.files?.[0]; if (f) handleUploadFoto(f); e.target.value = ""; }} />
+                        </label>
+                        {formEquip.foto_url && (
+                          <Button type="button" size="sm" variant="ghost" className="h-9 text-rose-600" onClick={() => setFormEquip({ ...formEquip, foto_url: "" })}>
+                            <Trash2 size={14} className="mr-1" /> Remover
+                          </Button>
+                        )}
+                      </div>
+                      <Input value={formEquip.foto_url} onChange={e => setFormEquip({...formEquip, foto_url: e.target.value})} placeholder="ou cole uma URL: https://..." className="text-xs" />
+                      <p className="text-[10px] text-muted-foreground">JPG, PNG ou WEBP — máx. 5MB.</p>
+                    </div>
+                  </div>
+               </div>
                <div><Label>Codigo IU *</Label><Input value={formEquip.codigo} onChange={e => setFormEquip({...formEquip, codigo: e.target.value})} /></div>
                <div><Label>Descricao *</Label><Input value={formEquip.descricao} onChange={e => setFormEquip({...formEquip, descricao: e.target.value})} /></div>
                <div><Label>Tipo</Label><Select value={formEquip.tipo} onValueChange={v => setFormEquip({...formEquip, tipo: v})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{TIPOS_EQUIPAMENTO.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
                <div><Label>Status Atual</Label><Select value={formEquip.status} onValueChange={v => setFormEquip({...formEquip, status: v})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{Object.entries(STATUS_EQUIP).map(([k,v]) => <SelectItem key={k} value={k}>{v.label}</SelectItem>)}</SelectContent></Select></div>
-               <div><Label>Empresa Proprietaria</Label><Select value={formEquip.empresa_id || ""} onValueChange={v => setFormEquip({...formEquip, empresa_id: v})}><SelectTrigger><SelectValue placeholder="Global" /></SelectTrigger><SelectContent>{empresas.map(e => <SelectItem key={e.id} value={e.id}>{e.razao_social}</SelectItem>)}</SelectContent></Select></div>
+               <div><Label>Marca</Label><Input value={formEquip.marca} onChange={e => setFormEquip({...formEquip, marca: e.target.value})} placeholder="Ex: Bosch, Makita" /></div>
+               <div><Label>Modelo</Label><Input value={formEquip.modelo} onChange={e => setFormEquip({...formEquip, modelo: e.target.value})} placeholder="Ex: GSB 550" /></div>
+               <div><Label>Nº de Série <span className="text-xs text-muted-foreground font-normal">(opcional)</span></Label><Input value={formEquip.numero_serie} onChange={e => setFormEquip({...formEquip, numero_serie: e.target.value})} placeholder="Deixe em branco se não houver" /></div>
+               <div><Label>Data de Aquisição <span className="text-xs text-muted-foreground font-normal">(opcional)</span></Label><Input type="date" value={formEquip.data_aquisicao} onChange={e => setFormEquip({...formEquip, data_aquisicao: e.target.value})} /></div>
+               <div><Label>Valor de Aquisição (R$) <span className="text-xs text-muted-foreground font-normal">(opcional)</span></Label><Input type="number" step="0.01" min="0" value={formEquip.valor_aquisicao || ""} onChange={e => setFormEquip({...formEquip, valor_aquisicao: parseFloat(e.target.value) || 0})} placeholder="0,00" /></div>
+               <div><Label>Fornecedor <span className="text-xs text-muted-foreground font-normal">(opcional)</span></Label><Input value={formEquip.fornecedor} onChange={e => setFormEquip({...formEquip, fornecedor: e.target.value})} placeholder="Onde foi adquirido" /></div>
+               <div><Label>Empresa Proprietária *</Label><Select value={formEquip.empresa_id || ""} onValueChange={v => setFormEquip({...formEquip, empresa_id: v})}><SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger><SelectContent>{empresas.map(e => <SelectItem key={e.id} value={e.id}>{e.razao_social}</SelectItem>)}</SelectContent></Select></div>
+               <div><Label>Obra atual (opcional)</Label><Select value={formEquip.obra_id || "estoque"} onValueChange={v => setFormEquip({...formEquip, obra_id: v === "estoque" ? "" : v})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="estoque">Almoxarifado</SelectItem>{obras.map(o => <SelectItem key={o.id} value={o.id}>{o.codigo} — {o.nome}</SelectItem>)}</SelectContent></Select></div>
                <div className="md:col-span-2"><Label>Observacoes</Label><Textarea value={formEquip.observacoes} onChange={e => setFormEquip({...formEquip, observacoes: e.target.value})} /></div>
             </div>
             <DialogFooter><Button onClick={saveEquip} className="w-full">Confirmar e Salvar</Button></DialogFooter>

@@ -27,13 +27,21 @@ interface Obra {
   data_inicio?: string; data_previsao_fim?: string; data_fim?: string; observacoes?: string;
   tipo_obra?: string; engenheiro_responsavel?: string; cliente?: string;
   horario_padrao?: any;
+  percentual_retencao_padrao?: number;
+  impostos_padrao?: Array<{ imposto: string; aliquota: number }>;
+  observacoes_fiscais?: string;
 }
+
+const IMPOSTOS_DISPONIVEIS = ["ISS", "IRRF", "PIS", "COFINS", "CSLL", "INSS"];
 interface Empresa { id: string; razao_social: string; nome_fantasia?: string; cnpj: string; telefone?: string; email?: string; endereco?: string; cidade?: string; uf?: string; logo_url?: string; cor_primaria?: string; cor_secundaria?: string; nome_responsavel?: string; cargo_responsavel?: string; }
 
 const emptyForm = {
   codigo: "", nome: "", empresa_id: "", construtora: "", cliente: "", endereco: "", cidade: "", uf: "",
   status: "prospeccao", data_inicio: "", data_previsao_fim: "", data_fim: "", observacoes: "",
   tipo_obra: "", engenheiro_responsavel: "",
+  percentual_retencao_padrao: 5,
+  impostos_padrao: [] as Array<{ imposto: string; aliquota: number }>,
+  observacoes_fiscais: "",
 };
 
 export default function Obras() {
@@ -57,7 +65,7 @@ export default function Obras() {
       supabase.from("obras").select("*").order("codigo"),
       supabase.from("empresas").select("id,razao_social,nome_fantasia,cnpj").eq("ativo", true),
     ]);
-    if (obrasRes.data) setObras(obrasRes.data as Obra[]);
+    if (obrasRes.data) setObras(obrasRes.data as any as Obra[]);
     if (empRes.data) setEmpresas(empRes.data as Empresa[]);
     setLoading(false);
   };
@@ -83,6 +91,9 @@ export default function Obras() {
       data_previsao_fim: obra.data_previsao_fim || "", data_fim: obra.data_fim || "",
       observacoes: obra.observacoes || "", tipo_obra: obra.tipo_obra || "",
       engenheiro_responsavel: obra.engenheiro_responsavel || "",
+      percentual_retencao_padrao: Number(obra.percentual_retencao_padrao ?? 5),
+      impostos_padrao: Array.isArray(obra.impostos_padrao) ? obra.impostos_padrao : [],
+      observacoes_fiscais: obra.observacoes_fiscais || "",
     });
     setFormOpen(true);
   };
@@ -266,6 +277,51 @@ export default function Obras() {
             <div><Label>Previsão Término</Label><Input type="date" value={form.data_previsao_fim} onChange={e => setForm(f => ({ ...f, data_previsao_fim: e.target.value }))} /></div>
             <div><Label>Data Conclusão</Label><Input type="date" value={form.data_fim} onChange={e => setForm(f => ({ ...f, data_fim: e.target.value }))} /></div>
             <div className="sm:col-span-2"><Label>Observações</Label><Textarea value={form.observacoes} onChange={e => setForm(f => ({ ...f, observacoes: e.target.value }))} rows={3} /></div>
+
+            {/* Bloco Fiscal — usado nas Medições */}
+            <div className="sm:col-span-2 mt-2 border-t pt-4">
+              <h4 className="text-sm font-bold text-slate-700 mb-3">Configuração Fiscal (usado nas Medições)</h4>
+            </div>
+            <div>
+              <Label>Retenção Contratual Padrão (%)</Label>
+              <Input type="number" step="0.01" value={form.percentual_retencao_padrao}
+                onChange={e => setForm(f => ({ ...f, percentual_retencao_padrao: Number(e.target.value) }))} />
+            </div>
+            <div className="sm:col-span-2">
+              <Label className="mb-2 block">Impostos Padrão (% sobre o bruto)</Label>
+              <div className="space-y-2">
+                {form.impostos_padrao.map((imp, i) => (
+                  <div key={i} className="flex gap-2 items-center">
+                    <Select value={imp.imposto} onValueChange={v => setForm(f => ({
+                      ...f,
+                      impostos_padrao: f.impostos_padrao.map((x, ix) => ix === i ? { ...x, imposto: v } : x),
+                    }))}>
+                      <SelectTrigger className="flex-1"><SelectValue placeholder="Imposto" /></SelectTrigger>
+                      <SelectContent>{IMPOSTOS_DISPONIVEIS.map(n => <SelectItem key={n} value={n}>{n}</SelectItem>)}</SelectContent>
+                    </Select>
+                    <Input type="number" step="0.01" placeholder="Alíquota %" className="w-32"
+                      value={imp.aliquota || ""}
+                      onChange={e => setForm(f => ({
+                        ...f,
+                        impostos_padrao: f.impostos_padrao.map((x, ix) => ix === i ? { ...x, aliquota: Number(e.target.value) } : x),
+                      }))} />
+                    <Button variant="outline" size="sm" type="button"
+                      onClick={() => setForm(f => ({ ...f, impostos_padrao: f.impostos_padrao.filter((_, ix) => ix !== i) }))}>
+                      Remover
+                    </Button>
+                  </div>
+                ))}
+                <Button variant="outline" size="sm" type="button"
+                  onClick={() => setForm(f => ({ ...f, impostos_padrao: [...f.impostos_padrao, { imposto: "ISS", aliquota: 0 }] }))}>
+                  + Adicionar imposto
+                </Button>
+              </div>
+            </div>
+            <div className="sm:col-span-2">
+              <Label>Observações Fiscais</Label>
+              <Textarea value={form.observacoes_fiscais}
+                onChange={e => setForm(f => ({ ...f, observacoes_fiscais: e.target.value }))} rows={2} />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFormOpen(false)}>Cancelar</Button>

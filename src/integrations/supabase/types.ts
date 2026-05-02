@@ -798,7 +798,7 @@ export type Database = {
           data_fim: string | null
           data_inicio: string
           descricao: string
-          empresa_id: string
+          empresa_id: string | null
           fornecedor_id: string | null
           id: string
           numero_oc: string | null
@@ -817,7 +817,7 @@ export type Database = {
           data_fim?: string | null
           data_inicio: string
           descricao: string
-          empresa_id: string
+          empresa_id?: string | null
           fornecedor_id?: string | null
           id?: string
           numero_oc?: string | null
@@ -836,7 +836,7 @@ export type Database = {
           data_fim?: string | null
           data_inicio?: string
           descricao?: string
-          empresa_id?: string
+          empresa_id?: string | null
           fornecedor_id?: string | null
           id?: string
           numero_oc?: string | null
@@ -881,6 +881,7 @@ export type Database = {
           data_aquisicao: string | null
           descricao: string
           empresa_id: string
+          fornecedor: string | null
           foto_url: string | null
           id: string
           marca: string | null
@@ -899,6 +900,7 @@ export type Database = {
           data_aquisicao?: string | null
           descricao: string
           empresa_id: string
+          fornecedor?: string | null
           foto_url?: string | null
           id?: string
           marca?: string | null
@@ -917,6 +919,7 @@ export type Database = {
           data_aquisicao?: string | null
           descricao?: string
           empresa_id?: string
+          fornecedor?: string | null
           foto_url?: string | null
           id?: string
           marca?: string | null
@@ -1267,6 +1270,7 @@ export type Database = {
           agencia: string | null
           bairro: string | null
           banco: string | null
+          bonificacoes_padrao: Json
           cargo: string
           categoria_cnh: string | null
           cep: string | null
@@ -1304,6 +1308,7 @@ export type Database = {
           nome_pai: string | null
           numero_registro: string | null
           obra_id: string | null
+          observacoes: string | null
           pis: string | null
           rg: string | null
           rne: string | null
@@ -1325,6 +1330,7 @@ export type Database = {
           agencia?: string | null
           bairro?: string | null
           banco?: string | null
+          bonificacoes_padrao?: Json
           cargo: string
           categoria_cnh?: string | null
           cep?: string | null
@@ -1362,6 +1368,7 @@ export type Database = {
           nome_pai?: string | null
           numero_registro?: string | null
           obra_id?: string | null
+          observacoes?: string | null
           pis?: string | null
           rg?: string | null
           rne?: string | null
@@ -1383,6 +1390,7 @@ export type Database = {
           agencia?: string | null
           bairro?: string | null
           banco?: string | null
+          bonificacoes_padrao?: Json
           cargo?: string
           categoria_cnh?: string | null
           cep?: string | null
@@ -1420,6 +1428,7 @@ export type Database = {
           nome_pai?: string | null
           numero_registro?: string | null
           obra_id?: string | null
+          observacoes?: string | null
           pis?: string | null
           rg?: string | null
           rne?: string | null
@@ -1668,6 +1677,7 @@ export type Database = {
           obra_id: string
           observacoes: string | null
           quantidade: number
+          quantidade_acumulada_inicial: number
           unidade: string
           updated_at: string
           valor_total: number
@@ -1686,6 +1696,7 @@ export type Database = {
           obra_id: string
           observacoes?: string | null
           quantidade?: number
+          quantidade_acumulada_inicial?: number
           unidade?: string
           updated_at?: string
           valor_total?: number
@@ -1704,6 +1715,7 @@ export type Database = {
           obra_id?: string
           observacoes?: string | null
           quantidade?: number
+          quantidade_acumulada_inicial?: number
           unidade?: string
           updated_at?: string
           valor_total?: number
@@ -1814,8 +1826,12 @@ export type Database = {
       }
       medicoes: {
         Row: {
+          aprovado_em: string | null
+          aprovado_por: string | null
+          conta_receber_id: string | null
           created_at: string
           data_emissao: string
+          data_previsao_recebimento: string | null
           empresa_id: string
           id: string
           numero: number
@@ -1831,8 +1847,12 @@ export type Database = {
           valor_retencao: number
         }
         Insert: {
+          aprovado_em?: string | null
+          aprovado_por?: string | null
+          conta_receber_id?: string | null
           created_at?: string
           data_emissao?: string
+          data_previsao_recebimento?: string | null
           empresa_id: string
           id?: string
           numero: number
@@ -1848,8 +1868,12 @@ export type Database = {
           valor_retencao?: number
         }
         Update: {
+          aprovado_em?: string | null
+          aprovado_por?: string | null
+          conta_receber_id?: string | null
           created_at?: string
           data_emissao?: string
+          data_previsao_recebimento?: string | null
           empresa_id?: string
           id?: string
           numero?: number
@@ -2004,8 +2028,11 @@ export type Database = {
           engenheiro_responsavel: string | null
           horario_padrao: Json | null
           id: string
+          impostos_padrao: Json
           nome: string
           observacoes: string | null
+          observacoes_fiscais: string | null
+          percentual_retencao_padrao: number
           status: string
           tipo_obra: string | null
           uf: string | null
@@ -2025,8 +2052,11 @@ export type Database = {
           engenheiro_responsavel?: string | null
           horario_padrao?: Json | null
           id?: string
+          impostos_padrao?: Json
           nome: string
           observacoes?: string | null
+          observacoes_fiscais?: string | null
+          percentual_retencao_padrao?: number
           status?: string
           tipo_obra?: string | null
           uf?: string | null
@@ -2046,8 +2076,11 @@ export type Database = {
           engenheiro_responsavel?: string | null
           horario_padrao?: Json | null
           id?: string
+          impostos_padrao?: Json
           nome?: string
           observacoes?: string | null
+          observacoes_fiscais?: string | null
+          percentual_retencao_padrao?: number
           status?: string
           tipo_obra?: string | null
           uf?: string | null
