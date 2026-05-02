@@ -1,5 +1,5 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Search, Upload, MessageCircle, UserPlus, FolderOpen, Stethoscope, ArrowRightLeft, Save, Filter, Calendar, LogOut, Pencil, FileSpreadsheet, FileDown } from "lucide-react";
+import { Search, Upload, MessageCircle, UserPlus, FolderOpen, Stethoscope, ArrowRightLeft, Save, Filter, Calendar, LogOut, Pencil, FileSpreadsheet, FileDown, Trash2 } from "lucide-react";
 import { baixarModeloFuncionarios, importarPlanilhaFuncionarios } from "@/lib/funcionariosPlanilha";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { toast } from "@/hooks/use-toast";
@@ -299,6 +299,29 @@ export default function RH() {
               title="Importar planilha .xlsx para criar/atualizar funcionários"
             >
               <FileSpreadsheet className="h-4 w-4" /> Importar Planilha
+            </button>
+            <button
+              onClick={async () => {
+                if (!window.confirm("TEM CERTEZA QUE DESEJA APAGAR TODOS OS FUNCIONÁRIOS DO BANCO? Isso não pode ser desfeito.")) return;
+                toast({ title: "Apagando...", description: "Por favor, aguarde." });
+                try {
+                  // Apaga primeiro tabelas dependentes (se houver) para evitar erro de chave estrangeira
+                  await supabase.from("folhas_pagamento").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+                  
+                  // Apaga os funcionários
+                  const { error } = await supabase.from("funcionarios").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+                  
+                  if (error) throw error;
+                  toast({ title: "Banco limpo!", description: "A tabela de funcionários foi completamente zerada." });
+                  window.location.reload();
+                } catch (e: any) {
+                  toast({ title: "Erro ao limpar", description: e?.message ?? String(e), variant: "destructive" });
+                }
+              }}
+              className="inline-flex items-center gap-2 rounded-lg bg-destructive px-4 py-2.5 text-sm font-bold text-destructive-foreground shadow-sm hover:bg-destructive/90 transition-colors animate-pulse"
+              title="Apagar TODOS os funcionários do banco de dados (CUIDADO)"
+            >
+              <Trash2 className="h-4 w-4" /> Limpar Banco
             </button>
             <input
               ref={xlsxInputRef}
