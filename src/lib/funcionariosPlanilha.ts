@@ -228,9 +228,10 @@ export async function importarPlanilhaFuncionarios(
   const empresasByCnpj = new Map<string, string>();
   (empresas ?? []).forEach((e: any) => empresasByCnpj.set(normCNPJ(e.cnpj), e.id));
   // Fallback: primeira empresa cadastrada (caso CNPJ não seja informado/encontrado)
-  const empresaPadraoId = empresas?.[0]?.id ?? null;
+  let empresaPadraoId = empresas?.[0]?.id ?? null;
 
   const obrasByCodigo = new Map<string, any>();
+  const obrasByNome = new Map<string, any>();
   (obras ?? []).forEach((o: any) => {
     obrasByNome.set(String(o.nome ?? "").trim().toLowerCase(), o);
     obrasByCodigo.set(String(o.codigo ?? "").trim().toLowerCase(), o);
@@ -248,7 +249,6 @@ export async function importarPlanilhaFuncionarios(
   };
 
   // --- RESILIÊNCIA: Se não houver NENHUMA empresa, cria uma padrão ---
-  let empresaPadraoId = empresas?.[0]?.id ?? null;
   if (!empresaPadraoId) {
     console.log("Banco vazio: Criando empresa e obra padrão...");
     const { data: novaEmp, error: errEmp } = await supabase.from("empresas").insert({
