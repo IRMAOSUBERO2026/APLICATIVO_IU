@@ -230,13 +230,13 @@ export async function importarPlanilhaFuncionarios(
   // Fallback: primeira empresa cadastrada (caso CNPJ não seja informado/encontrado)
   const empresaPadraoId = empresas?.[0]?.id ?? null;
 
-  const obrasByNome = new Map<string, any>();
   const obrasByCodigo = new Map<string, any>();
   (obras ?? []).forEach((o: any) => {
     obrasByNome.set(String(o.nome ?? "").trim().toLowerCase(), o);
     obrasByCodigo.set(String(o.codigo ?? "").trim().toLowerCase(), o);
   });
-  const semObra = obrasByCodigo.get(SEM_OBRA_CODIGO.toLowerCase()) ?? null;
+  
+  let semObra = obrasByCodigo.get(SEM_OBRA_CODIGO.toLowerCase()) ?? null;
 
   const result: ImportResult = {
     total: rows.length,
@@ -246,6 +246,29 @@ export async function importarPlanilhaFuncionarios(
     pulados_existentes: 0,
     erros: [],
   };
+
+  // --- RESILIÊNCIA: Se não houver NENHUMA empresa, cria uma padrão ---
+  let empresaPadraoId = empresas?.[0]?.id ?? null;
+  if (!empresaPadraoId) {
+    console.log("Banco vazio: Criando empresa e obra padrão...");
+    const { data: novaEmp, error: errEmp } = await supabase.from("empresas").insert({
+      razao_social: "IU ENGENHARIA - EMPRESA MATRIZ",
+      cnpj: "00000000000000",
+      nome_fantasia: "IU ENGENHARIA"
+    }).select("id").single();
+    
+    if (novaEmp) {
+      empresaPadraoId = novaEmp.id;
+      // Cria a obra SEM-OBRA vinculada a essa empresa
+      const { data: novaObr } = await supabase.from("obras").insert({
+        codigo: SEM_OBRA_CODIGO,
+        nome: "Funcionários sem alocação (SEM OBRA)",
+        empresa_id: novaEmp.id,
+        status: "ativo"
+      }).select("id").single();
+      if (novaObr) semObra = { id: novaObr.id };
+    }
+  }
 
   // Carrega TODOS os funcionários existentes (com CPF, Nº Reg e nome+nascimento p/ matching de fallback)
   const { data: funcionariosExistentes, error: errFuncionarios } = await supabase
@@ -298,7 +321,7 @@ export async function importarPlanilhaFuncionarios(
     const empresa_id = empresasByCnpj.get(cnpjNorm) || empresaPadraoId;
     if (!empresa_id) {
       result.ignorados++;
-      result.erros.push({ linha: i + 2, cpf, erro: "Nenhuma empresa cadastrada no sistema" });
+      result.erros.push({ linha: i + 2, cpf, erro: `Empresa (CNPJ: ${cnpjNorm || 'não informado'}) não encontrada e nenhuma empresa padrão disponível.` });
       continue;
     }
 
