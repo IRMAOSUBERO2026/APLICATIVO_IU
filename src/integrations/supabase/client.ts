@@ -3,8 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
 // USANDO SUPABASE EXTERNO (Sincronização com o projeto Real)
-const SUPABASE_URL = "https://uvrqntfjknojxkiwsibz.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_9iKbH80_q1JDoXx0nEdJEA_Vjjve55s";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
