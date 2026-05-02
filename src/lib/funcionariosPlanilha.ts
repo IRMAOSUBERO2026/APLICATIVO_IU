@@ -207,7 +207,17 @@ export async function importarPlanilhaFuncionarios(
   const wb = XLSX.read(buf, { type: "array" });
   const sheetName = wb.SheetNames.find((n) => /func/i.test(n)) || wb.SheetNames[0];
   const ws = wb.Sheets[sheetName];
-  const rows = XLSX.utils.sheet_to_json<any>(ws, { defval: "" });
+  let rows = XLSX.utils.sheet_to_json<any>(ws, { defval: "" });
+
+  // --- LOGICA DE RECONTRATADOS: Ordenar para processar quem TEM rescisão ANTES de quem NÃO TEM ---
+  // Isso garante que se o mesmo CPF aparecer 2x, o registro sem rescisão (mais recente/ativo) seja o último a ser gravado.
+  rows = rows.sort((a, b) => {
+    const rescA = parseDate(getCell(a, COL.rescisao));
+    const rescB = parseDate(getCell(b, COL.rescisao));
+    if (rescA && !rescB) return -1; // 'a' tem rescisão, 'b' não. 'a' vem primeiro.
+    if (!rescA && rescB) return 1;  // 'b' tem rescisão, 'a' não. 'b' vem primeiro.
+    return 0;
+  });
 
   // Carrega empresas, obras e SEM-OBRA
   const [{ data: empresas }, { data: obras }] = await Promise.all([
@@ -384,7 +394,16 @@ export async function importarPlanilhaFuncionarios(
       setIf("salario_combinado", num(getCell(r, COL.salarioCombinado)));
       // Status só se vier explicitamente preenchido na planilha ou por ABANDONO/ATESTADO
       if (String(statusOriginal ?? "").trim() || statusForcado) setIf("status", status);
-      if (observacoes) setIf("motivo_rescisao", observacoes);
+      
+      // TRATAMENTO ESPECIAL PARA RECONTRATAÇÃO:
+      // Se na planilha a data de rescisão está vazia E o status é ATIVO, 
+      // precisamos LIMPAR a data de rescisão e motivo de rescisão do banco.
+      if (!parseDate(getCell(r, COL.rescisao)) && status === "ativo") {
+        updatePayload.data_rescisao = null;
+        updatePayload.motivo_rescisao = null;
+      } else {
+        if (observacoes) updatePayload.motivo_rescisao = observacoes;
+      }
 
       if (Object.keys(updatePayload).length === 0) {
         result.pulados_existentes++;
