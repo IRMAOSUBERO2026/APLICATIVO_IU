@@ -8,7 +8,7 @@ import {
   DollarSign, TrendingUp, TrendingDown, HardHat, Users, AlertTriangle,
   ArrowUpRight, ArrowDownRight, Activity, Clock, ShoppingCart, FileText,
   Wallet, Calendar, ChevronRight, Sparkles, Bell, ClipboardList,
-  PackageSearch, Stethoscope, Wrench, MessageSquare,
+  PackageSearch, Stethoscope, Wrench, MessageSquare, Building2,
 } from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
