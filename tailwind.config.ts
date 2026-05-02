@@ -13,6 +13,9 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -22,6 +25,9 @@ export default {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          hover: "hsl(var(--primary-hover))",
+          light: "hsl(var(--primary-light))",
+          dark: "hsl(var(--primary-dark))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -30,6 +36,7 @@ export default {
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
+          soft: "hsl(var(--destructive-soft))",
         },
         muted: {
           DEFAULT: "hsl(var(--muted))",
@@ -50,10 +57,16 @@ export default {
         success: {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",
+          soft: "hsl(var(--success-soft))",
         },
         warning: {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))",
+          soft: "hsl(var(--warning-soft))",
+        },
+        gold: {
+          DEFAULT: "hsl(var(--gold))",
+          foreground: "hsl(var(--gold-foreground))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
@@ -65,6 +78,9 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
           muted: "hsl(var(--sidebar-muted))",
+          icon: "hsl(var(--sidebar-icon))",
+          hover: "hsl(var(--sidebar-hover))",
+          "active-border": "hsl(var(--sidebar-active-border))",
         },
       },
       borderRadius: {

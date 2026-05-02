@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 
 interface ObraOption { id: string; nome: string; codigo: string; }
 interface FuncOption { id: string; nome: string; cargo: string; obra_id: string | null; }
@@ -180,7 +181,7 @@ export default function DiarioObra() {
 
   useEffect(() => {
     Promise.all([
-      supabase.from("obras").select("id, nome, codigo").eq("status", "em_andamento"),
+      supabase.from("obras").select("id, nome, codigo").in("status", OBRA_STATUS_ATIVOS_ARR).order("nome"),
       supabase.from("funcionarios").select("id, nome, cargo, obra_id").eq("status", "ativo"),
     ]).then(([obrasRes, funcRes]) => {
       if (obrasRes.data) setObras(obrasRes.data);

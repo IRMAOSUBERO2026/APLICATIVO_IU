@@ -2,16 +2,131 @@
 @tailwind components;
 @tailwind utilities;
 
+/* =========================================================
+   IU ENGENHARIA — Design System
+   Verde militar / preto / branco — estilo ERP corporativo
+   Tema CLARO por padrão. Sem gradientes. Sem dark mode.
+   ========================================================= */
+
 @layer base {
   :root {
-    --background: 0 0% 0%;
-    --foreground: 0 0% 98%;
-    --primary: 104 93% 22%;
-    --sidebar-background: 0 0% 4%;
-    --sidebar-foreground: 0 0% 98%;
+    /* === Superfícies === */
+    --background: 220 14% 97%;        /* #F4F5F6 — fundo geral */
+    --foreground: 0 0% 10%;           /* #1A1A1A — texto principal */
+
+    --card: 0 0% 100%;                /* #FFFFFF */
+    --card-foreground: 0 0% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+
+    /* === Verde militar institucional === */
+    --primary: 105 26% 28%;           /* #3A5C35 */
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 110 24% 23%;     /* #2D4A29 */
+    --primary-light: 110 26% 58%;     /* #7AAE6E */
+    --primary-dark: 110 27% 22%;      /* #2F4A2A */
+
+    /* === Secundário / muted === */
+    --secondary: 0 0% 96%;            /* #F5F5F5 */
+    --secondary-foreground: 0 0% 17%;
+
+    --muted: 220 13% 95%;             /* #F0F1F2 */
+    --muted-foreground: 0 0% 53%;     /* #888888 */
+
+    --accent: 110 24% 95%;            /* verde muito suave hover */
+    --accent-foreground: 105 26% 28%;
+
+    /* === Status === */
+    --success: 105 55% 30%;           /* #2D6A1F */
+    --success-foreground: 0 0% 100%;
+    --success-soft: 99 56% 92%;       /* #E8F5E1 */
+
+    --warning: 36 89% 33%;            /* #A0660A */
+    --warning-foreground: 0 0% 100%;
+    --warning-soft: 38 100% 94%;      /* #FFF4E0 */
+
+    --destructive: 0 73% 42%;         /* #B91C1C */
+    --destructive-foreground: 0 0% 100%;
+    --destructive-soft: 4 88% 96%;    /* #FDECEA */
+
+    --gold: 43 51% 54%;               /* #C9A84C — destaques financeiros */
+    --gold-foreground: 0 0% 10%;
+
+    /* === Inputs / bordas === */
+    --border: 220 13% 91%;            /* #E5E7EB */
+    --input: 220 13% 84%;             /* #D0D5DD */
+    --ring: 105 26% 28%;              /* foco verde militar */
+
+    --radius: 0.5rem;                 /* 8px base, cards usam 10px */
+
+    /* === Sidebar — preto corporativo === */
+    --sidebar-background: 0 0% 7%;        /* #111111 */
+    --sidebar-foreground: 0 0% 100%;      /* texto branco */
+    --sidebar-muted: 0 0% 53%;            /* #888 — labels de grupo */
+    --sidebar-border: 0 0% 16%;           /* #2A2A2A — separadores */
+    --sidebar-icon: 105 22% 41%;          /* #4A6741 verde militar nos ícones */
+    --sidebar-accent: 110 27% 22%;        /* #2F4A2A — item ativo */
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-hover: 110 26% 14%;         /* #1A2E18 — hover */
+    --sidebar-active-border: 110 26% 58%; /* #7AAE6E — borda esquerda do ativo */
+    --sidebar-primary: 0 0% 100%;
+    --sidebar-primary-foreground: 0 0% 7%;
+    --sidebar-ring: 105 26% 28%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html, body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Tipografia padronizada */
+  h1 { @apply text-[22px] sm:text-[24px] font-semibold tracking-tight text-foreground; }
+  h2 { @apply text-[15px] sm:text-[16px] font-medium text-foreground/90; }
+
+  /* Sparingly: rótulos uppercase */
+  .label-overline {
+    @apply text-[11px] font-medium uppercase tracking-wider text-muted-foreground;
+  }
+
+  /* KPI value */
+  .kpi-value {
+    @apply text-[28px] font-bold tracking-tight text-foreground leading-none;
+  }
+  .kpi-value-gold { color: hsl(var(--gold)); }
+
+  /* Card padrão ERP */
+  .erp-card {
+    @apply bg-card border border-border rounded-[10px];
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  }
+
+  /* Tabela ERP */
+  .erp-table thead th {
+    @apply bg-secondary text-[12px] font-medium uppercase tracking-wide text-foreground/70 px-4 py-3 text-left;
+  }
+  .erp-table tbody tr {
+    @apply border-b border-border/60 transition-colors;
+  }
+  .erp-table tbody tr:hover {
+    background-color: hsl(var(--accent) / 0.6);
+  }
+  .erp-table tbody td {
+    @apply px-4 py-3 text-[13px] text-foreground;
+    height: 44px;
+  }
 }
+
+/* Scrollbar discreta na sidebar */
+.scrollbar-sidebar::-webkit-scrollbar { width: 4px; }
+.scrollbar-sidebar::-webkit-scrollbar-track { background: transparent; }
+.scrollbar-sidebar::-webkit-scrollbar-thumb { background: hsl(var(--sidebar-border)); border-radius: 4px; }
