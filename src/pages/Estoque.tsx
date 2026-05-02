@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 
 type TabKey = "produtos" | "movimentacoes" | "alertas";
 type SortKey = "descricao" | "codigo" | "saldo";
@@ -41,7 +42,7 @@ export default function Estoque() {
     const [{ data: p }, { data: m }, { data: o }] = await Promise.all([
       supabase.from("produtos").select("*"),
       supabase.from("movimentacoes_estoque").select("*, produtos(descricao, unidade), obras(nome)").order("data_movimentacao", { ascending: false }).limit(300),
-      supabase.from("obras").select("id, nome, codigo").eq("status", "em_andamento"),
+      supabase.from("obras").select("id, nome, codigo").in("status", OBRA_STATUS_ATIVOS_ARR),
     ]);
     if (p) setProdutos(p);
     if (m) setMovimentacoes(m);
