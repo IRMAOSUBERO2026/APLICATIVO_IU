@@ -140,7 +140,7 @@ function normStatus(s: any): string {
     "férias": "ferias", "ferias": "ferias",
     "atestado": "afastado", "afastamento": "afastado", "afastado": "afastado",
     "desligado": "desligado", "desligada": "desligado",
-    "abandono": "desligado",
+    "abandono": "ativo", // MUDANÇA: Abandono é tratado como ATIVO para ficar no radar
     "pré-cadastro": "ativo", "pre-cadastro": "ativo", "pré cadastro": "ativo",
     "experiência": "ativo", "experiencia": "ativo",
   };
@@ -348,12 +348,18 @@ export async function importarPlanilhaFuncionarios(
     const observacoes = obsParts.length ? obsParts.join(" | ") : null;
 
     const statusOriginal = getCell(r, COL.status);
-    const statusForcado = abandono && abandono.toLowerCase() !== "não" && abandono.toLowerCase() !== "nao"
-      ? "desligado"
+    const isAbandono = abandono && abandono.toLowerCase() !== "não" && abandono.toLowerCase() !== "nao";
+    const statusForcado = isAbandono
+      ? "ativo" // Abandono fica ATIVO no radar
       : atestado
         ? "afastado"
         : "";
     const status = normStatus(statusForcado || statusOriginal);
+
+    // Se for abandono, FORÇA ir para SEM-OBRA
+    if (isAbandono) {
+      obra_id = semObra?.id ?? null;
+    }
 
     // Helper: só inclui no payload se houver valor (evita sobrescrever com vazio em UPDATE)
     const txt = (v: any) => {
@@ -395,6 +401,9 @@ export async function importarPlanilhaFuncionarios(
       // Status só se vier explicitamente preenchido na planilha ou por ABANDONO/ATESTADO
       if (String(statusOriginal ?? "").trim() || statusForcado) setIf("status", status);
       
+      // Observações (sempre atualiza se houver)
+      if (observacoes) updatePayload.observacoes = observacoes;
+
       // TRATAMENTO ESPECIAL PARA RECONTRATAÇÃO:
       // Se na planilha a data de rescisão está vazia E o status é ATIVO, 
       // precisamos LIMPAR a data de rescisão e motivo de rescisão do banco.
@@ -448,8 +457,8 @@ export async function importarPlanilhaFuncionarios(
         salario_base: parseNum(getCell(r, COL.salarioBase)),
         salario_combinado: getCell(r, COL.salarioCombinado) === "" ? null : parseNum(getCell(r, COL.salarioCombinado)),
         status,
+        observacoes: observacoes,
       };
-      if (observacoes) insertPayload.motivo_rescisao = observacoes;
 
       const { data: novoFuncionario, error } = await supabase
         .from("funcionarios")
