@@ -438,6 +438,7 @@ export default function RH() {
                     <th className="px-4 py-3 text-center font-medium text-muted-foreground">NR12</th>
                     <th className="px-4 py-3 text-center font-medium text-muted-foreground">NR18</th>
                     <th className="px-4 py-3 text-center font-medium text-muted-foreground">NR35</th>
+                    <th className="px-4 py-3 text-center font-medium text-muted-foreground">Bonificações</th>
                     <th className="px-4 py-3 text-center font-medium text-muted-foreground">Ações</th>
                   </tr>
                 </thead>
@@ -454,6 +455,19 @@ export default function RH() {
                         <td className="px-4 py-3.5 text-center">{f.data_nr12 ? <ExamBadge date={f.data_nr12} validityYears={2} label="NR12" /> : <span className="text-[10px] text-muted-foreground">—</span>}</td>
                         <td className="px-4 py-3.5 text-center">{f.data_nr18 ? <ExamBadge date={f.data_nr18} validityYears={2} label="NR18" /> : <span className="text-[10px] text-muted-foreground">—</span>}</td>
                         <td className="px-4 py-3.5 text-center">{f.data_nr35 ? <ExamBadge date={f.data_nr35} validityYears={2} label="NR35" /> : <span className="text-[10px] text-muted-foreground">—</span>}</td>
+                        <td className="px-4 py-3.5 text-center">
+                          {(() => {
+                            const bons = f.bonificacoes_padrao;
+                            if (!Array.isArray(bons) || bons.length === 0) return <span className="text-[10px] text-muted-foreground">—</span>;
+                            const total = bons.reduce((acc: number, b: any) => acc + (Number(b.valor) || 0), 0);
+                            return (
+                              <div className="flex flex-col items-center">
+                                <span className="text-xs font-bold text-success">R$ {total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                                <span className="text-[9px] text-muted-foreground">{bons.length} itens</span>
+                              </div>
+                            );
+                          })()}
+                        </td>
                         <td className="px-4 py-3.5 text-center">
                           <button onClick={() => setEditingExamFunc(f)} className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors" title="Editar Exames/Treinamentos">
                             <Pencil className="h-4 w-4" />
@@ -533,6 +547,7 @@ export default function RH() {
                       <th className="px-3 py-3 text-left font-medium text-muted-foreground">Status</th>
                       <th className="px-3 py-3 text-left font-medium text-muted-foreground">Experiência</th>
                       <th className="px-3 py-3 text-right font-medium text-muted-foreground">Salário</th>
+                      <th className="px-3 py-3 text-center font-medium text-muted-foreground">Bonificações</th>
                       <th className="px-3 py-3 text-center font-medium text-muted-foreground">Ações</th>
                     </tr>
                   </thead>
@@ -610,6 +625,19 @@ export default function RH() {
                           {/* Salário */}
                           <td className="px-3 py-2.5 text-right font-medium text-xs">
                             R$ {(f.salario_combinado || f.salario_base || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                          </td>
+                          <td className="px-3 py-2.5 text-center">
+                            {(() => {
+                              const bons = f.bonificacoes_padrao;
+                              if (!Array.isArray(bons) || bons.length === 0) return <span className="text-[10px] text-muted-foreground">—</span>;
+                              const total = bons.reduce((acc: number, b: any) => acc + (Number(b.valor) || 0), 0);
+                              return (
+                                <div className="flex flex-col items-center">
+                                  <span className="text-[10px] font-bold text-success">R$ {total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                                  <span className="text-[9px] text-muted-foreground italic">{bons.length} bonif.</span>
+                                </div>
+                              );
+                            })()}
                           </td>
                           {/* Ações */}
                           <td className="px-3 py-2.5">
