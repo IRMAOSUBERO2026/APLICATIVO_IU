@@ -283,7 +283,7 @@ export async function importarPlanilhaFuncionarios(
   // Index por CPF normalizado, Nº Reg e nome+data_nascimento.
   // Quando houver duplicado legado, usa o cadastro mais completo para atualizar em vez de criar outro.
   const funcionariosPorCpf = new Map<string, string>();
-  const funcionariosPorRegistro = new Map<string, string>();
+  const funcionariosPorRegistro = new Map<string, string>(); // Mantém empresa para registro
   const funcionariosPorNomeNasc = new Map<string, string>();
   const qualidadeCadastro = (f: any) =>
     (normRegistro(f?.numero_registro) ? 100 : 0) +
@@ -296,10 +296,10 @@ export async function importarPlanilhaFuncionarios(
     .sort((a: any, b: any) => qualidadeCadastro(b) - qualidadeCadastro(a) || String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")))
     .forEach((f: any) => {
       const cpfN = normCPF(f.cpf);
-      if (cpfN && !funcionariosPorCpf.has(`${f.empresa_id}|${cpfN}`)) funcionariosPorCpf.set(`${f.empresa_id}|${cpfN}`, f.id);
+      if (cpfN && !funcionariosPorCpf.has(cpfN)) funcionariosPorCpf.set(cpfN, f.id);
       const regN = normRegistro(f.numero_registro);
       if (regN && !funcionariosPorRegistro.has(`${f.empresa_id}|${regN}`)) funcionariosPorRegistro.set(`${f.empresa_id}|${regN}`, f.id);
-      const k = chaveNomeNasc(f.empresa_id, f.nome, f.data_nascimento);
+      const k = `${String(f.nome || "").trim().toLowerCase()}|${f.data_nascimento || ""}`;
       if (!funcionariosPorNomeNasc.has(k)) funcionariosPorNomeNasc.set(k, f.id);
     });
 
@@ -325,13 +325,13 @@ export async function importarPlanilhaFuncionarios(
       continue;
     }
 
-    // Match: 1º por CPF, 2º por Nº REG dentro da empresa, 3º por NOME+DATA_NASCIMENTO dentro da empresa
-    let funcionarioExistenteId: string | undefined = cpf ? funcionariosPorCpf.get(`${empresa_id}|${cpf}`) : undefined;
+    // Match: 1º por CPF, 2º por Nº REG dentro da empresa, 3º por NOME+DATA_NASCIMENTO global
+    let funcionarioExistenteId: string | undefined = cpf ? funcionariosPorCpf.get(cpf) : undefined;
     if (!funcionarioExistenteId && numeroRegistro) {
       funcionarioExistenteId = funcionariosPorRegistro.get(`${empresa_id}|${numeroRegistro}`);
     }
     if (!funcionarioExistenteId) {
-      funcionarioExistenteId = funcionariosPorNomeNasc.get(chaveNomeNasc(empresa_id, nome, dataNascimento));
+      funcionarioExistenteId = funcionariosPorNomeNasc.get(`${nome.toLowerCase()}|${dataNascimento || ""}`);
     }
 
     // Se modo "criar_somente" e já existe, pula
@@ -451,9 +451,9 @@ export async function importarPlanilhaFuncionarios(
         result.ignorados++;
       } else {
         result.atualizados++;
-        if (cpf) funcionariosPorCpf.set(`${empresa_id}|${cpf}`, funcionarioExistenteId);
+        if (cpf) funcionariosPorCpf.set(cpf, funcionarioExistenteId);
         if (numeroRegistro) funcionariosPorRegistro.set(`${empresa_id}|${numeroRegistro}`, funcionarioExistenteId);
-        funcionariosPorNomeNasc.set(chaveNomeNasc(empresa_id, nome, dataNascimento), funcionarioExistenteId);
+        funcionariosPorNomeNasc.set(`${nome.toLowerCase()}|${dataNascimento || ""}`, funcionarioExistenteId);
       }
     } else {
       // ===== INSERT: criar novo =====
@@ -494,9 +494,9 @@ export async function importarPlanilhaFuncionarios(
       } else {
         result.criados++;
         if (novoFuncionario?.id) {
-          if (cpf) funcionariosPorCpf.set(`${empresa_id}|${cpf}`, novoFuncionario.id);
+          if (cpf) funcionariosPorCpf.set(cpf, novoFuncionario.id);
           if (numeroRegistro) funcionariosPorRegistro.set(`${empresa_id}|${numeroRegistro}`, novoFuncionario.id);
-          funcionariosPorNomeNasc.set(chaveNomeNasc(empresa_id, nome, dataNascimento), novoFuncionario.id);
+          funcionariosPorNomeNasc.set(`${nome.toLowerCase()}|${dataNascimento || ""}`, novoFuncionario.id);
         }
       }
     }
