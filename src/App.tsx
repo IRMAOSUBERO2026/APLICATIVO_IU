@@ -1,4 +1,4 @@
-﻿import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -15,6 +15,8 @@ import Acesso from "./pages/Acesso";
 import Empresas from "./pages/Empresas";
 import Fornecedores from "./pages/Fornecedores";
 import DiarioObra from "./pages/DiarioObra";
+import DiarioObraPainel from "./pages/DiarioObraPainel";
+import DiarioObraForm from "./pages/DiarioObraForm";
 import EntregaEPI from "./pages/EntregaEPI";
 import EntregaEPIMobile from "./pages/EntregaEPIMobile";
 import Ferias from "./pages/Ferias";
@@ -60,6 +62,8 @@ const App = () => (
           <Route path="/empresas" element={<Empresas />} />
           <Route path="/fornecedores" element={<Fornecedores />} />
           <Route path="/diario-obra" element={<DiarioObra />} />
+          <Route path="/diario-obra/:obraId" element={<DiarioObraPainel />} />
+          <Route path="/diario-obra/:obraId/novo" element={<DiarioObraForm />} />
           <Route path="/entrega-epi" element={<EntregaEPI />} />
           <Route path="/entrega-epi-mobile" element={<EntregaEPIMobile />} />
           <Route path="/ferias" element={<Ferias />} />
