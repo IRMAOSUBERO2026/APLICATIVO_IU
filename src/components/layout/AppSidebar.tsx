@@ -100,10 +100,12 @@ export function AppSidebar({ onClose }: AppSidebarProps) {
     <div className="flex h-full flex-col overflow-y-auto scrollbar-saas bg-[#0D0D0D] w-[240px]">
       <div className="flex h-20 items-center justify-between px-6 border-b border-[#2A2A2A]">
         <div className="flex items-center gap-3">
-          <img src={logoBranco} alt="IU Engenharia" className="h-10 w-auto" />
+          <div className="flex h-12 w-12 items-center justify-center rounded-md bg-black p-1 shadow-md">
+            <img src={logoBranco} alt="Irmãos Ubero Engenharia" className="h-10 w-auto" />
+          </div>
           <div className="hidden sm:block">
-            <h1 className="text-[11px] font-black text-white tracking-[0.1em] leading-tight uppercase">IU ENGENHARIA</h1>
-            <p className="text-[9px] text-[#4A6741] font-bold leading-none uppercase">Engenharia</p>
+            <h1 className="text-[11px] font-black text-white tracking-[0.08em] leading-tight uppercase">IRMÃOS UBERO</h1>
+            <p className="text-[9px] text-[#C9A84C] font-bold leading-none uppercase tracking-[0.12em]">Engenharia</p>
           </div>
         </div>
         <button onClick={onClose} className="rounded-md p-1.5 text-white/40 hover:text-white lg:hidden">
@@ -127,14 +129,12 @@ export function AppSidebar({ onClose }: AppSidebarProps) {
                       onClick={onClose}
                       className={`flex items-center gap-3 px-6 py-2.5 text-[13px] transition-all relative ${
                         isActive
-                          ? "bg-[#2F4A2A] text-white font-medium border-l-[3px] border-[#7AAE6E]"
+                          ? "bg-[#2F4A2A] text-white font-medium border-l-[3px] border-[#C9A84C]"
                           : "text-white hover:bg-[#1A2E18] font-normal"
                       }`}
                     >
-                      <item.icon 
-                        className={`h-4 w-4 flex-shrink-0 transition-colors ${
-                          isActive ? "text-white" : "text-[#4A6741]"
-                        }`} 
+                      <item.icon
+                        className="h-4 w-4 flex-shrink-0 text-[#C9A84C]"
                         style={{ width: '16px', height: '16px' }}
                       />
                       {item.label}
