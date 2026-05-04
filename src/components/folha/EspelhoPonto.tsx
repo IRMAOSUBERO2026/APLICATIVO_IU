@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Clock, RotateCcw, Copy } from "lucide-react";
 import { getDaysInMonth } from "date-fns";
+import { getFeriadosNacionais, isFeriadoNacional } from "@/lib/feriadosNacionais";
 
 const DIAS_SEMANA = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"] as const;
 const DIAS_LABELS: Record<string, string> = {
@@ -142,14 +143,16 @@ export function EspelhoPonto({ mes, ano, horarioPadrao, onResult }: Props) {
       const date = new Date(ano, mes, d);
       const dow = DIAS_SEMANA[date.getDay()];
       const padrao = horarioPadrao?.[dow as keyof HorarioPadrao];
+      const feriado = isFeriadoNacional(ano, mes, d);
+      const isHoliday = feriado !== null;
       days.push({
         dia: d,
         diaSemana: dow,
-        e1: padrao?.e1 || "",
-        s1: padrao?.s1 || "",
-        e2: padrao?.e2 || "",
-        s2: padrao?.s2 || "",
-        status: "normal",
+        e1: isHoliday ? "" : (padrao?.e1 || ""),
+        s1: isHoliday ? "" : (padrao?.s1 || ""),
+        e2: isHoliday ? "" : (padrao?.e2 || ""),
+        s2: isHoliday ? "" : (padrao?.s2 || ""),
+        status: isHoliday ? "feriado" : "normal",
       });
     }
     setPunches(days);
@@ -320,10 +323,17 @@ export function EspelhoPonto({ mes, ano, horarioPadrao, onResult }: Props) {
                   {STATUS_LABEL[p.status] || "·"}
                 </button>
                 {isSpecial ? (
-                  <span className={`col-span-4 text-[10px] font-medium pl-1 ${
-                    p.status === "falta" ? "text-destructive" : p.status === "atestado" ? "text-amber-600" : "text-primary"
-                  }`}>
-                    {p.status === "falta" ? "FALTA" : p.status === "atestado" ? "ATESTADO" : "FERIADO"}
+                  <span
+                    className={`col-span-4 text-[10px] font-medium pl-1 truncate ${
+                      p.status === "falta" ? "text-destructive" : p.status === "atestado" ? "text-amber-600" : "text-primary"
+                    }`}
+                    title={p.status === "feriado" ? (isFeriadoNacional(ano, mes, p.dia)?.nome || "Feriado") : undefined}
+                  >
+                    {p.status === "falta"
+                      ? "FALTA"
+                      : p.status === "atestado"
+                      ? "ATESTADO"
+                      : `FERIADO${isFeriadoNacional(ano, mes, p.dia) ? ` — ${isFeriadoNacional(ano, mes, p.dia)!.nome}` : ""}`}
                   </span>
                 ) : (
                   <>
