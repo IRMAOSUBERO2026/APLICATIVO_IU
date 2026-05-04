@@ -323,10 +323,17 @@ export function EspelhoPonto({ mes, ano, horarioPadrao, onResult }: Props) {
                   {STATUS_LABEL[p.status] || "·"}
                 </button>
                 {isSpecial ? (
-                  <span className={`col-span-4 text-[10px] font-medium pl-1 ${
-                    p.status === "falta" ? "text-destructive" : p.status === "atestado" ? "text-amber-600" : "text-primary"
-                  }`}>
-                    {p.status === "falta" ? "FALTA" : p.status === "atestado" ? "ATESTADO" : "FERIADO"}
+                  <span
+                    className={`col-span-4 text-[10px] font-medium pl-1 truncate ${
+                      p.status === "falta" ? "text-destructive" : p.status === "atestado" ? "text-amber-600" : "text-primary"
+                    }`}
+                    title={p.status === "feriado" ? (isFeriadoNacional(ano, mes, p.dia)?.nome || "Feriado") : undefined}
+                  >
+                    {p.status === "falta"
+                      ? "FALTA"
+                      : p.status === "atestado"
+                      ? "ATESTADO"
+                      : `FERIADO${isFeriadoNacional(ano, mes, p.dia) ? ` — ${isFeriadoNacional(ano, mes, p.dia)!.nome}` : ""}`}
                   </span>
                 ) : (
                   <>
