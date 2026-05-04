@@ -134,7 +134,7 @@ export default function Medicoes() {
     try {
       const { data, error } = await supabase.from("obras").select("*").order("codigo", { ascending: true });
       if (error) throw error;
-      const all = (data || []) as Obra[];
+      const all = (data || []) as unknown as Obra[];
       setObras(all);
       loadTotaisObras(all.map(o => o.id));
     } catch (err) {
