@@ -1,86 +1,220 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { TrendingUp, TrendingDown, Wallet, Building2, Gift } from "lucide-react";
 import type { FolhaOutput } from "@/lib/motorFolha";
+import type { FolhaInput } from "@/lib/motorFolha";
 
 interface Props {
   result: FolhaOutput;
+  input?: FolhaInput;
 }
 
 const fmt = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-function Line({ label, value, highlight, negative, muted }: {
-  label: string; value: number; highlight?: boolean; negative?: boolean; muted?: boolean;
+function Line({
+  label, value, negative, muted, bold, indent,
+}: {
+  label: string;
+  value: number;
+  negative?: boolean;
+  muted?: boolean;
+  bold?: boolean;
+  indent?: boolean;
 }) {
+  const isZero = !value || value === 0;
   return (
-    <div className={`flex items-center justify-between py-1 text-sm ${highlight ? "font-bold text-base" : ""}`}>
-      <span className={muted ? "text-muted-foreground text-xs" : "text-muted-foreground"}>{label}</span>
-      <span className={
-        negative ? "text-destructive font-medium" :
-        highlight ? "text-primary font-bold" :
-        muted ? "text-muted-foreground text-xs" :
-        "font-medium"
-      }>
+    <div
+      className={`flex items-center justify-between py-1 text-xs ${
+        indent ? "pl-3" : ""
+      } ${isZero ? "opacity-50" : ""}`}
+    >
+      <span className={muted ? "text-muted-foreground" : "text-foreground"}>
+        {label}
+      </span>
+      <span
+        className={`tabular-nums ${
+          negative
+            ? "text-destructive"
+            : bold
+            ? "font-bold text-primary"
+            : "font-medium"
+        }`}
+      >
         {negative && value > 0 ? `- ${fmt(value)}` : fmt(value)}
       </span>
     </div>
   );
 }
 
-export function FolhaResultado({ result }: Props) {
+function SectionHeader({
+  icon: Icon, title, color, total,
+}: {
+  icon: typeof TrendingUp;
+  title: string;
+  color: "primary" | "destructive" | "amber";
+  total?: number;
+}) {
+  const colorClass =
+    color === "destructive"
+      ? "text-destructive"
+      : color === "amber"
+      ? "text-amber-600"
+      : "text-primary";
+  return (
+    <div className="flex items-center justify-between border-b pb-1.5 mb-1.5">
+      <div className={`flex items-center gap-1.5 text-xs font-bold ${colorClass}`}>
+        <Icon className="h-3.5 w-3.5" />
+        <span>{title}</span>
+      </div>
+      {total !== undefined && (
+        <span className={`text-xs font-bold tabular-nums ${colorClass}`}>
+          {fmt(total)}
+        </span>
+      )}
+    </div>
+  );
+}
+
+export function FolhaResultado({ result, input }: Props) {
+  // Marmita total (calculado)
+  const totalMarmita = input
+    ? input.desconto_marmita > 0
+      ? input.desconto_marmita
+      : input.qtd_marmitas * input.valor_marmita_unitario
+    : 0;
+
+  const isProducao = input?.tipo_remuneracao === "producao";
+  const salarioBaseProvento = isProducao
+    ? result.valor_producao
+    : input?.salario_combinado ?? 0;
+
+  const totalProventos =
+    salarioBaseProvento +
+    result.total_HE +
+    result.valor_atestados +
+    result.total_bonificacoes;
+
   return (
     <div className="space-y-2">
-      {/* Proventos */}
+      {/* PROVENTOS */}
       <Card>
-        <CardHeader className="pb-1 pt-3 px-4">
-          <CardTitle className="text-xs font-semibold text-primary">PROVENTOS</CardTitle>
-        </CardHeader>
-        <CardContent className="px-4 pb-3 space-y-0.5">
-          {result.valor_producao > 0 && (
-            <Line label="Produção" value={result.valor_producao} />
-          )}
-          {result.total_HE > 0 && (
-            <>
-              <Line label="HE 50% (Sem)" value={result.HE_semanal} muted />
-              <Line label="HE 50% (Sáb)" value={result.HE_sabado} muted />
-              <Line label="HE 100%" value={result.HE_100} muted />
-              <Line label="Total HE" value={result.total_HE} />
-            </>
-          )}
-          {result.valor_atestados > 0 && (
-            <Line label="Atestados" value={result.valor_atestados} />
-          )}
-          {result.total_bonificacoes > 0 && (
-            <Line label="Bonificações" value={result.total_bonificacoes} />
-          )}
+        <CardContent className="px-3 py-2.5">
+          <SectionHeader
+            icon={TrendingUp}
+            title="PROVENTOS"
+            color="primary"
+            total={totalProventos}
+          />
+          <Line
+            label={isProducao ? "Valor Produção" : "Salário Combinado"}
+            value={salarioBaseProvento}
+          />
+
+          {/* HE detalhado */}
+          <div className="mt-1">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mt-1">
+              Horas Extras
+            </div>
+            <Line label="HE 50% Semanal" value={result.HE_semanal} indent muted />
+            <Line label="HE 50% Sábado" value={result.HE_sabado} indent muted />
+            <Line label="HE 100%" value={result.HE_100} indent muted />
+            <Line label="Total HE" value={result.total_HE} indent bold />
+          </div>
+
+          <Line label="Atestados" value={result.valor_atestados} />
         </CardContent>
       </Card>
 
-      {/* Descontos */}
-      {result.total_descontos > 0 && (
-        <Card>
-          <CardHeader className="pb-1 pt-3 px-4">
-            <CardTitle className="text-xs font-semibold text-destructive">DESCONTOS</CardTitle>
-          </CardHeader>
-          <CardContent className="px-4 pb-3 space-y-0.5">
-            {result.desconto_faltas > 0 && <Line label="Faltas" value={result.desconto_faltas} negative />}
-            {result.desconto_horas_negativas > 0 && <Line label="Horas Neg." value={result.desconto_horas_negativas} negative />}
-            {result.dsr_perdido > 0 && <Line label="DSR Perdido" value={result.dsr_perdido} negative />}
-            <Line label="Total Descontos" value={result.total_descontos} negative />
-          </CardContent>
-        </Card>
-      )}
+      {/* BONIFICAÇÕES */}
+      <Card>
+        <CardContent className="px-3 py-2.5">
+          <SectionHeader
+            icon={Gift}
+            title="BONIFICAÇÕES"
+            color="amber"
+            total={result.total_bonificacoes}
+          />
+          <Line label="Meta" value={input?.bonificacao_meta ?? 0} />
+          <Line label="Assiduidade" value={input?.bonificacao_assiduidade ?? 0} />
+        </CardContent>
+      </Card>
 
-      {/* Resultado Final */}
-      <Card className="border-primary/30 bg-primary/5">
-        <CardContent className="py-3 px-4 space-y-1">
-          <Line label="SALÁRIO LÍQUIDO" value={result.salario_final} highlight />
-          <Separator className="my-1" />
+      {/* DESCONTOS */}
+      <Card>
+        <CardContent className="px-3 py-2.5">
+          <SectionHeader
+            icon={TrendingDown}
+            title="DESCONTOS"
+            color="destructive"
+            total={result.total_descontos}
+          />
+
+          {/* Faltas / Ponto */}
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">
+            Ponto
+          </div>
+          <Line label="Faltas" value={result.desconto_faltas} negative indent />
+          <Line label="Horas Negativas" value={result.desconto_horas_negativas} negative indent />
+          <Line label="DSR Perdido" value={result.dsr_perdido} negative indent />
+
+          {/* Outros descontos */}
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mt-1">
+            Outros
+          </div>
+          <Line label="Marmita" value={totalMarmita} negative indent />
+          <Line label="Vale" value={input?.desconto_vale ?? 0} negative indent />
+          <Line label="Adiantamento" value={input?.desconto_adiantamento ?? 0} negative indent />
+          <Line label="Empréstimo" value={input?.desconto_emprestimo ?? 0} negative indent />
+          <Line label="Sindicato" value={input?.desconto_sindicato ?? 0} negative indent />
+          <Line label="Outros" value={input?.outros_descontos ?? 0} negative indent />
+        </CardContent>
+      </Card>
+
+      {/* RESULTADO FINAL */}
+      <Card className="border-primary/40 bg-gradient-to-br from-primary/10 to-primary/5">
+        <CardContent className="px-3 py-3 space-y-1.5">
+          <div className="flex items-center gap-1.5 text-[10px] font-bold text-primary uppercase tracking-wider">
+            <Wallet className="h-3.5 w-3.5" />
+            Resultado Final
+          </div>
+
+          <div className="grid grid-cols-2 gap-1 text-[10px] text-muted-foreground">
+            <span>Proventos</span>
+            <span className="text-right tabular-nums">{fmt(totalProventos)}</span>
+            <span>Descontos</span>
+            <span className="text-right tabular-nums text-destructive">
+              - {fmt(result.total_descontos)}
+            </span>
+          </div>
+
+          <Separator />
+
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-bold text-primary">SALÁRIO LÍQUIDO</span>
+            <span className="text-lg font-bold text-primary tabular-nums">
+              {fmt(result.salario_final)}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* CUSTO EMPRESA */}
+      <Card className="border-dashed">
+        <CardContent className="px-3 py-2.5">
+          <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">
+            <Building2 className="h-3.5 w-3.5" />
+            Custo Empresa
+          </div>
+          <Line label="Salário Líquido" value={result.salario_final} muted />
           <Line label="FGTS (8%)" value={result.fgts} muted />
           <Line label="INSS Empresa (20%)" value={result.inss_empresa} muted />
-          <div className="flex items-center justify-between py-1 text-sm font-semibold">
-            <span className="text-muted-foreground">CUSTO EMPRESA</span>
-            <span className="text-foreground">{fmt(result.custo_total_empresa)}</span>
+          <Separator className="my-1" />
+          <div className="flex items-center justify-between pt-0.5">
+            <span className="text-xs font-bold">CUSTO TOTAL</span>
+            <span className="text-sm font-bold tabular-nums">
+              {fmt(result.custo_total_empresa)}
+            </span>
           </div>
         </CardContent>
       </Card>
