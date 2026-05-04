@@ -129,14 +129,12 @@ export function AppSidebar({ onClose }: AppSidebarProps) {
                       onClick={onClose}
                       className={`flex items-center gap-3 px-6 py-2.5 text-[13px] transition-all relative ${
                         isActive
-                          ? "bg-[#2F4A2A] text-white font-medium border-l-[3px] border-[#7AAE6E]"
+                          ? "bg-[#2F4A2A] text-white font-medium border-l-[3px] border-[#C9A84C]"
                           : "text-white hover:bg-[#1A2E18] font-normal"
                       }`}
                     >
-                      <item.icon 
-                        className={`h-4 w-4 flex-shrink-0 transition-colors ${
-                          isActive ? "text-white" : "text-[#4A6741]"
-                        }`} 
+                      <item.icon
+                        className="h-4 w-4 flex-shrink-0 text-[#C9A84C]"
                         style={{ width: '16px', height: '16px' }}
                       />
                       {item.label}
