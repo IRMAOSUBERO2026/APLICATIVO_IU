@@ -140,10 +140,16 @@ export function FolhaResultado({ result, input }: Props) {
             <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mt-1">
               Horas Extras
             </div>
-            <Line label="HE 50% Semanal" value={result.HE_semanal} indent muted />
-            <Line label="HE 50% Sábado" value={result.HE_sabado} indent muted />
-            <Line label="HE 100%" value={result.HE_100} indent muted />
-            <Line label="Total HE" value={result.total_HE} indent bold />
+            <Line label="HE Sem" value={result.HE_semanal} horas={input?.horas_extras_semanais ?? 0} indent muted />
+            <Line label="HE Sáb" value={result.HE_sabado} horas={input?.horas_extras_sabado ?? 0} indent muted />
+            <Line label="HE 100%" value={result.HE_100} horas={input?.horas_extras_100 ?? 0} indent muted />
+            <Line
+              label="Total HE"
+              value={result.total_HE}
+              horas={(input?.horas_extras_semanais ?? 0) + (input?.horas_extras_sabado ?? 0) + (input?.horas_extras_100 ?? 0)}
+              indent
+              bold
+            />
           </div>
 
           <Line label="Atestados" value={result.valor_atestados} />
