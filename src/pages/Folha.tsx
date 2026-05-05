@@ -48,11 +48,29 @@ const MESES = [
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
 
+/**
+ * Retorna o número exato de dias do mês.
+ * month é 0-indexado (0=Janeiro ... 11=Dezembro).
+ * Usa o "dia 0 do mês seguinte" — abordagem nativa e à prova de timezone.
+ */
+function diasDoMesExato(year: number, month: number): number {
+  return new Date(year, month + 1, 0).getDate();
+}
+
+/**
+ * Conta domingos + feriados nacionais do mês (para DSR).
+ * month é 0-indexado.
+ */
 function countSundaysAndHolidays(year: number, month: number): number {
-  const days = getDaysInMonth(new Date(year, month));
+  const days = diasDoMesExato(year, month);
+  // Importação dinâmica evita dependência circular no topo
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { isFeriadoNacional } = require("@/lib/feriadosNacionais");
   let count = 0;
   for (let d = 1; d <= days; d++) {
-    if (new Date(year, month, d).getDay() === 0) count++;
+    const dow = new Date(year, month, d).getDay();
+    const feriado = isFeriadoNacional(year, month, d);
+    if (dow === 0 || feriado) count++;
   }
   return count;
 }
