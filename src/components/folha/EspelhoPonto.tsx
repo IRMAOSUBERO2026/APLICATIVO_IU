@@ -133,7 +133,8 @@ const STATUS_CLASS: Record<PunchDay["status"], string> = {
 };
 
 export function EspelhoPonto({ mes, ano, horarioPadrao, onResult }: Props) {
-  const diasNoMes = getDaysInMonth(new Date(ano, mes));
+  // mes é 0-indexado (0=Jan ... 11=Dez). "Dia 0 do mês seguinte" devolve o último dia do mês corrente.
+  const diasNoMes = new Date(ano, mes + 1, 0).getDate();
   const [punches, setPunches] = useState<PunchDay[]>([]);
 
   useEffect(() => {
