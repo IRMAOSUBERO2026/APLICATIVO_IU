@@ -20,6 +20,7 @@ import { createBrandedPDF, addPDFFooter, getAutoTableStyles, type EmpresaBrandin
 import { getDaysInMonth } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { buscarFuncionariosFolha, calcularPrefillBonificacoes } from "@/lib/bonificacoesPadrao";
+import { isFeriadoNacional } from "@/lib/feriadosNacionais";
 
 interface FuncionarioFolha {
   id: string;
