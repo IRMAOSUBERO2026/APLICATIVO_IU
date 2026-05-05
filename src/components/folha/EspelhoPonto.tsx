@@ -2,8 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Clock, RotateCcw, Copy } from "lucide-react";
-import { getDaysInMonth } from "date-fns";
-import { getFeriadosNacionais, isFeriadoNacional } from "@/lib/feriadosNacionais";
+import { isFeriadoNacional } from "@/lib/feriadosNacionais";
 
 const DIAS_SEMANA = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"] as const;
 const DIAS_LABELS: Record<string, string> = {
