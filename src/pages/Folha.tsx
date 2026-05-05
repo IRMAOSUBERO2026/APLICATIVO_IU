@@ -64,9 +64,6 @@ function diasDoMesExato(year: number, month: number): number {
  */
 function countSundaysAndHolidays(year: number, month: number): number {
   const days = diasDoMesExato(year, month);
-  // Importação dinâmica evita dependência circular no topo
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { isFeriadoNacional } = require("@/lib/feriadosNacionais");
   let count = 0;
   for (let d = 1; d <= days; d++) {
     const dow = new Date(year, month, d).getDay();
