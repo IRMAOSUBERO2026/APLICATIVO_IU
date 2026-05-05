@@ -12,8 +12,26 @@ interface Props {
 const fmt = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+function decimalParaHHMM(horas: number): string {
+  const sinal = horas < 0 ? "-" : "";
+  const abs = Math.abs(horas);
+  const h = Math.floor(abs);
+  const m = Math.round((abs - h) * 60);
+  // ajusta se arredondar para 60min
+  const hf = m === 60 ? h + 1 : h;
+  const mf = m === 60 ? 0 : m;
+  return `${sinal}${String(hf).padStart(2, "0")}:${String(mf).padStart(2, "0")}`;
+}
+
+function decimalFmt(horas: number): string {
+  return horas.toLocaleString("pt-BR", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 2,
+  });
+}
+
 function Line({
-  label, value, negative, muted, bold, indent,
+  label, value, negative, muted, bold, indent, horas,
 }: {
   label: string;
   value: number;
@@ -21,6 +39,7 @@ function Line({
   muted?: boolean;
   bold?: boolean;
   indent?: boolean;
+  horas?: number;
 }) {
   const isZero = !value || value === 0;
   return (
@@ -31,6 +50,11 @@ function Line({
     >
       <span className={muted ? "text-muted-foreground" : "text-foreground"}>
         {label}
+        {horas !== undefined && (
+          <span className="ml-1.5 text-[10px] text-muted-foreground tabular-nums">
+            {decimalParaHHMM(horas)} / {decimalFmt(horas)}h
+          </span>
+        )}
       </span>
       <span
         className={`tabular-nums ${
@@ -116,10 +140,16 @@ export function FolhaResultado({ result, input }: Props) {
             <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold mt-1">
               Horas Extras
             </div>
-            <Line label="HE 50% Semanal" value={result.HE_semanal} indent muted />
-            <Line label="HE 50% Sábado" value={result.HE_sabado} indent muted />
-            <Line label="HE 100%" value={result.HE_100} indent muted />
-            <Line label="Total HE" value={result.total_HE} indent bold />
+            <Line label="HE Sem" value={result.HE_semanal} horas={input?.horas_extras_semanais ?? 0} indent muted />
+            <Line label="HE Sáb" value={result.HE_sabado} horas={input?.horas_extras_sabado ?? 0} indent muted />
+            <Line label="HE 100%" value={result.HE_100} horas={input?.horas_extras_100 ?? 0} indent muted />
+            <Line
+              label="Total HE"
+              value={result.total_HE}
+              horas={(input?.horas_extras_semanais ?? 0) + (input?.horas_extras_sabado ?? 0) + (input?.horas_extras_100 ?? 0)}
+              indent
+              bold
+            />
           </div>
 
           <Line label="Atestados" value={result.valor_atestados} />
@@ -155,7 +185,7 @@ export function FolhaResultado({ result, input }: Props) {
             Ponto
           </div>
           <Line label="Faltas" value={result.desconto_faltas} negative indent />
-          <Line label="Horas Negativas" value={result.desconto_horas_negativas} negative indent />
+          <Line label="Horas Negativas" value={result.desconto_horas_negativas} horas={input?.horas_negativas ?? 0} negative indent />
           <Line label="DSR Perdido" value={result.dsr_perdido} negative indent />
 
           {/* Outros descontos */}
