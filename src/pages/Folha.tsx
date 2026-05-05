@@ -203,7 +203,7 @@ export default function Folha() {
           const input: FolhaInput = {
             salario_registro: Number(existing.salario_registro),
             salario_combinado: Number(existing.salario_combinado),
-            dias_do_mes: existing.dias_do_mes,
+            dias_do_mes: diasMes,
             tipo_remuneracao: existing.tipo_remuneracao || "mensal",
             valor_producao: Number(existing.valor_producao || 0),
             horas_extras_semanais: Number(existing.horas_extras_semanais),
