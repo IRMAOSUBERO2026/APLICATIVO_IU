@@ -185,7 +185,7 @@ export default function Folha() {
     if (view === "funcionario") return;
     setLoading(true);
     setSelectedFuncId(null);
-    const diasMes = getDaysInMonth(new Date(ano, mes));
+    const diasMes = diasDoMesExato(ano, mes);
     const domingos = countSundaysAndHolidays(ano, mes);
 
     Promise.all([
