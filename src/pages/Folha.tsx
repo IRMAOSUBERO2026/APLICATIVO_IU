@@ -213,7 +213,7 @@ export default function Folha() {
             faltas: existing.faltas,
             atestados: existing.atestados,
             semanas_com_falta: existing.semanas_com_falta,
-            domingos_feriados_no_mes: existing.domingos_feriados_no_mes,
+            domingos_feriados_no_mes: domingos,
             bonificacao_meta: Number(existing.bonificacao_meta),
             bonificacao_assiduidade: Number(existing.bonificacao_assiduidade),
             desconto_marmita: Number(existing.desconto_marmita),
