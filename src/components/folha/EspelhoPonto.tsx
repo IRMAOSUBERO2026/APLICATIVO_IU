@@ -2,8 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Clock, RotateCcw, Copy } from "lucide-react";
-import { getDaysInMonth } from "date-fns";
-import { getFeriadosNacionais, isFeriadoNacional } from "@/lib/feriadosNacionais";
+import { isFeriadoNacional } from "@/lib/feriadosNacionais";
 
 const DIAS_SEMANA = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"] as const;
 const DIAS_LABELS: Record<string, string> = {
@@ -134,7 +133,8 @@ const STATUS_CLASS: Record<PunchDay["status"], string> = {
 };
 
 export function EspelhoPonto({ mes, ano, horarioPadrao, onResult }: Props) {
-  const diasNoMes = getDaysInMonth(new Date(ano, mes));
+  // mes é 0-indexado (0=Jan ... 11=Dez). "Dia 0 do mês seguinte" devolve o último dia do mês corrente.
+  const diasNoMes = new Date(ano, mes + 1, 0).getDate();
   const [punches, setPunches] = useState<PunchDay[]>([]);
 
   useEffect(() => {

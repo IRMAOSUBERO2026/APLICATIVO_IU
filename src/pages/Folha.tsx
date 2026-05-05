@@ -20,6 +20,7 @@ import { createBrandedPDF, addPDFFooter, getAutoTableStyles, type EmpresaBrandin
 import { getDaysInMonth } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { buscarFuncionariosFolha, calcularPrefillBonificacoes } from "@/lib/bonificacoesPadrao";
+import { isFeriadoNacional } from "@/lib/feriadosNacionais";
 
 interface FuncionarioFolha {
   id: string;
@@ -48,11 +49,26 @@ const MESES = [
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
 
+/**
+ * Retorna o número exato de dias do mês.
+ * month é 0-indexado (0=Janeiro ... 11=Dezembro).
+ * Usa o "dia 0 do mês seguinte" — abordagem nativa e à prova de timezone.
+ */
+function diasDoMesExato(year: number, month: number): number {
+  return new Date(year, month + 1, 0).getDate();
+}
+
+/**
+ * Conta domingos + feriados nacionais do mês (para DSR).
+ * month é 0-indexado.
+ */
 function countSundaysAndHolidays(year: number, month: number): number {
-  const days = getDaysInMonth(new Date(year, month));
+  const days = diasDoMesExato(year, month);
   let count = 0;
   for (let d = 1; d <= days; d++) {
-    if (new Date(year, month, d).getDay() === 0) count++;
+    const dow = new Date(year, month, d).getDay();
+    const feriado = isFeriadoNacional(year, month, d);
+    if (dow === 0 || feriado) count++;
   }
   return count;
 }
@@ -169,7 +185,7 @@ export default function Folha() {
     if (view === "funcionario") return;
     setLoading(true);
     setSelectedFuncId(null);
-    const diasMes = getDaysInMonth(new Date(ano, mes));
+    const diasMes = diasDoMesExato(ano, mes);
     const domingos = countSundaysAndHolidays(ano, mes);
 
     Promise.all([
@@ -187,7 +203,7 @@ export default function Folha() {
           const input: FolhaInput = {
             salario_registro: Number(existing.salario_registro),
             salario_combinado: Number(existing.salario_combinado),
-            dias_do_mes: existing.dias_do_mes,
+            dias_do_mes: diasMes,
             tipo_remuneracao: existing.tipo_remuneracao || "mensal",
             valor_producao: Number(existing.valor_producao || 0),
             horas_extras_semanais: Number(existing.horas_extras_semanais),
@@ -197,7 +213,7 @@ export default function Folha() {
             faltas: existing.faltas,
             atestados: existing.atestados,
             semanas_com_falta: existing.semanas_com_falta,
-            domingos_feriados_no_mes: existing.domingos_feriados_no_mes,
+            domingos_feriados_no_mes: domingos,
             bonificacao_meta: Number(existing.bonificacao_meta),
             bonificacao_assiduidade: Number(existing.bonificacao_assiduidade),
             desconto_marmita: Number(existing.desconto_marmita),
