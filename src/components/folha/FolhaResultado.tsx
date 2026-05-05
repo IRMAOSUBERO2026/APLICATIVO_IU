@@ -185,7 +185,7 @@ export function FolhaResultado({ result, input }: Props) {
             Ponto
           </div>
           <Line label="Faltas" value={result.desconto_faltas} negative indent />
-          <Line label="Horas Negativas" value={result.desconto_horas_negativas} negative indent />
+          <Line label="Horas Negativas" value={result.desconto_horas_negativas} horas={input?.horas_negativas ?? 0} negative indent />
           <Line label="DSR Perdido" value={result.dsr_perdido} negative indent />
 
           {/* Outros descontos */}
