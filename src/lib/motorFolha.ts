@@ -108,19 +108,19 @@ export function calcularFolha(input: FolhaInput): FolhaOutput {
   const base_dia = r2(salarioEfetivo / dias_do_mes);
   const base_hora = r2(salario_calculo / 220);
 
-  // Horas extras
-  const HE_semanal = r2(base_hora * 1.5 * horas_extras_semanais);
-  const HE_sabado = r2(base_hora * 1.5 * horas_extras_sabado);
-  const HE_100 = r2(base_hora * 2 * horas_extras_100);
+  // Horas extras — só para mensal
+  const HE_semanal = isProducao ? 0 : r2(base_hora * 1.5 * horas_extras_semanais);
+  const HE_sabado = isProducao ? 0 : r2(base_hora * 1.5 * horas_extras_sabado);
+  const HE_100 = isProducao ? 0 : r2(base_hora * 2 * horas_extras_100);
   const total_HE = r2(HE_semanal + HE_sabado + HE_100);
 
-  // Horas negativas
-  const desconto_horas_negativas = r2(base_hora * horas_negativas);
+  // Horas negativas — só para mensal
+  const desconto_horas_negativas = isProducao ? 0 : r2(base_hora * horas_negativas);
 
-  // Atestados (pago pelo salário de registro)
-  const valor_atestados = r2((salario_registro / dias_do_mes) * atestados);
+  // Atestados (pago pelo salário de registro) — só para mensal
+  const valor_atestados = isProducao ? 0 : r2((salario_registro / dias_do_mes) * atestados);
 
-  // Faltas e DSR
+  // Faltas e DSR — só para mensal
   let desconto_faltas = 0;
   let dsr_perdido = 0;
 
@@ -130,13 +130,15 @@ export function calcularFolha(input: FolhaInput): FolhaOutput {
     dsr_perdido = r2(valor_dsr_dia * semanas_com_falta);
   }
 
-  // Marmita: pode ser valor direto ou qtd × unitário
+  // Marmita: pode ser valor direto ou qtd × unitário (aplica em ambos)
   const totalMarmita = r2(desconto_marmita > 0 ? desconto_marmita : qtd_marmitas * valor_marmita_unitario);
 
-  // Bonificações
-  const total_bonificacoes = r2(bonificacao_meta + bonificacao_assiduidade);
+  // Bonificações — só para mensal (produção não soma proventos)
+  const total_bonificacoes = isProducao ? 0 : r2(bonificacao_meta + bonificacao_assiduidade);
 
   // Descontos
+  // Mensal: descontos completos (vale, marmita, faltas, h.neg, DSR, etc.)
+  // Produção: apenas descontos administrativos (vale, empréstimo, adiantamento, sindicato, marmita, outros)
   const total_descontos = r2(
     totalMarmita +
     desconto_vale +
@@ -150,6 +152,8 @@ export function calcularFolha(input: FolhaInput): FolhaOutput {
   );
 
   // Salário final
+  // Mensal: salário combinado + HE + atestados + bonificações - descontos
+  // Produção: valor_producao - descontos administrativos
   const salario_final = r2(
     salarioEfetivo +
     total_HE +
