@@ -132,4 +132,53 @@ describe("motorFolha", () => {
     expect(r.total_descontos).toBe(300);
     expect(r.salario_final).toBe(3200 - 300);
   });
+
+  it("produção: ignora HE, atestados e bonificações; aplica apenas descontos administrativos", () => {
+    const r = calcularFolha({
+      ...baseInput,
+      tipo_remuneracao: "producao",
+      valor_producao: 5000,
+      horas_extras_semanais: 10,
+      horas_extras_sabado: 5,
+      horas_extras_100: 3,
+      horas_negativas: 4,
+      atestados: 2,
+      faltas: 1,
+      semanas_com_falta: 1,
+      bonificacao_meta: 500,
+      bonificacao_assiduidade: 200,
+      desconto_vale: 300,
+      desconto_emprestimo: 100,
+      desconto_adiantamento: 50,
+      qtd_marmitas: 10,
+      valor_marmita_unitario: 15,
+    });
+    expect(r.total_HE).toBe(0);
+    expect(r.valor_atestados).toBe(0);
+    expect(r.total_bonificacoes).toBe(0);
+    expect(r.desconto_faltas).toBe(0);
+    expect(r.dsr_perdido).toBe(0);
+    expect(r.desconto_horas_negativas).toBe(0);
+    // 300 + 100 + 50 + (10*15)=150 = 600
+    expect(r.total_descontos).toBe(600);
+    expect(r.salario_final).toBe(5000 - 600);
+  });
+
+  it("mensal com bonificação: soma bonificação mantendo descontos por faltas/HE", () => {
+    const r = calcularFolha({
+      ...baseInput,
+      bonificacao_meta: 500,
+      bonificacao_assiduidade: 150,
+      horas_extras_semanais: 10,
+      faltas: 2,
+      semanas_com_falta: 2,
+      desconto_vale: 100,
+    });
+    expect(r.total_HE).toBe(170.4);
+    expect(r.total_bonificacoes).toBe(650);
+    expect(r.desconto_faltas).toBe(213.34);
+    expect(r.dsr_perdido).toBe(213.34);
+    // 3200 + 170.4 + 650 - (213.34 + 213.34 + 100) = 3493.72
+    expect(r.salario_final).toBe(3493.72);
+  });
 });
