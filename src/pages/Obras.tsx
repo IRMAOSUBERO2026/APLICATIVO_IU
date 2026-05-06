@@ -79,6 +79,10 @@ export default function Obras() {
     return matchSearch && matchStatus;
   });
 
+  const STATUS_EM_EXECUCAO = ["em_execucao", "em_andamento"];
+  const obrasEmExecucao = filtered.filter(o => STATUS_EM_EXECUCAO.includes(o.status));
+  const obrasDemais = filtered.filter(o => !STATUS_EM_EXECUCAO.includes(o.status));
+
   const openNew = () => { setEditingObra(null); setForm(emptyForm); setFormOpen(true); };
 
   const openEdit = (obra: Obra) => {
