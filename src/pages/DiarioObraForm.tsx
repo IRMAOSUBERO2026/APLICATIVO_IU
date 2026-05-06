@@ -215,8 +215,9 @@ export default function DiarioObraForm() {
       obra: obra?.nome,
       data,
       clima: `Manhã: ${climaManha}, Tarde: ${climaTarde}. Condição: ${condicaoObra}`,
-      equipe: `Própria: ${maoDeObraPropria.reduce((acc, curr) => acc + (Number(curr.quantidade)||0), 0)} pessoas. Terceiros: ${maoDeObraTerceirizada.reduce((acc, curr) => acc + (Number(curr.quantidade)||0), 0)} pessoas.`,
-      atividades: atividades.map(a => `- ${a.descricao} (${a.local}) [${a.status}]`).join("\n"),
+      equipe: `Próprios: ${equipe.filter(e => e.presente && !e.apoio).length} pessoas. Apoio (outras obras): ${equipe.filter(e => e.presente && e.apoio).length} pessoas.`,
+      equipamentos: equipamentos.map(e => `- ${e.codigo} ${e.descricao} [${e.status}]${e.apoio ? ` (apoio de ${e.origem || "outro local"})` : ""}`).join("\n"),
+      atividades: atividades.map(a => `- ${a.descricao} (${a.local}) [${a.status}]${a.foraContrato ? ` [FORA DE CONTRATO${a.observacao ? ": " + a.observacao : ""}]` : ""}`).join("\n"),
       ocorrencias: ocorrencias || "Nenhuma ocorrência registrada."
     };
 
