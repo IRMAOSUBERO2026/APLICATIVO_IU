@@ -27,7 +27,7 @@ export default function ObraAndamento({ obraId, empresaId, status }: Props) {
 
   const load = async () => {
     const [itensRes, medItensRes, medPendRes, funcRes, cpRes] = await Promise.all([
-      supabase.from("medicao_contrato_itens").select("id,quantidade,valor_unitario,valor_total").eq("obra_id", obraId),
+      supabase.from("medicao_contrato_itens").select("id,item_numero,quantidade,valor_unitario,valor_total").eq("obra_id", obraId),
       supabase.from("medicao_boletim_itens").select("contrato_item_id,quantidade_medida,valor_medido,medicao_id").in(
         "contrato_item_id",
         (await supabase.from("medicao_contrato_itens").select("id").eq("obra_id", obraId)).data?.map((i: any) => i.id) || []
