@@ -756,6 +756,114 @@ export default function DiarioObraForm() {
           </div>
         )}
       </div>
+
+      {/* Diálogo: Adicionar Funcionário de Apoio */}
+      {showApoioFuncDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowApoioFuncDialog(false)}>
+          <div className="bg-card rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b">
+              <h3 className="font-semibold flex items-center gap-2"><UserPlus className="h-5 w-5 text-primary" /> Adicionar Funcionário de Apoio</h3>
+              <p className="text-xs text-muted-foreground mt-1">Selecione funcionários de outras obras/almoxarifado que prestaram suporte ou tarefa específica nesta obra.</p>
+              <Input
+                placeholder="Buscar por nome ou cargo..."
+                className="mt-3"
+                value={searchApoioFunc}
+                onChange={e => setSearchApoioFunc(e.target.value)}
+              />
+            </div>
+            <div className="flex-1 overflow-y-auto divide-y">
+              {funcionariosEmpresa
+                .filter(f => f.obra_id !== obraId)
+                .filter(f => !equipe.some(e => e.funcionario_id === f.id))
+                .filter(f => {
+                  if (!searchApoioFunc) return true;
+                  const s = searchApoioFunc.toLowerCase();
+                  return f.nome.toLowerCase().includes(s) || (f.cargo || "").toLowerCase().includes(s);
+                })
+                .map(f => (
+                  <button
+                    key={f.id}
+                    onClick={() => {
+                      setEquipe(prev => [...prev, {
+                        funcionario_id: f.id, nome: f.nome, cargo: f.cargo,
+                        presente: true, apoio: true,
+                        origem: f.obra_id ? (obrasMap[f.obra_id] || "Outra obra") : "Almoxarifado/Sem alocação",
+                      }]);
+                      setShowApoioFuncDialog(false);
+                    }}
+                    className="w-full text-left p-3 hover:bg-muted/50 transition-colors flex items-center justify-between"
+                  >
+                    <div>
+                      <p className="text-sm font-medium">{f.nome}</p>
+                      <p className="text-xs text-muted-foreground">{f.cargo} • {f.obra_id ? (obrasMap[f.obra_id] || "Outra obra") : "Almoxarifado"}</p>
+                    </div>
+                    <Plus className="h-4 w-4 text-primary" />
+                  </button>
+                ))}
+              {funcionariosEmpresa.filter(f => f.obra_id !== obraId && !equipe.some(e => e.funcionario_id === f.id)).length === 0 && (
+                <p className="p-6 text-center text-sm text-muted-foreground">Nenhum funcionário disponível para apoio.</p>
+              )}
+            </div>
+            <div className="p-3 border-t flex justify-end">
+              <button onClick={() => setShowApoioFuncDialog(false)} className="px-4 py-2 text-sm border rounded-lg hover:bg-muted">Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Diálogo: Adicionar Equipamento de Apoio */}
+      {showApoioEqpDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowApoioEqpDialog(false)}>
+          <div className="bg-card rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b">
+              <h3 className="font-semibold flex items-center gap-2"><Wrench className="h-5 w-5 text-primary" /> Adicionar Equipamento de Apoio</h3>
+              <p className="text-xs text-muted-foreground mt-1">Selecione equipamentos do almoxarifado ou de outras obras.</p>
+              <Input
+                placeholder="Buscar por código, descrição ou tipo..."
+                className="mt-3"
+                value={searchApoioEqp}
+                onChange={e => setSearchApoioEqp(e.target.value)}
+              />
+            </div>
+            <div className="flex-1 overflow-y-auto divide-y">
+              {equipamentosEmpresa
+                .filter(e => e.obra_id !== obraId)
+                .filter(e => !equipamentos.some(x => x.equipamento_id === e.id))
+                .filter(e => {
+                  if (!searchApoioEqp) return true;
+                  const s = searchApoioEqp.toLowerCase();
+                  return (e.codigo || "").toLowerCase().includes(s) || e.descricao.toLowerCase().includes(s) || (e.tipo || "").toLowerCase().includes(s);
+                })
+                .map(e => (
+                  <button
+                    key={e.id}
+                    onClick={() => {
+                      setEquipamentos(prev => [...prev, {
+                        equipamento_id: e.id, codigo: e.codigo, descricao: e.descricao,
+                        status: "Operando", apoio: true,
+                        origem: e.obra_id ? (obrasMap[e.obra_id] || "Outra obra") : "Almoxarifado",
+                      }]);
+                      setShowApoioEqpDialog(false);
+                    }}
+                    className="w-full text-left p-3 hover:bg-muted/50 transition-colors flex items-center justify-between"
+                  >
+                    <div>
+                      <p className="text-sm font-medium">{e.codigo} • {e.descricao}</p>
+                      <p className="text-xs text-muted-foreground">{e.tipo} • {e.obra_id ? (obrasMap[e.obra_id] || "Outra obra") : "Almoxarifado"}</p>
+                    </div>
+                    <Plus className="h-4 w-4 text-primary" />
+                  </button>
+                ))}
+              {equipamentosEmpresa.filter(e => e.obra_id !== obraId && !equipamentos.some(x => x.equipamento_id === e.id)).length === 0 && (
+                <p className="p-6 text-center text-sm text-muted-foreground">Nenhum equipamento disponível para apoio.</p>
+              )}
+            </div>
+            <div className="p-3 border-t flex justify-end">
+              <button onClick={() => setShowApoioEqpDialog(false)} className="px-4 py-2 text-sm border rounded-lg hover:bg-muted">Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }
