@@ -79,6 +79,10 @@ export default function Obras() {
     return matchSearch && matchStatus;
   });
 
+  const STATUS_EM_EXECUCAO = ["em_execucao", "em_andamento"];
+  const obrasEmExecucao = filtered.filter(o => STATUS_EM_EXECUCAO.includes(o.status));
+  const obrasDemais = filtered.filter(o => !STATUS_EM_EXECUCAO.includes(o.status));
+
   const openNew = () => { setEditingObra(null); setForm(emptyForm); setFormOpen(true); };
 
   const openEdit = (obra: Obra) => {
@@ -192,54 +196,96 @@ export default function Obras() {
         ) : filtered.length === 0 ? (
           <div className="py-12 text-center text-sm text-muted-foreground">Nenhuma obra encontrada</div>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {filtered.map(obra => {
-              const stage = getStage(obra.status);
-              const stageIdx = getStageIndex(obra.status);
-              const progress = Math.min(100, ((stageIdx + 1) / 7) * 100);
-              return (
-                <button
-                  key={obra.id}
-                  onClick={() => setDetalheObra(obra)}
-                  className="group rounded-xl border bg-card p-4 shadow-sm hover:shadow-md hover:border-primary/30 transition-all text-left animate-fade-in"
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 flex-shrink-0">
-                        <HardHat className="h-4 w-4 text-primary" />
+          <>
+            {(() => {
+              const renderCard = (obra: Obra) => {
+                const stage = getStage(obra.status);
+                const stageIdx = getStageIndex(obra.status);
+                const progress = Math.min(100, ((stageIdx + 1) / 7) * 100);
+                return (
+                  <button
+                    key={obra.id}
+                    onClick={() => setDetalheObra(obra)}
+                    className="group rounded-xl border bg-card p-4 shadow-sm hover:shadow-md hover:border-primary/30 transition-all text-left animate-fade-in"
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 flex-shrink-0">
+                          <HardHat className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <h3 className="font-semibold text-sm truncate">{obra.codigo} — {obra.nome}</h3>
+                          <p className="text-xs text-muted-foreground truncate">{obra.cliente || obra.construtora || getEmpresaNome(obra.empresa_id)}</p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <h3 className="font-semibold text-sm truncate">{obra.codigo} — {obra.nome}</h3>
-                        <p className="text-xs text-muted-foreground truncate">{obra.cliente || obra.construtora || getEmpresaNome(obra.empresa_id)}</p>
-                      </div>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap ${stage.color}`}>
+                        {stage.emoji} {stage.label}
+                      </span>
                     </div>
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap ${stage.color}`}>
-                      {stage.emoji} {stage.label}
-                    </span>
-                  </div>
-
-                  {/* Progress bar */}
-                  <Progress value={progress} className="h-1 mb-2" />
-
-                  <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
-                    {(obra.cidade || obra.uf) && (
+                    <Progress value={progress} className="h-1 mb-2" />
+                    <div className="flex items-center gap-4 text-[11px] text-muted-foreground">
+                      {(obra.cidade || obra.uf) && (
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3" /> {obra.cidade}{obra.uf ? `/${obra.uf}` : ""}
+                        </span>
+                      )}
+                      {obra.data_previsao_fim && (
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" /> {new Date(obra.data_previsao_fim + "T12:00:00").toLocaleDateString("pt-BR")}
+                        </span>
+                      )}
                       <span className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3" /> {obra.cidade}{obra.uf ? `/${obra.uf}` : ""}
+                        <Building2 className="h-3 w-3" /> {getEmpresaNome(obra.empresa_id)}
                       </span>
+                    </div>
+                  </button>
+                );
+              };
+
+              return (
+                <div className="space-y-6">
+                  {/* Em Execução */}
+                  <section>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <h2 className="text-sm font-bold uppercase tracking-wide text-emerald-700">
+                        Obras em Execução
+                      </h2>
+                      <Badge variant="secondary" className="h-5 text-[10px]">{obrasEmExecucao.length}</Badge>
+                    </div>
+                    {obrasEmExecucao.length === 0 ? (
+                      <div className="rounded-lg border border-dashed py-8 text-center text-xs text-muted-foreground">
+                        Nenhuma obra em execução no momento
+                      </div>
+                    ) : (
+                      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                        {obrasEmExecucao.map(renderCard)}
+                      </div>
                     )}
-                    {obra.data_previsao_fim && (
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" /> {new Date(obra.data_previsao_fim + "T12:00:00").toLocaleDateString("pt-BR")}
-                      </span>
-                    )}
-                    <span className="flex items-center gap-1">
-                      <Building2 className="h-3 w-3" /> {getEmpresaNome(obra.empresa_id)}
-                    </span>
-                  </div>
-                </button>
+                  </section>
+
+                  {/* Demais Obras */}
+                  {obrasDemais.length > 0 && (
+                    <section>
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="h-2 w-2 rounded-full bg-slate-400" />
+                        <h2 className="text-sm font-bold uppercase tracking-wide text-slate-600">
+                          Demais Obras
+                        </h2>
+                        <Badge variant="secondary" className="h-5 text-[10px]">{obrasDemais.length}</Badge>
+                        <span className="text-[11px] text-muted-foreground ml-1">
+                          (prospecção, orçamento, negociação, contrato fechado, finalizadas, paralisadas, canceladas)
+                        </span>
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 opacity-90">
+                        {obrasDemais.map(renderCard)}
+                      </div>
+                    </section>
+                  )}
+                </div>
               );
-            })}
-          </div>
+            })()}
+          </>
         )}
       </div>
 
