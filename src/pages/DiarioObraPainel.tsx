@@ -61,11 +61,15 @@ export default function DiarioObraPainel() {
   const totalPages = Math.ceil(filteredDiarios.length / itemsPerPage);
   const paginatedDiarios = filteredDiarios.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
-  const handleGeneratePdf = (id: string) => {
+  const handleGeneratePdf = async (id: string) => {
     const diarioToExport = diarios.find(d => d.id === id);
     if (diarioToExport && obra) {
-      toast({ title: "Gerando PDF", description: "O download iniciará em instantes." });
-      generateDiarioPdf(diarioToExport, obra);
+      toast({ title: "Gerando PDF", description: "Carregando logo, fotos e resumo IA..." });
+      try {
+        await generateDiarioPdf(diarioToExport, obra);
+      } catch (e: any) {
+        toast({ title: "Erro ao gerar PDF", description: e?.message || "Falha desconhecida", variant: "destructive" });
+      }
     } else {
       toast({ title: "Erro", description: "Dados insuficientes para gerar o PDF.", variant: "destructive" });
     }
