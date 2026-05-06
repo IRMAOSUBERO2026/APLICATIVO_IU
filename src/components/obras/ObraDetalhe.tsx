@@ -119,7 +119,7 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
       supabase.from("funcionarios").select("id", { count: "exact", head: true }).eq("obra_id", currentObra.id).eq("status", "ativo"),
       supabase.from("medicoes").select("id", { count: "exact", head: true }).eq("obra_id", currentObra.id),
     ]);
-    if (itensRes.data) setContratoItens(itensRes.data as ContratoItem[]);
+    if (itensRes.data) setContratoItens(ordenarItensContrato(itensRes.data as ContratoItem[]));
     if (reajRes.data) setReajustes(reajRes.data as Reajuste[]);
     setFuncionariosCount(funcRes.count || 0);
     setMedicoesCount(medRes.count || 0);
