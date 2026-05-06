@@ -572,7 +572,7 @@ export default function DiarioObraForm() {
                   className="inline-flex items-center gap-2 rounded-lg bg-success px-8 py-3 text-sm font-bold text-success-foreground shadow-sm hover:bg-success/90 transition-all disabled:opacity-50 disabled:grayscale"
                 >
                   {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle2 className="h-5 w-5" />}
-                  {saving ? "Salvando Diário..." : "Finalizar e Salvar Diário"}
+                  {saving ? (isEdit ? "Atualizando..." : "Salvando Diário...") : (isEdit ? "Atualizar Diário" : "Finalizar e Salvar Diário")}
                 </button>
               </div>
             </div>
