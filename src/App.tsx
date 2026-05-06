@@ -64,6 +64,7 @@ const App = () => (
           <Route path="/diario-obra" element={<DiarioObra />} />
           <Route path="/diario-obra/:obraId" element={<DiarioObraPainel />} />
           <Route path="/diario-obra/:obraId/novo" element={<DiarioObraForm />} />
+          <Route path="/diario-obra/:obraId/:diarioId/editar" element={<DiarioObraForm />} />
           <Route path="/entrega-epi" element={<EntregaEPI />} />
           <Route path="/entrega-epi-mobile" element={<EntregaEPIMobile />} />
           <Route path="/ferias" element={<Ferias />} />
