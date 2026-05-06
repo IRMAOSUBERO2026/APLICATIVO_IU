@@ -433,61 +433,127 @@ export default function DiarioObraForm() {
         {/* TAB 2: Equipe e Equipamentos */}
         {activeTab === "equipe" && (
           <div className="grid gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="grid gap-6 lg:grid-cols-2">
-              {/* Mão de Obra Própria */}
-              <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
-                <div className="flex items-center justify-between border-b pb-2">
-                  <h2 className="text-lg font-semibold flex items-center gap-2"><Users className="h-5 w-5 text-primary" /> Equipe Própria</h2>
-                  <button onClick={() => addArrayItem(setMaoDeObraPropria, { funcao: "", quantidade: 1 })} className="text-sm text-primary font-medium hover:underline">+ Adicionar</button>
-                </div>
-                {maoDeObraPropria.map((m, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <Input placeholder="Função (ex: Pedreiro)" value={m.funcao} onChange={e => updateArrayItem(setMaoDeObraPropria, i, "funcao", e.target.value)} className="flex-1" />
-                    <Input type="number" min={1} value={m.quantidade} onChange={e => updateArrayItem(setMaoDeObraPropria, i, "quantidade", e.target.value)} className="w-20" />
-                    <button onClick={() => removeArrayItem(setMaoDeObraPropria, i)} className="p-2 text-destructive hover:bg-destructive/10 rounded"><Trash2 className="h-4 w-4" /></button>
-                  </div>
-                ))}
-              </div>
-
-              {/* Mão de Obra Terceirizada */}
-              <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
-                <div className="flex items-center justify-between border-b pb-2">
-                  <h2 className="text-lg font-semibold flex items-center gap-2"><HardHat className="h-5 w-5 text-warning" /> Equipe Terceirizada</h2>
-                  <button onClick={() => addArrayItem(setMaoDeObraTerceirizada, { empresa: "", funcao: "", quantidade: 1 })} className="text-sm text-primary font-medium hover:underline">+ Adicionar</button>
-                </div>
-                {maoDeObraTerceirizada.map((m, i) => (
-                  <div key={i} className="flex flex-col gap-2 p-3 border rounded-lg bg-muted/20 relative">
-                    <button onClick={() => removeArrayItem(setMaoDeObraTerceirizada, i)} className="absolute top-2 right-2 p-1 text-destructive hover:bg-destructive/10 rounded"><Trash2 className="h-4 w-4" /></button>
-                    <Input placeholder="Nome da Empresa" value={m.empresa} onChange={e => updateArrayItem(setMaoDeObraTerceirizada, i, "empresa", e.target.value)} className="pr-8" />
-                    <div className="flex gap-2">
-                      <Input placeholder="Função" value={m.funcao} onChange={e => updateArrayItem(setMaoDeObraTerceirizada, i, "funcao", e.target.value)} className="flex-1" />
-                      <Input type="number" min={1} value={m.quantidade} onChange={e => updateArrayItem(setMaoDeObraTerceirizada, i, "quantidade", e.target.value)} className="w-20" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Equipamentos */}
+            {/* Equipe da Obra (auto) + Apoio */}
             <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
               <div className="flex items-center justify-between border-b pb-2">
-                <h2 className="text-lg font-semibold flex items-center gap-2"><Wrench className="h-5 w-5 text-muted-foreground" /> Equipamentos Utilizados</h2>
-                <button onClick={() => addArrayItem(setEquipamentos, { descricao: "", quantidade: 1, status: "Operando" })} className="text-sm text-primary font-medium hover:underline">+ Adicionar</button>
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary" /> Equipe da Obra
+                  <span className="text-xs font-normal text-muted-foreground">
+                    ({equipe.filter(e => e.presente).length} presente(s) de {equipe.length})
+                  </span>
+                </h2>
+                <button
+                  onClick={() => { setSearchApoioFunc(""); setShowApoioFuncDialog(true); }}
+                  className="inline-flex items-center gap-1 text-sm text-primary font-medium hover:underline"
+                >
+                  <UserPlus className="h-4 w-4" /> Adicionar funcionário de apoio
+                </button>
               </div>
-              {equipamentos.map((eq, i) => (
-                <div key={i} className="flex flex-col sm:flex-row items-center gap-2">
-                  <Input placeholder="Descrição do Equipamento (Ex: Betoneira, Retroescavadeira)" value={eq.descricao} onChange={e => updateArrayItem(setEquipamentos, i, "descricao", e.target.value)} className="flex-1" />
-                  <div className="flex gap-2 w-full sm:w-auto">
-                    <Input type="number" min={1} value={eq.quantidade} onChange={e => updateArrayItem(setEquipamentos, i, "quantidade", e.target.value)} className="w-20" />
-                    <select className="rounded-md border p-2 text-sm w-full sm:w-32" value={eq.status} onChange={e => updateArrayItem(setEquipamentos, i, "status", e.target.value)}>
-                      <option value="Operando">Operando</option>
-                      <option value="Parado">Parado</option>
-                      <option value="Manutenção">Manutenção</option>
-                    </select>
-                    <button onClick={() => removeArrayItem(setEquipamentos, i)} className="p-2 text-destructive hover:bg-destructive/10 rounded"><Trash2 className="h-4 w-4" /></button>
-                  </div>
+              <p className="text-xs text-muted-foreground">
+                Funcionários cadastrados nesta obra são carregados automaticamente como presentes. Desmarque ausentes ou inclua funcionários de apoio (de outras obras) que prestaram suporte ou tarefa específica.
+              </p>
+
+              {equipe.length === 0 ? (
+                <div className="py-6 text-center text-sm text-muted-foreground border-2 border-dashed rounded-lg">
+                  Nenhum funcionário alocado a esta obra. Use "Adicionar funcionário de apoio" para incluir.
                 </div>
-              ))}
+              ) : (
+                <div className="divide-y border rounded-lg">
+                  {equipe.map((p, i) => (
+                    <div key={`${p.funcionario_id}-${i}`} className={`flex flex-col sm:flex-row sm:items-center gap-2 p-3 ${p.apoio ? "bg-warning/5" : ""}`}>
+                      <label className="flex items-center gap-3 flex-1 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={p.presente}
+                          onChange={e => setEquipe(prev => prev.map((x, idx) => idx === i ? { ...x, presente: e.target.checked } : x))}
+                          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                        />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">
+                            {p.nome}
+                            {p.apoio && <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-warning/20 text-warning-foreground">APOIO</span>}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {p.cargo}{p.apoio && p.origem ? ` • Origem: ${p.origem}` : ""}
+                          </p>
+                        </div>
+                      </label>
+                      <Input
+                        placeholder="Tarefa/observação"
+                        value={p.observacao || ""}
+                        onChange={e => setEquipe(prev => prev.map((x, idx) => idx === i ? { ...x, observacao: e.target.value } : x))}
+                        className="sm:w-64 h-8 text-xs"
+                      />
+                      {p.apoio && (
+                        <button onClick={() => setEquipe(prev => prev.filter((_, idx) => idx !== i))} className="p-2 text-destructive hover:bg-destructive/10 rounded">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Equipamentos da Obra (auto) + Apoio */}
+            <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between border-b pb-2">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <Wrench className="h-5 w-5 text-muted-foreground" /> Equipamentos Utilizados
+                  <span className="text-xs font-normal text-muted-foreground">({equipamentos.length})</span>
+                </h2>
+                <button
+                  onClick={() => { setSearchApoioEqp(""); setShowApoioEqpDialog(true); }}
+                  className="inline-flex items-center gap-1 text-sm text-primary font-medium hover:underline"
+                >
+                  <Plus className="h-4 w-4" /> Adicionar equipamento de apoio
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Equipamentos alocados nesta obra são carregados automaticamente. Inclua equipamentos do almoxarifado ou de outras obras quando necessário.
+              </p>
+
+              {equipamentos.length === 0 ? (
+                <div className="py-6 text-center text-sm text-muted-foreground border-2 border-dashed rounded-lg">
+                  Nenhum equipamento alocado a esta obra.
+                </div>
+              ) : (
+                <div className="divide-y border rounded-lg">
+                  {equipamentos.map((eq, i) => (
+                    <div key={`${eq.equipamento_id}-${i}`} className={`flex flex-col sm:flex-row sm:items-center gap-2 p-3 ${eq.apoio ? "bg-warning/5" : ""}`}>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">
+                          {eq.codigo} • {eq.descricao}
+                          {eq.apoio && <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-warning/20 text-warning-foreground">APOIO</span>}
+                        </p>
+                        {eq.apoio && eq.origem && (
+                          <p className="text-xs text-muted-foreground">Origem: {eq.origem}</p>
+                        )}
+                      </div>
+                      <Input
+                        placeholder="Observação"
+                        value={eq.observacao || ""}
+                        onChange={e => setEquipamentos(prev => prev.map((x, idx) => idx === i ? { ...x, observacao: e.target.value } : x))}
+                        className="sm:w-48 h-8 text-xs"
+                      />
+                      <select
+                        className="rounded-md border p-2 text-sm w-full sm:w-36 bg-background"
+                        value={eq.status}
+                        onChange={e => setEquipamentos(prev => prev.map((x, idx) => idx === i ? { ...x, status: e.target.value } : x))}
+                      >
+                        <option value="Operando">Operando</option>
+                        <option value="Parado">Parado</option>
+                        <option value="Manutenção">Manutenção</option>
+                      </select>
+                      {eq.apoio && (
+                        <button onClick={() => setEquipamentos(prev => prev.filter((_, idx) => idx !== i))} className="p-2 text-destructive hover:bg-destructive/10 rounded">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="flex justify-between">
