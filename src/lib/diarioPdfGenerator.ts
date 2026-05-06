@@ -289,7 +289,18 @@ export const generateDiarioPdf = async (diario: any, obra: any) => {
     y += lines.length * 4.5 + 6;
   }
 
-  // 6. Resumo IA
+  // 5b. Observações livres (formato mobile, sem JSON estruturado)
+  if (observacoesTexto && observacoesTexto.trim()) {
+    y = ensureSpace(doc, y, 30, redrawHeader);
+    sectionTitle(doc, y, diario.ocorrencias ? "5b" : "5", "OBSERVAÇÕES ADICIONAIS");
+    y += 6;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(...TEXT);
+    const lines = doc.splitTextToSize(observacoesTexto, pageWidth - 28);
+    doc.text(lines, 14, y);
+    y += lines.length * 4.5 + 6;
+  }
   if (extraData.resumoIA) {
     y = ensureSpace(doc, y, 40, redrawHeader);
     sectionTitle(doc, y, "6", "RESUMO EXECUTIVO (INTELIGÊNCIA ARTIFICIAL)");
