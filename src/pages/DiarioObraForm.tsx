@@ -291,17 +291,18 @@ export default function DiarioObraForm() {
 
       const rawData = {
         climaManha, climaTarde, condicaoObra,
-        maoDeObraPropria, maoDeObraTerceirizada,
-        equipamentos, atividades, resumoIA, ocorrencias,
+        equipe, equipamentos, atividades, resumoIA, ocorrencias,
         fotos: todasFotos,
       };
+
+      const totalPresentes = equipe.filter(e => e.presente).length;
 
       const payload = {
         obra_id: obraId,
         data,
         responsavel,
         clima: `${climaManha} / ${climaTarde}`,
-        mao_de_obra_presente: maoDeObraPropria.reduce((s, c) => s + (Number(c.quantidade)||0), 0) + maoDeObraTerceirizada.reduce((s, c) => s + (Number(c.quantidade)||0), 0),
+        mao_de_obra_presente: totalPresentes,
         atividades_executadas: atividadesTexto,
         observacoes: JSON.stringify(rawData),
         ocorrencias: ocorrencias || null,
