@@ -15,8 +15,10 @@ import { toast } from "@/hooks/use-toast";
 import {
   Wrench, Plus, Search, MapPin, ShoppingCart, Settings, History,
   Trash2, Edit, HardHat, Zap, Wind, Hammer, Box, Layers,
-  CheckCircle2, AlertTriangle, Clock, XCircle, Package, ArrowRightLeft, Camera, DollarSign, FileText, FileBarChart
+  CheckCircle2, AlertTriangle, Clock, XCircle, Package, ArrowRightLeft, Camera, DollarSign, FileText, FileBarChart,
+  ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown
 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ScrollableTable } from "@/components/shared/ScrollableTable";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
