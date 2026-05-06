@@ -36,7 +36,7 @@ export default function ObraAndamento({ obraId, empresaId, status }: Props) {
       supabase.from("funcionarios").select("id", { count: "exact", head: true }).eq("obra_id", obraId).eq("status", "ativo"),
       supabase.from("contas_pagar").select("valor").eq("obra_id", obraId),
     ]);
-    if (itensRes.data) setContratoItens(itensRes.data);
+    if (itensRes.data) setContratoItens(ordenarItensContrato(itensRes.data as any[]));
     if (medItensRes.data) setMedicoesItens(medItensRes.data);
     setMedicoesPendentes(medPendRes.count || 0);
     setFuncionariosCount(funcRes.count || 0);
