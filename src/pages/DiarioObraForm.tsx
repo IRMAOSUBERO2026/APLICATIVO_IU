@@ -569,11 +569,11 @@ export default function DiarioObraForm() {
             <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
               <div className="flex items-center justify-between border-b pb-2">
                 <h2 className="text-lg font-semibold flex items-center gap-2 text-primary">Atividades Executadas</h2>
-                <button onClick={() => addArrayItem(setAtividades, { descricao: "", local: "", status: "Em andamento" })} className="text-sm text-primary font-medium hover:underline">+ Adicionar Atividade</button>
+                <button onClick={() => addArrayItem(setAtividades, { descricao: "", local: "", status: "Em andamento", foraContrato: false, observacao: "" })} className="text-sm text-primary font-medium hover:underline">+ Adicionar Atividade</button>
               </div>
               <div className="space-y-4">
                 {atividades.map((at, i) => (
-                  <div key={i} className="p-4 border rounded-lg bg-muted/10 relative space-y-3">
+                  <div key={i} className={`p-4 border rounded-lg relative space-y-3 ${at.foraContrato ? "bg-warning/5 border-warning/40" : "bg-muted/10"}`}>
                     <button onClick={() => removeArrayItem(setAtividades, i)} className="absolute top-2 right-2 p-1 text-destructive hover:bg-destructive/10 rounded"><Trash2 className="h-4 w-4" /></button>
                     <div className="pr-8">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Descrição do Serviço</label>
@@ -581,8 +581,8 @@ export default function DiarioObraForm() {
                     </div>
                     <div className="grid sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="text-xs font-medium text-muted-foreground mb-1 block">Local / Eixo</label>
-                        <Input placeholder="Ex: Bloco A, Estaca 10" value={at.local} onChange={e => updateArrayItem(setAtividades, i, "local", e.target.value)} />
+                        <label className="text-xs font-medium text-muted-foreground mb-1 block">Local / Eixo / Item de Contrato</label>
+                        <Input placeholder="Ex: Bloco A, Estaca 10 ou item 1.3" value={at.local} onChange={e => updateArrayItem(setAtividades, i, "local", e.target.value)} />
                       </div>
                       <div>
                         <label className="text-xs font-medium text-muted-foreground mb-1 block">Status</label>
@@ -592,6 +592,30 @@ export default function DiarioObraForm() {
                           <option value="Pausado">Pausado</option>
                         </select>
                       </div>
+                    </div>
+                    <div className="border-t pt-3 space-y-2">
+                      <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={!!at.foraContrato}
+                          onChange={e => updateArrayItem(setAtividades, i, "foraContrato", e.target.checked)}
+                          className="h-4 w-4 rounded border-gray-300 text-warning focus:ring-warning"
+                        />
+                        <span className="font-medium">Serviço fora do contrato</span>
+                        <span className="text-xs text-muted-foreground">(ex: serviço por administração, extra, contingência)</span>
+                      </label>
+                      {at.foraContrato && (
+                        <div>
+                          <label className="text-xs font-medium text-warning mb-1 block">Observação / Justificativa</label>
+                          <Textarea
+                            placeholder="Descreva o motivo do serviço extra (ex: solicitado pela fiscalização, serviço por administração, contingência por chuva...)"
+                            value={at.observacao || ""}
+                            onChange={e => updateArrayItem(setAtividades, i, "observacao", e.target.value)}
+                            rows={2}
+                            className="bg-background"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
