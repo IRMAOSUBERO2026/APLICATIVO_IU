@@ -152,13 +152,38 @@ export const generateDiarioPdf = async (diario: any, obra: any) => {
   const redrawHeader = () => drawHeader(doc, logoData, diario, obra, dataFormatada);
   redrawHeader();
 
-  // Extrai dados embutidos no observacoes (JSON)
+  // Extrai dados embutidos no observacoes (JSON) — formato do form web
   let extraData: any = {};
+  let observacoesTexto = "";
   try {
-    if (diario.observacoes && diario.observacoes.startsWith("{")) {
+    if (diario.observacoes && diario.observacoes.trim().startsWith("{")) {
       extraData = JSON.parse(diario.observacoes);
+    } else if (diario.observacoes) {
+      observacoesTexto = String(diario.observacoes);
     }
-  } catch { /* ignore */ }
+  } catch {
+    observacoesTexto = String(diario.observacoes || "");
+  }
+
+  // Fallback: se não veio fotos no JSON, usa coluna fotos[] da tabela (formato mobile)
+  if ((!extraData.fotos || extraData.fotos.length === 0) && Array.isArray(diario.fotos) && diario.fotos.length > 0) {
+    extraData.fotos = diario.fotos.map((url: string) => ({ url, descricao: "" }));
+  }
+
+  // Fallback de atividades quando vier somente texto (mobile)
+  if ((!extraData.atividades || extraData.atividades.length === 0) && diario.atividades_executadas) {
+    extraData.atividades = String(diario.atividades_executadas)
+      .split("\n")
+      .filter((l: string) => l.trim())
+      .map((linha: string) => ({ descricao: linha.trim(), local: "—", status: "—" }));
+  }
+
+  // Fallback clima
+  if (!extraData.climaManha && diario.clima) {
+    const partes = String(diario.clima).split("/");
+    extraData.climaManha = partes[0]?.trim() || "—";
+    extraData.climaTarde = partes[1]?.trim() || "—";
+  }
 
   let y = 50;
 
