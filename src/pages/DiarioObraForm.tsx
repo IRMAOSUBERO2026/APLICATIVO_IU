@@ -182,31 +182,35 @@ export default function DiarioObraForm() {
     
     setSaving(true);
     try {
-      // 1. Salvar RDO no banco de dados
-      const payloadTexto = `
-=== EFETIVO PRÓPRIO ===
-${maoDeObraPropria.filter(m => m.funcao).map(m => `${m.quantidade}x ${m.funcao}`).join("\n")}
-
-=== EFETIVO TERCEIRIZADO ===
-${maoDeObraTerceirizada.filter(m => m.empresa).map(m => `${m.quantidade}x ${m.funcao} (${m.empresa})`).join("\n")}
-
-=== EQUIPAMENTOS ===
-${equipamentos.filter(e => e.descricao).map(e => `${e.quantidade}x ${e.descricao} [${e.status}]`).join("\n")}
-
-=== RESUMO IA ===
-${resumoIA || "Não gerado"}
-      `;
-
       const atividadesTexto = atividades.filter(a => a.descricao).map(a => `[${a.status}] ${a.descricao} (Local: ${a.local})`).join("\n");
 
-      // Salva o JSON estruturado para facilitar a geração do PDF depois
+      // Upload de novas fotos primeiro
+      const novasFotosUrls: Array<{ url: string; descricao: string }> = [];
+      if (fotos.length > 0) {
+        toast({ title: "Enviando fotos..." });
+        for (let i = 0; i < fotos.length; i++) {
+          const foto = fotos[i];
+          const fileExt = foto.file.name.split('.').pop();
+          const fileName = `${obraId}/rdo_${Date.now()}_${i}.${fileExt}`;
+          const filePath = `diarios/${fileName}`;
+          const { error: uploadError } = await supabase.storage.from("documentos").upload(filePath, foto.file);
+          if (!uploadError) {
+            const { data: pubData } = supabase.storage.from("documentos").getPublicUrl(filePath);
+            novasFotosUrls.push({ url: pubData.publicUrl, descricao: foto.descricao });
+          }
+        }
+      }
+
+      const todasFotos = [...fotosExistentes, ...novasFotosUrls];
+
       const rawData = {
         climaManha, climaTarde, condicaoObra,
         maoDeObraPropria, maoDeObraTerceirizada,
-        equipamentos, atividades, resumoIA, ocorrencias
+        equipamentos, atividades, resumoIA, ocorrencias,
+        fotos: todasFotos,
       };
 
-      const { data: insertedRdo, error: dbError } = await supabase.from("diarios_obra").insert({
+      const payload = {
         obra_id: obraId,
         data,
         responsavel,
@@ -214,48 +218,28 @@ ${resumoIA || "Não gerado"}
         mao_de_obra_presente: maoDeObraPropria.reduce((s, c) => s + (Number(c.quantidade)||0), 0) + maoDeObraTerceirizada.reduce((s, c) => s + (Number(c.quantidade)||0), 0),
         atividades_executadas: atividadesTexto,
         observacoes: JSON.stringify(rawData),
-        ocorrencias: ocorrencias || null
-      }).select("id").single();
+        ocorrencias: ocorrencias || null,
+        fotos: todasFotos.length > 0 ? todasFotos.map(f => f.url) : null,
+      };
 
-      if (dbError) throw dbError;
-
-      // 2. Upload de Fotos (se houver) e salvar na tabela do bucket
-      // Assumindo que a coluna fotos não existe em diarios_obra, vamos guardar as URLs no observacoes
-      // Para manter simples e não quebrar schemas, enviamos para storage e atualizamos o observacoes
-      if (fotos.length > 0 && insertedRdo) {
-        toast({ title: "Enviando fotos..." });
-        const fotosUrls = [];
-        
-        for (let i = 0; i < fotos.length; i++) {
-          const foto = fotos[i];
-          const fileExt = foto.file.name.split('.').pop();
-          const fileName = `${obraId}/rdo_${insertedRdo.id}_${Date.now()}_${i}.${fileExt}`;
-          const filePath = `diarios/${fileName}`;
-          
-          const { error: uploadError } = await supabase.storage.from("documentos").upload(filePath, foto.file);
-          if (!uploadError) {
-            const { data: pubData } = supabase.storage.from("documentos").getPublicUrl(filePath);
-            fotosUrls.push({ url: pubData.publicUrl, descricao: foto.descricao });
-          }
-        }
-
-        if (fotosUrls.length > 0) {
-          const updatedRawData = { ...rawData, fotos: fotosUrls };
-          await supabase.from("diarios_obra").update({
-            observacoes: JSON.stringify(updatedRawData)
-          }).eq("id", insertedRdo.id);
-        }
+      if (isEdit && diarioId) {
+        const { error: dbError } = await supabase.from("diarios_obra").update(payload).eq("id", diarioId);
+        if (dbError) throw dbError;
+        toast({ title: "Sucesso!", description: "Diário atualizado com sucesso." });
+      } else {
+        const { error: dbError } = await supabase.from("diarios_obra").insert(payload);
+        if (dbError) throw dbError;
+        toast({ title: "Sucesso!", description: "Diário de Obra salvo com sucesso." });
       }
-
-      toast({ title: "Sucesso!", description: "Diário de Obra salvo com sucesso." });
       navigate(`/diario-obra/${obraId}`);
-
     } catch (error: any) {
       toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
   };
+
+  const removeFotoExistente = (i: number) => setFotosExistentes(prev => prev.filter((_, idx) => idx !== i));
 
   return (
     <AppLayout>
