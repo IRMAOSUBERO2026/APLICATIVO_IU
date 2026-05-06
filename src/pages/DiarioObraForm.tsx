@@ -94,10 +94,47 @@ export default function DiarioObraForm() {
 
   useEffect(() => {
     if (obraId) {
-      supabase.from("obras").select("nome, codigo").eq("id", obraId).single()
+      supabase.from("obras").select("nome, codigo, empresa_id").eq("id", obraId).single()
         .then(({ data }) => setObra(data));
     }
   }, [obraId]);
+
+  // Carrega funcionários e equipamentos da empresa (para opção de apoio) e os da obra (presença automática)
+  useEffect(() => {
+    if (!obra?.empresa_id || !obraId) return;
+    (async () => {
+      const [funcRes, eqpRes, obrasRes] = await Promise.all([
+        supabase.from("funcionarios").select("id, nome, cargo, obra_id, empresa_id, status")
+          .eq("empresa_id", obra.empresa_id).eq("status", "ativo").order("nome"),
+        supabase.from("equipamentos_proprios").select("id, codigo, descricao, tipo, obra_id, empresa_id, status")
+          .eq("empresa_id", obra.empresa_id).order("descricao"),
+        supabase.from("obras").select("id, nome, codigo").eq("empresa_id", obra.empresa_id),
+      ]);
+      const funcs = (funcRes.data || []) as FuncionarioRow[];
+      const eqps = (eqpRes.data || []) as EquipamentoRow[];
+      const oMap: Record<string, string> = {};
+      (obrasRes.data || []).forEach((o: any) => { oMap[o.id] = `${o.codigo} - ${o.nome}`; });
+      setObrasMap(oMap);
+      setFuncionariosEmpresa(funcs);
+      setEquipamentosEmpresa(eqps);
+
+      // Em modo NOVO: pré-carrega equipe e equipamentos da obra
+      if (!isEdit) {
+        setEquipe(
+          funcs.filter(f => f.obra_id === obraId).map(f => ({
+            funcionario_id: f.id, nome: f.nome, cargo: f.cargo,
+            presente: true, apoio: false,
+          }))
+        );
+        setEquipamentos(
+          eqps.filter(e => e.obra_id === obraId).map(e => ({
+            equipamento_id: e.id, codigo: e.codigo, descricao: e.descricao,
+            status: "Operando", apoio: false,
+          }))
+        );
+      }
+    })();
+  }, [obra?.empresa_id, obraId, isEdit]);
 
   useEffect(() => {
     if (!isEdit || !diarioId) return;
@@ -122,14 +159,16 @@ export default function DiarioObraForm() {
       setClimaManha(extra.climaManha || (d.clima || "").split("/")[0]?.trim() || "");
       setClimaTarde(extra.climaTarde || (d.clima || "").split("/")[1]?.trim() || "");
       setCondicaoObra(extra.condicaoObra || "Operável");
-      if (Array.isArray(extra.maoDeObraPropria) && extra.maoDeObraPropria.length) setMaoDeObraPropria(extra.maoDeObraPropria);
-      if (Array.isArray(extra.maoDeObraTerceirizada) && extra.maoDeObraTerceirizada.length) setMaoDeObraTerceirizada(extra.maoDeObraTerceirizada);
-      if (Array.isArray(extra.equipamentos) && extra.equipamentos.length) setEquipamentos(extra.equipamentos);
+      if (Array.isArray(extra.equipe)) setEquipe(extra.equipe);
+      if (Array.isArray(extra.equipamentos)) setEquipamentos(extra.equipamentos);
       if (Array.isArray(extra.atividades) && extra.atividades.length) {
-        setAtividades(extra.atividades);
+        setAtividades(extra.atividades.map((a: any) => ({
+          descricao: a.descricao || "", local: a.local || "", status: a.status || "Em andamento",
+          foraContrato: !!a.foraContrato, observacao: a.observacao || "",
+        })));
       } else if (d.atividades_executadas) {
         const linhas = String(d.atividades_executadas).split("\n").filter((l: string) => l.trim());
-        if (linhas.length) setAtividades(linhas.map((linha: string) => ({ descricao: linha, local: "", status: "Concluído" })));
+        if (linhas.length) setAtividades(linhas.map((linha: string) => ({ descricao: linha, local: "", status: "Concluído", foraContrato: false, observacao: "" })));
       }
       setOcorrencias(d.ocorrencias || "");
       setResumoIA(extra.resumoIA || "");
