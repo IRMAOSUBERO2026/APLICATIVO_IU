@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, CheckCircle, Clock, FileText, Users, DollarSign } from "lucide-react";
+import { ordenarItensContrato } from "@/lib/sortItens";
 
 const fmtBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -26,7 +27,7 @@ export default function ObraAndamento({ obraId, empresaId, status }: Props) {
 
   const load = async () => {
     const [itensRes, medItensRes, medPendRes, funcRes, cpRes] = await Promise.all([
-      supabase.from("medicao_contrato_itens").select("id,quantidade,valor_unitario,valor_total").eq("obra_id", obraId),
+      supabase.from("medicao_contrato_itens").select("id,item_numero,quantidade,valor_unitario,valor_total").eq("obra_id", obraId),
       supabase.from("medicao_boletim_itens").select("contrato_item_id,quantidade_medida,valor_medido,medicao_id").in(
         "contrato_item_id",
         (await supabase.from("medicao_contrato_itens").select("id").eq("obra_id", obraId)).data?.map((i: any) => i.id) || []
@@ -35,7 +36,7 @@ export default function ObraAndamento({ obraId, empresaId, status }: Props) {
       supabase.from("funcionarios").select("id", { count: "exact", head: true }).eq("obra_id", obraId).eq("status", "ativo"),
       supabase.from("contas_pagar").select("valor").eq("obra_id", obraId),
     ]);
-    if (itensRes.data) setContratoItens(itensRes.data);
+    if (itensRes.data) setContratoItens(ordenarItensContrato(itensRes.data as any[]));
     if (medItensRes.data) setMedicoesItens(medItensRes.data);
     setMedicoesPendentes(medPendRes.count || 0);
     setFuncionariosCount(funcRes.count || 0);

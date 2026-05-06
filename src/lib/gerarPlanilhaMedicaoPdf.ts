@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { ordenarItensContrato } from "@/lib/sortItens";
 
 const fmtBRL = (v: any) => (Number(v) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const fmtNum = (v: any) => (Number(v) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -78,7 +79,7 @@ export async function gerarPlanilhaMedicaoPdf(dados: MedicaoPdfDados): Promise<v
   doc.setFont("helvetica", "normal").text(`${dados.medicao.periodo_inicio} a ${dados.medicao.periodo_fim}`, pageWidth / 2 + 16, y);
 
   // Tabela
-  const linhas = dados.itens.map(it => [
+  const linhas = ordenarItensContrato(dados.itens).map(it => [
     it.item_numero,
     it.descricao,
     it.unidade,
