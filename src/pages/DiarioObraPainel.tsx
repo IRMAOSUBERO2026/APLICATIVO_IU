@@ -1,7 +1,7 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Plus, Search, Calendar, FileText, ArrowLeft, Loader2, Download, Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Search, Calendar, FileText, ArrowLeft, Loader2, Download, Pencil, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
@@ -9,6 +9,7 @@ import { generateDiarioPdf } from "@/lib/diarioPdfGenerator";
 
 export default function DiarioObraPainel() {
   const { obraId } = useParams();
+  const navigate = useNavigate();
   const [obra, setObra] = useState<any>(null);
   const [diarios, setDiarios] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -157,10 +158,10 @@ export default function DiarioObraPainel() {
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button 
-                            className="inline-flex h-8 items-center justify-center rounded-md border bg-background px-3 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                            onClick={() => toast({ title: "Visualizar", description: "Em construção" })}
+                            className="inline-flex h-8 items-center justify-center rounded-md border bg-background px-3 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                            onClick={() => navigate(`/diario-obra/${obraId}/${d.id}/editar`)}
                           >
-                            <Eye className="h-3.5 w-3.5 mr-1" /> Ver
+                            <Pencil className="h-3.5 w-3.5 mr-1" /> Ver / Editar
                           </button>
                           <button 
                             className="inline-flex h-8 items-center justify-center rounded-md bg-primary/10 px-3 text-xs font-medium text-primary hover:bg-primary/20 transition-colors"

@@ -14,38 +14,33 @@ interface FotoUpload {
 }
 
 export default function DiarioObraForm() {
-  const { obraId } = useParams();
+  const { obraId, diarioId } = useParams();
+  const isEdit = Boolean(diarioId);
   const navigate = useNavigate();
   const [obra, setObra] = useState<any>(null);
+  const [loadingDiario, setLoadingDiario] = useState(isEdit);
   
-  // Tabs: "geral", "equipe", "atividades", "fotos"
   const [activeTab, setActiveTab] = useState("geral");
 
-  // Dados Gerais
   const [data, setData] = useState(new Date().toISOString().slice(0, 10));
   const [responsavel, setResponsavel] = useState("");
   
-  // Clima
   const [climaManha, setClimaManha] = useState("");
   const [climaTarde, setClimaTarde] = useState("");
   const [condicaoObra, setCondicaoObra] = useState("Operável");
 
-  // Efetivo
   const [maoDeObraPropria, setMaoDeObraPropria] = useState([{ funcao: "", quantidade: 1 }]);
   const [maoDeObraTerceirizada, setMaoDeObraTerceirizada] = useState([{ empresa: "", funcao: "", quantidade: 1 }]);
 
-  // Equipamentos
   const [equipamentos, setEquipamentos] = useState([{ descricao: "", quantidade: 1, status: "Operando" }]);
 
-  // Atividades & Ocorrências
   const [atividades, setAtividades] = useState([{ descricao: "", local: "", status: "Em andamento" }]);
   const [ocorrencias, setOcorrencias] = useState("");
   
-  // Fotos
   const [fotos, setFotos] = useState<FotoUpload[]>([]);
+  const [fotosExistentes, setFotosExistentes] = useState<Array<{ url: string; descricao: string }>>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // IA e Aprovação
   const [resumoIA, setResumoIA] = useState("");
   const [gerandoResumo, setGerandoResumo] = useState(false);
   const [aprovado, setAprovado] = useState(false);
@@ -57,6 +52,50 @@ export default function DiarioObraForm() {
         .then(({ data }) => setObra(data));
     }
   }, [obraId]);
+
+  useEffect(() => {
+    if (!isEdit || !diarioId) return;
+    (async () => {
+      setLoadingDiario(true);
+      const { data: d, error } = await supabase
+        .from("diarios_obra")
+        .select("*")
+        .eq("id", diarioId)
+        .single();
+      if (error || !d) {
+        toast({ title: "Erro", description: "Diário não encontrado.", variant: "destructive" });
+        setLoadingDiario(false);
+        return;
+      }
+      setData(d.data);
+      setResponsavel(d.responsavel || "");
+      let extra: any = {};
+      try {
+        if (d.observacoes && d.observacoes.trim().startsWith("{")) extra = JSON.parse(d.observacoes);
+      } catch {}
+      setClimaManha(extra.climaManha || (d.clima || "").split("/")[0]?.trim() || "");
+      setClimaTarde(extra.climaTarde || (d.clima || "").split("/")[1]?.trim() || "");
+      setCondicaoObra(extra.condicaoObra || "Operável");
+      if (Array.isArray(extra.maoDeObraPropria) && extra.maoDeObraPropria.length) setMaoDeObraPropria(extra.maoDeObraPropria);
+      if (Array.isArray(extra.maoDeObraTerceirizada) && extra.maoDeObraTerceirizada.length) setMaoDeObraTerceirizada(extra.maoDeObraTerceirizada);
+      if (Array.isArray(extra.equipamentos) && extra.equipamentos.length) setEquipamentos(extra.equipamentos);
+      if (Array.isArray(extra.atividades) && extra.atividades.length) {
+        setAtividades(extra.atividades);
+      } else if (d.atividades_executadas) {
+        const linhas = String(d.atividades_executadas).split("\n").filter((l: string) => l.trim());
+        if (linhas.length) setAtividades(linhas.map((linha: string) => ({ descricao: linha, local: "", status: "Concluído" })));
+      }
+      setOcorrencias(d.ocorrencias || "");
+      setResumoIA(extra.resumoIA || "");
+      if (Array.isArray(extra.fotos) && extra.fotos.length) {
+        setFotosExistentes(extra.fotos.map((f: any) => typeof f === "string" ? { url: f, descricao: "" } : f));
+      } else if (Array.isArray(d.fotos) && d.fotos.length) {
+        setFotosExistentes(d.fotos.map((url: string) => ({ url, descricao: "" })));
+      }
+      setAprovado(true);
+      setLoadingDiario(false);
+    })();
+  }, [isEdit, diarioId]);
 
   // Helpers para arrays
   const addArrayItem = (setter: any, defaultItem: any) => setter((prev: any) => [...prev, defaultItem]);
@@ -143,31 +182,35 @@ export default function DiarioObraForm() {
     
     setSaving(true);
     try {
-      // 1. Salvar RDO no banco de dados
-      const payloadTexto = `
-=== EFETIVO PRÓPRIO ===
-${maoDeObraPropria.filter(m => m.funcao).map(m => `${m.quantidade}x ${m.funcao}`).join("\n")}
-
-=== EFETIVO TERCEIRIZADO ===
-${maoDeObraTerceirizada.filter(m => m.empresa).map(m => `${m.quantidade}x ${m.funcao} (${m.empresa})`).join("\n")}
-
-=== EQUIPAMENTOS ===
-${equipamentos.filter(e => e.descricao).map(e => `${e.quantidade}x ${e.descricao} [${e.status}]`).join("\n")}
-
-=== RESUMO IA ===
-${resumoIA || "Não gerado"}
-      `;
-
       const atividadesTexto = atividades.filter(a => a.descricao).map(a => `[${a.status}] ${a.descricao} (Local: ${a.local})`).join("\n");
 
-      // Salva o JSON estruturado para facilitar a geração do PDF depois
+      // Upload de novas fotos primeiro
+      const novasFotosUrls: Array<{ url: string; descricao: string }> = [];
+      if (fotos.length > 0) {
+        toast({ title: "Enviando fotos..." });
+        for (let i = 0; i < fotos.length; i++) {
+          const foto = fotos[i];
+          const fileExt = foto.file.name.split('.').pop();
+          const fileName = `${obraId}/rdo_${Date.now()}_${i}.${fileExt}`;
+          const filePath = `diarios/${fileName}`;
+          const { error: uploadError } = await supabase.storage.from("documentos").upload(filePath, foto.file);
+          if (!uploadError) {
+            const { data: pubData } = supabase.storage.from("documentos").getPublicUrl(filePath);
+            novasFotosUrls.push({ url: pubData.publicUrl, descricao: foto.descricao });
+          }
+        }
+      }
+
+      const todasFotos = [...fotosExistentes, ...novasFotosUrls];
+
       const rawData = {
         climaManha, climaTarde, condicaoObra,
         maoDeObraPropria, maoDeObraTerceirizada,
-        equipamentos, atividades, resumoIA, ocorrencias
+        equipamentos, atividades, resumoIA, ocorrencias,
+        fotos: todasFotos,
       };
 
-      const { data: insertedRdo, error: dbError } = await supabase.from("diarios_obra").insert({
+      const payload = {
         obra_id: obraId,
         data,
         responsavel,
@@ -175,48 +218,38 @@ ${resumoIA || "Não gerado"}
         mao_de_obra_presente: maoDeObraPropria.reduce((s, c) => s + (Number(c.quantidade)||0), 0) + maoDeObraTerceirizada.reduce((s, c) => s + (Number(c.quantidade)||0), 0),
         atividades_executadas: atividadesTexto,
         observacoes: JSON.stringify(rawData),
-        ocorrencias: ocorrencias || null
-      }).select("id").single();
+        ocorrencias: ocorrencias || null,
+        fotos: todasFotos.length > 0 ? todasFotos.map(f => f.url) : null,
+      };
 
-      if (dbError) throw dbError;
-
-      // 2. Upload de Fotos (se houver) e salvar na tabela do bucket
-      // Assumindo que a coluna fotos não existe em diarios_obra, vamos guardar as URLs no observacoes
-      // Para manter simples e não quebrar schemas, enviamos para storage e atualizamos o observacoes
-      if (fotos.length > 0 && insertedRdo) {
-        toast({ title: "Enviando fotos..." });
-        const fotosUrls = [];
-        
-        for (let i = 0; i < fotos.length; i++) {
-          const foto = fotos[i];
-          const fileExt = foto.file.name.split('.').pop();
-          const fileName = `${obraId}/rdo_${insertedRdo.id}_${Date.now()}_${i}.${fileExt}`;
-          const filePath = `diarios/${fileName}`;
-          
-          const { error: uploadError } = await supabase.storage.from("documentos").upload(filePath, foto.file);
-          if (!uploadError) {
-            const { data: pubData } = supabase.storage.from("documentos").getPublicUrl(filePath);
-            fotosUrls.push({ url: pubData.publicUrl, descricao: foto.descricao });
-          }
-        }
-
-        if (fotosUrls.length > 0) {
-          const updatedRawData = { ...rawData, fotos: fotosUrls };
-          await supabase.from("diarios_obra").update({
-            observacoes: JSON.stringify(updatedRawData)
-          }).eq("id", insertedRdo.id);
-        }
+      if (isEdit && diarioId) {
+        const { error: dbError } = await supabase.from("diarios_obra").update(payload).eq("id", diarioId);
+        if (dbError) throw dbError;
+        toast({ title: "Sucesso!", description: "Diário atualizado com sucesso." });
+      } else {
+        const { error: dbError } = await supabase.from("diarios_obra").insert(payload);
+        if (dbError) throw dbError;
+        toast({ title: "Sucesso!", description: "Diário de Obra salvo com sucesso." });
       }
-
-      toast({ title: "Sucesso!", description: "Diário de Obra salvo com sucesso." });
       navigate(`/diario-obra/${obraId}`);
-
     } catch (error: any) {
       toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
   };
+
+  const removeFotoExistente = (i: number) => setFotosExistentes(prev => prev.filter((_, idx) => idx !== i));
+
+  if (loadingDiario) {
+    return (
+      <AppLayout>
+        <div className="flex h-[60vh] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -226,7 +259,7 @@ ${resumoIA || "Não gerado"}
             <ArrowLeft className="h-5 w-5 text-muted-foreground" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Novo Diário de Obra</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{isEdit ? "Editar Diário de Obra" : "Novo Diário de Obra"}</h1>
             <p className="text-sm text-primary font-medium">{obra?.codigo} - {obra?.nome}</p>
           </div>
         </div>
@@ -445,30 +478,59 @@ ${resumoIA || "Não gerado"}
                 </button>
               </div>
               
-              {fotos.length === 0 ? (
+              {/* Fotos já existentes (modo edição) */}
+              {fotosExistentes.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Fotos já anexadas ({fotosExistentes.length})</p>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {fotosExistentes.map((foto, i) => (
+                      <div key={`ex-${i}`} className="group relative rounded-lg border overflow-hidden bg-muted/20">
+                        <div className="aspect-video w-full bg-black/5 flex items-center justify-center overflow-hidden relative">
+                          <img src={foto.url} alt={`Foto ${i}`} className="object-cover w-full h-full" />
+                          <button onClick={() => removeFotoExistente(i)} className="absolute top-2 right-2 bg-black/60 p-1.5 rounded-full text-white hover:bg-destructive transition-colors">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <div className="p-2 border-t">
+                          <Input placeholder="Legenda" className="h-8 text-xs border-transparent focus-visible:ring-0 px-1" value={foto.descricao} onChange={e => {
+                            const arr = [...fotosExistentes];
+                            arr[i] = { ...arr[i], descricao: e.target.value };
+                            setFotosExistentes(arr);
+                          }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {fotos.length === 0 && fotosExistentes.length === 0 ? (
                 <div className="py-8 text-center border-2 border-dashed rounded-lg bg-muted/20">
                   <Camera className="h-8 w-8 mx-auto text-muted-foreground opacity-50 mb-2" />
                   <p className="text-sm text-muted-foreground">Nenhuma foto anexada. Fotos enriquecem o RDO.</p>
                 </div>
-              ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {fotos.map((foto, i) => (
-                    <div key={i} className="group relative rounded-lg border overflow-hidden bg-muted/20">
-                      <div className="aspect-video w-full bg-black/5 flex items-center justify-center overflow-hidden relative">
-                        <img src={foto.previewUrl} alt={`Preview ${i}`} className="object-cover w-full h-full" />
-                        <button onClick={() => removePhoto(i)} className="absolute top-2 right-2 bg-black/60 p-1.5 rounded-full text-white hover:bg-destructive transition-colors opacity-0 group-hover:opacity-100">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+              ) : fotos.length > 0 && (
+                <div className="space-y-2">
+                  {fotosExistentes.length > 0 && <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Novas fotos ({fotos.length})</p>}
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {fotos.map((foto, i) => (
+                      <div key={i} className="group relative rounded-lg border overflow-hidden bg-muted/20">
+                        <div className="aspect-video w-full bg-black/5 flex items-center justify-center overflow-hidden relative">
+                          <img src={foto.previewUrl} alt={`Preview ${i}`} className="object-cover w-full h-full" />
+                          <button onClick={() => removePhoto(i)} className="absolute top-2 right-2 bg-black/60 p-1.5 rounded-full text-white hover:bg-destructive transition-colors opacity-0 group-hover:opacity-100">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <div className="p-2 border-t">
+                          <Input placeholder="Legenda da foto..." className="h-8 text-xs border-transparent focus-visible:ring-0 px-1" value={foto.descricao} onChange={e => {
+                            const newFotos = [...fotos];
+                            newFotos[i].descricao = e.target.value;
+                            setFotos(newFotos);
+                          }} />
+                        </div>
                       </div>
-                      <div className="p-2 border-t">
-                        <Input placeholder="Legenda da foto..." className="h-8 text-xs border-transparent focus-visible:ring-0 px-1" value={foto.descricao} onChange={e => {
-                          const newFotos = [...fotos];
-                          newFotos[i].descricao = e.target.value;
-                          setFotos(newFotos);
-                        }} />
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -510,7 +572,7 @@ ${resumoIA || "Não gerado"}
                   className="inline-flex items-center gap-2 rounded-lg bg-success px-8 py-3 text-sm font-bold text-success-foreground shadow-sm hover:bg-success/90 transition-all disabled:opacity-50 disabled:grayscale"
                 >
                   {saving ? <Loader2 className="h-5 w-5 animate-spin" /> : <CheckCircle2 className="h-5 w-5" />}
-                  {saving ? "Salvando Diário..." : "Finalizar e Salvar Diário"}
+                  {saving ? (isEdit ? "Atualizando..." : "Salvando Diário...") : (isEdit ? "Atualizar Diário" : "Finalizar e Salvar Diário")}
                 </button>
               </div>
             </div>

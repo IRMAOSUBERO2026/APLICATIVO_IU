@@ -152,13 +152,38 @@ export const generateDiarioPdf = async (diario: any, obra: any) => {
   const redrawHeader = () => drawHeader(doc, logoData, diario, obra, dataFormatada);
   redrawHeader();
 
-  // Extrai dados embutidos no observacoes (JSON)
+  // Extrai dados embutidos no observacoes (JSON) — formato do form web
   let extraData: any = {};
+  let observacoesTexto = "";
   try {
-    if (diario.observacoes && diario.observacoes.startsWith("{")) {
+    if (diario.observacoes && diario.observacoes.trim().startsWith("{")) {
       extraData = JSON.parse(diario.observacoes);
+    } else if (diario.observacoes) {
+      observacoesTexto = String(diario.observacoes);
     }
-  } catch { /* ignore */ }
+  } catch {
+    observacoesTexto = String(diario.observacoes || "");
+  }
+
+  // Fallback: se não veio fotos no JSON, usa coluna fotos[] da tabela (formato mobile)
+  if ((!extraData.fotos || extraData.fotos.length === 0) && Array.isArray(diario.fotos) && diario.fotos.length > 0) {
+    extraData.fotos = diario.fotos.map((url: string) => ({ url, descricao: "" }));
+  }
+
+  // Fallback de atividades quando vier somente texto (mobile)
+  if ((!extraData.atividades || extraData.atividades.length === 0) && diario.atividades_executadas) {
+    extraData.atividades = String(diario.atividades_executadas)
+      .split("\n")
+      .filter((l: string) => l.trim())
+      .map((linha: string) => ({ descricao: linha.trim(), local: "—", status: "—" }));
+  }
+
+  // Fallback clima
+  if (!extraData.climaManha && diario.clima) {
+    const partes = String(diario.clima).split("/");
+    extraData.climaManha = partes[0]?.trim() || "—";
+    extraData.climaTarde = partes[1]?.trim() || "—";
+  }
 
   let y = 50;
 
@@ -264,7 +289,18 @@ export const generateDiarioPdf = async (diario: any, obra: any) => {
     y += lines.length * 4.5 + 6;
   }
 
-  // 6. Resumo IA
+  // 5b. Observações livres (formato mobile, sem JSON estruturado)
+  if (observacoesTexto && observacoesTexto.trim()) {
+    y = ensureSpace(doc, y, 30, redrawHeader);
+    sectionTitle(doc, y, diario.ocorrencias ? "5b" : "5", "OBSERVAÇÕES ADICIONAIS");
+    y += 6;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(...TEXT);
+    const lines = doc.splitTextToSize(observacoesTexto, pageWidth - 28);
+    doc.text(lines, 14, y);
+    y += lines.length * 4.5 + 6;
+  }
   if (extraData.resumoIA) {
     y = ensureSpace(doc, y, 40, redrawHeader);
     sectionTitle(doc, y, "6", "RESUMO EXECUTIVO (INTELIGÊNCIA ARTIFICIAL)");
