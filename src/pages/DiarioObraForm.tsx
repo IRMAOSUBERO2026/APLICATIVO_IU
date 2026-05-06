@@ -14,38 +14,33 @@ interface FotoUpload {
 }
 
 export default function DiarioObraForm() {
-  const { obraId } = useParams();
+  const { obraId, diarioId } = useParams();
+  const isEdit = Boolean(diarioId);
   const navigate = useNavigate();
   const [obra, setObra] = useState<any>(null);
+  const [loadingDiario, setLoadingDiario] = useState(isEdit);
   
-  // Tabs: "geral", "equipe", "atividades", "fotos"
   const [activeTab, setActiveTab] = useState("geral");
 
-  // Dados Gerais
   const [data, setData] = useState(new Date().toISOString().slice(0, 10));
   const [responsavel, setResponsavel] = useState("");
   
-  // Clima
   const [climaManha, setClimaManha] = useState("");
   const [climaTarde, setClimaTarde] = useState("");
   const [condicaoObra, setCondicaoObra] = useState("Operável");
 
-  // Efetivo
   const [maoDeObraPropria, setMaoDeObraPropria] = useState([{ funcao: "", quantidade: 1 }]);
   const [maoDeObraTerceirizada, setMaoDeObraTerceirizada] = useState([{ empresa: "", funcao: "", quantidade: 1 }]);
 
-  // Equipamentos
   const [equipamentos, setEquipamentos] = useState([{ descricao: "", quantidade: 1, status: "Operando" }]);
 
-  // Atividades & Ocorrências
   const [atividades, setAtividades] = useState([{ descricao: "", local: "", status: "Em andamento" }]);
   const [ocorrencias, setOcorrencias] = useState("");
   
-  // Fotos
   const [fotos, setFotos] = useState<FotoUpload[]>([]);
+  const [fotosExistentes, setFotosExistentes] = useState<Array<{ url: string; descricao: string }>>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // IA e Aprovação
   const [resumoIA, setResumoIA] = useState("");
   const [gerandoResumo, setGerandoResumo] = useState(false);
   const [aprovado, setAprovado] = useState(false);
@@ -57,6 +52,50 @@ export default function DiarioObraForm() {
         .then(({ data }) => setObra(data));
     }
   }, [obraId]);
+
+  useEffect(() => {
+    if (!isEdit || !diarioId) return;
+    (async () => {
+      setLoadingDiario(true);
+      const { data: d, error } = await supabase
+        .from("diarios_obra")
+        .select("*")
+        .eq("id", diarioId)
+        .single();
+      if (error || !d) {
+        toast({ title: "Erro", description: "Diário não encontrado.", variant: "destructive" });
+        setLoadingDiario(false);
+        return;
+      }
+      setData(d.data);
+      setResponsavel(d.responsavel || "");
+      let extra: any = {};
+      try {
+        if (d.observacoes && d.observacoes.trim().startsWith("{")) extra = JSON.parse(d.observacoes);
+      } catch {}
+      setClimaManha(extra.climaManha || (d.clima || "").split("/")[0]?.trim() || "");
+      setClimaTarde(extra.climaTarde || (d.clima || "").split("/")[1]?.trim() || "");
+      setCondicaoObra(extra.condicaoObra || "Operável");
+      if (Array.isArray(extra.maoDeObraPropria) && extra.maoDeObraPropria.length) setMaoDeObraPropria(extra.maoDeObraPropria);
+      if (Array.isArray(extra.maoDeObraTerceirizada) && extra.maoDeObraTerceirizada.length) setMaoDeObraTerceirizada(extra.maoDeObraTerceirizada);
+      if (Array.isArray(extra.equipamentos) && extra.equipamentos.length) setEquipamentos(extra.equipamentos);
+      if (Array.isArray(extra.atividades) && extra.atividades.length) {
+        setAtividades(extra.atividades);
+      } else if (d.atividades_executadas) {
+        const linhas = String(d.atividades_executadas).split("\n").filter((l: string) => l.trim());
+        if (linhas.length) setAtividades(linhas.map((linha: string) => ({ descricao: linha, local: "", status: "Concluído" })));
+      }
+      setOcorrencias(d.ocorrencias || "");
+      setResumoIA(extra.resumoIA || "");
+      if (Array.isArray(extra.fotos) && extra.fotos.length) {
+        setFotosExistentes(extra.fotos.map((f: any) => typeof f === "string" ? { url: f, descricao: "" } : f));
+      } else if (Array.isArray(d.fotos) && d.fotos.length) {
+        setFotosExistentes(d.fotos.map((url: string) => ({ url, descricao: "" })));
+      }
+      setAprovado(true);
+      setLoadingDiario(false);
+    })();
+  }, [isEdit, diarioId]);
 
   // Helpers para arrays
   const addArrayItem = (setter: any, defaultItem: any) => setter((prev: any) => [...prev, defaultItem]);
