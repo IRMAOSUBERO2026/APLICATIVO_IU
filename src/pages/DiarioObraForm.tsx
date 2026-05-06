@@ -241,6 +241,16 @@ export default function DiarioObraForm() {
 
   const removeFotoExistente = (i: number) => setFotosExistentes(prev => prev.filter((_, idx) => idx !== i));
 
+  if (loadingDiario) {
+    return (
+      <AppLayout>
+        <div className="flex h-[60vh] items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </AppLayout>
+    );
+  }
+
   return (
     <AppLayout>
       <div className="space-y-6 max-w-5xl mx-auto pb-20">
@@ -249,7 +259,7 @@ export default function DiarioObraForm() {
             <ArrowLeft className="h-5 w-5 text-muted-foreground" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Novo Diário de Obra</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{isEdit ? "Editar Diário de Obra" : "Novo Diário de Obra"}</h1>
             <p className="text-sm text-primary font-medium">{obra?.codigo} - {obra?.nome}</p>
           </div>
         </div>
