@@ -14,10 +14,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import {
   Calculator, RefreshCw, Download, CheckCircle2, History, Save, Trash2, Edit, FileCheck2, CalendarClock,
-  Ruler, Plus, FileText, TrendingUp, DollarSign, ChevronRight, AlertCircle, LayoutGrid, ListChecks, ArrowRightLeft, Percent
+  Ruler, Plus, FileText, TrendingUp, DollarSign, ChevronRight, AlertCircle, LayoutGrid, ListChecks, ArrowRightLeft, Percent,
+  Building2, Archive, ArrowLeft
 } from "lucide-react";
 import { format } from "date-fns";
 import { gerarPlanilhaMedicaoPdf } from "@/lib/gerarPlanilhaMedicaoPdf";
+import { OBRA_STATUS_INATIVOS, isObraAtiva } from "@/lib/obraStatus";
 
 // Formatadores Premium
 const fCur = (v: any) => (Number(v) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
