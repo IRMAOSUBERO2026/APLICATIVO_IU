@@ -3,6 +3,7 @@ import { AppSidebar } from "./AppSidebar";
 import { Menu } from "lucide-react";
 import logoPreto from "@/assets/logo-preto.png";
 import { ContextoSelector } from "./ContextoSelector";
+import { UsuarioImpressaoBadge } from "./UsuarioImpressaoBadge";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -38,8 +39,9 @@ export function AppLayout({ children }: AppLayoutProps) {
             <Menu className="h-5 w-5" />
           </button>
           <img src={logoPreto} alt="IU Engenharia" className="h-7 w-auto lg:hidden" />
-          <div className="flex-1 lg:flex lg:items-center lg:justify-end">
+          <div className="flex-1 lg:flex lg:items-center lg:justify-end gap-3">
             <ContextoSelector />
+            <UsuarioImpressaoBadge />
           </div>
         </header>
 
