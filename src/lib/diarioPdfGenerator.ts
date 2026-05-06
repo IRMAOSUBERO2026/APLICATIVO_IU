@@ -1,208 +1,364 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import logoPreto from "@/assets/logo-preto.png";
+import { getLinhaImpressao, NOME_EMPRESA_OFICIAL } from "./usuarioImpressao";
 
-export const generateDiarioPdf = (diario: any, obra: any) => {
-  const doc = new jsPDF("p", "mm", "a4");
+// Verde militar (identidade Irmãos Ubero Engenharia)
+const PRIMARY: [number, number, number] = [60, 80, 45];
+const TEXT: [number, number, number] = [40, 40, 40];
+const MUTED: [number, number, number] = [110, 110, 110];
+
+async function loadAsset(url: string): Promise<string | null> {
+  try {
+    const r = await fetch(url);
+    const b = await r.blob();
+    return await new Promise(resolve => {
+      const fr = new FileReader();
+      fr.onloadend = () => resolve(fr.result as string);
+      fr.onerror = () => resolve(null);
+      fr.readAsDataURL(b);
+    });
+  } catch {
+    return null;
+  }
+}
+
+function detectImageFormat(dataUrl: string): "PNG" | "JPEG" {
+  if (dataUrl.startsWith("data:image/png")) return "PNG";
+  return "JPEG";
+}
+
+async function getImageDimensions(dataUrl: string): Promise<{ w: number; h: number }> {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+    img.onerror = () => resolve({ w: 4, h: 3 });
+    img.src = dataUrl;
+  });
+}
+
+function drawHeader(
+  doc: jsPDF,
+  logoData: string | null,
+  diario: any,
+  obra: any,
+  dataFormatada: string,
+) {
   const pageWidth = doc.internal.pageSize.getWidth();
-  
-  // Cores corporativas
-  const primaryColor = [22, 163, 74]; // bg-primary (green-600 approx)
-  const textColor = [51, 51, 51];
-  
-  let currentY = 15;
 
-  // --- CABEÇALHO ---
-  // Desenhando o box do cabeçalho
-  doc.setDrawColor(200, 200, 200);
-  doc.setFillColor(250, 250, 250);
-  doc.roundedRect(14, currentY, pageWidth - 28, 30, 2, 2, "FD");
+  // Faixa superior verde (identidade)
+  doc.setFillColor(...PRIMARY);
+  doc.rect(0, 0, pageWidth, 6, "F");
 
-  // Texto do cabeçalho
+  // Caixa do cabeçalho
+  doc.setDrawColor(220, 220, 220);
+  doc.setFillColor(252, 252, 252);
+  doc.roundedRect(14, 12, pageWidth - 28, 32, 2, 2, "FD");
+
+  // Logo
+  if (logoData) {
+    try {
+      doc.addImage(logoData, "PNG", 18, 16, 24, 24);
+    } catch { /* ignore */ }
+  }
+
+  // Nome da empresa
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(16);
-  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.text("RELATÓRIO DIÁRIO DE OBRA (RDO)", pageWidth / 2, currentY + 10, { align: "center" });
+  doc.setFontSize(14);
+  doc.setTextColor(...PRIMARY);
+  doc.text(NOME_EMPRESA_OFICIAL, 46, 22);
 
-  doc.setFontSize(10);
-  doc.setTextColor(textColor[0], textColor[1], textColor[2]);
-  
-  // Logo placeholder (Se tiver base64 da logo, pode usar doc.addImage)
-  doc.setFont("helvetica", "bold");
-  doc.text("IU ENGENHARIA", 18, currentY + 8);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
-  doc.text("Construção & Engenharia", 18, currentY + 12);
+  doc.setTextColor(...MUTED);
+  doc.text("Construção • Engenharia • Concreto", 46, 27);
 
-  doc.setFontSize(10);
+  // Título à direita
   doc.setFont("helvetica", "bold");
-  doc.text(`Obra:`, 18, currentY + 20);
+  doc.setFontSize(13);
+  doc.setTextColor(...TEXT);
+  doc.text("RELATÓRIO DIÁRIO DE OBRA", pageWidth - 18, 22, { align: "right" });
+
   doc.setFont("helvetica", "normal");
-  doc.text(`${obra?.codigo || ""} - ${obra?.nome || ""}`, 30, currentY + 20);
+  doc.setFontSize(9);
+  doc.setTextColor(...MUTED);
+  doc.text(`RDO Nº ${(diario.id || "").slice(0, 8).toUpperCase()}`, pageWidth - 18, 28, { align: "right" });
+
+  // Linha de info da obra
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(...TEXT);
+  doc.text("Obra:", 18, 38);
+  doc.setFont("helvetica", "normal");
+  doc.text(`${obra?.codigo || ""} — ${obra?.nome || ""}`, 30, 38);
 
   doc.setFont("helvetica", "bold");
-  doc.text(`Data:`, pageWidth - 60, currentY + 20);
+  doc.text("Data:", pageWidth - 60, 38);
   doc.setFont("helvetica", "normal");
-  const dataFormatada = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" }).format(new Date(diario.data));
-  doc.text(dataFormatada, pageWidth - 48, currentY + 20);
+  doc.text(dataFormatada, pageWidth - 48, 38);
+}
 
+function drawFooter(doc: jsPDF) {
+  const pageCount = doc.getNumberOfPages();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const linhaImp = getLinhaImpressao();
+
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    // Faixa inferior verde
+    doc.setFillColor(...PRIMARY);
+    doc.rect(0, pageHeight - 14, pageWidth, 14, "F");
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(255, 255, 255);
+    doc.text(NOME_EMPRESA_OFICIAL, 14, pageHeight - 8);
+    doc.text(linhaImp, pageWidth / 2, pageHeight - 8, { align: "center" });
+    doc.text(`Página ${i} de ${pageCount}`, pageWidth - 14, pageHeight - 8, { align: "right" });
+  }
+}
+
+function ensureSpace(doc: jsPDF, currentY: number, needed: number, redraw: () => void): number {
+  const pageHeight = doc.internal.pageSize.getHeight();
+  if (currentY + needed > pageHeight - 22) {
+    doc.addPage();
+    redraw();
+    return 50;
+  }
+  return currentY;
+}
+
+function sectionTitle(doc: jsPDF, y: number, num: string, title: string, color: [number, number, number] = PRIMARY) {
   doc.setFont("helvetica", "bold");
-  doc.text(`Responsável:`, 18, currentY + 26);
-  doc.setFont("helvetica", "normal");
-  doc.text(diario.responsavel || "Não informado", 45, currentY + 26);
+  doc.setFontSize(11);
+  doc.setTextColor(...color);
+  doc.text(`${num}. ${title}`, 14, y);
+  doc.setDrawColor(...color);
+  doc.setLineWidth(0.4);
+  doc.line(14, y + 1.5, 60, y + 1.5);
+}
 
-  currentY += 35;
+export const generateDiarioPdf = async (diario: any, obra: any) => {
+  const doc = new jsPDF("p", "mm", "a4");
+  const pageWidth = doc.internal.pageSize.getWidth();
 
-  // Extrai os dados embutidos nas observacoes (JSON)
+  const logoData = await loadAsset(logoPreto);
+
+  const dataFormatada = new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC",
+  }).format(new Date(diario.data));
+
+  const redrawHeader = () => drawHeader(doc, logoData, diario, obra, dataFormatada);
+  redrawHeader();
+
+  // Extrai dados embutidos no observacoes (JSON)
   let extraData: any = {};
   try {
     if (diario.observacoes && diario.observacoes.startsWith("{")) {
       extraData = JSON.parse(diario.observacoes);
     }
-  } catch (e) {
-    console.error("Falha ao ler dados extras do RDO", e);
-  }
+  } catch { /* ignore */ }
 
-  // --- CLIMA ---
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.text("1. CONDIÇÕES CLIMÁTICAS E DE OPERAÇÃO", 14, currentY);
-  currentY += 5;
+  let y = 50;
 
-  autoTable(doc, {
-    startY: currentY,
-    head: [['Manhã', 'Tarde', 'Condição da Obra']],
-    body: [
-      [extraData.climaManha || "—", extraData.climaTarde || "—", extraData.condicaoObra || "—"]
-    ],
-    theme: 'grid',
-    headStyles: { fillColor: primaryColor as any, textColor: 255 },
-    styles: { fontSize: 9 }
-  });
-  currentY = (doc as any).lastAutoTable.finalY + 10;
-
-  // --- MÃO DE OBRA ---
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.text("2. EFETIVO (MÃO DE OBRA)", 14, currentY);
-  currentY += 5;
-
-  const equipeBody = [];
-  if (extraData.maoDeObraPropria && extraData.maoDeObraPropria.length > 0) {
-    extraData.maoDeObraPropria.forEach((m: any) => equipeBody.push(["IU Engenharia (Própria)", m.funcao || "—", m.quantidade || 0]));
-  }
-  if (extraData.maoDeObraTerceirizada && extraData.maoDeObraTerceirizada.length > 0) {
-    extraData.maoDeObraTerceirizada.forEach((m: any) => equipeBody.push([m.empresa || "Terceirizada", m.funcao || "—", m.quantidade || 0]));
-  }
-  if (equipeBody.length === 0) equipeBody.push(["—", "Nenhum efetivo registrado", "0"]);
-
-  autoTable(doc, {
-    startY: currentY,
-    head: [['Empresa', 'Função', 'Quantidade']],
-    body: equipeBody,
-    theme: 'grid',
-    headStyles: { fillColor: primaryColor as any, textColor: 255 },
-    styles: { fontSize: 9 }
-  });
-  currentY = (doc as any).lastAutoTable.finalY + 10;
-
-  // --- EQUIPAMENTOS ---
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.text("3. EQUIPAMENTOS", 14, currentY);
-  currentY += 5;
-
-  const equipBody = [];
-  if (extraData.equipamentos && extraData.equipamentos.length > 0) {
-    extraData.equipamentos.forEach((e: any) => equipBody.push([e.descricao || "—", e.quantidade || 0, e.status || "—"]));
-  } else {
-    equipBody.push(["Nenhum equipamento registrado", "0", "—"]);
-  }
-
-  autoTable(doc, {
-    startY: currentY,
-    head: [['Equipamento', 'Quantidade', 'Status']],
-    body: equipBody,
-    theme: 'grid',
-    headStyles: { fillColor: primaryColor as any, textColor: 255 },
-    styles: { fontSize: 9 }
-  });
-  currentY = (doc as any).lastAutoTable.finalY + 10;
-
-  // --- ATIVIDADES ---
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.text("4. ATIVIDADES EXECUTADAS", 14, currentY);
-  currentY += 5;
-
-  const ativBody = [];
-  if (extraData.atividades && extraData.atividades.length > 0) {
-    extraData.atividades.forEach((a: any) => ativBody.push([a.descricao || "—", a.local || "—", a.status || "—"]));
-  } else {
-    ativBody.push(["Nenhuma atividade registrada", "—", "—"]);
-  }
-
-  autoTable(doc, {
-    startY: currentY,
-    head: [['Descrição', 'Local', 'Status']],
-    body: ativBody,
-    theme: 'grid',
-    headStyles: { fillColor: primaryColor as any, textColor: 255 },
-    styles: { fontSize: 9 }
-  });
-  currentY = (doc as any).lastAutoTable.finalY + 10;
-
-  // --- OCORRÊNCIAS ---
-  if (diario.ocorrencias) {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    doc.setTextColor(220, 38, 38); // Red
-    doc.text("5. OCORRÊNCIAS / OBSERVAÇÕES", 14, currentY);
-    currentY += 5;
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.setTextColor(textColor[0], textColor[1], textColor[2]);
-    const splitOcorrencias = doc.splitTextToSize(diario.ocorrencias, pageWidth - 28);
-    doc.text(splitOcorrencias, 14, currentY);
-    currentY += (splitOcorrencias.length * 5) + 10;
-  }
-
-  // --- RESUMO IA ---
-  if (extraData.resumoIA) {
-    // Nova página se não couber
-    if (currentY > 250) { doc.addPage(); currentY = 20; }
-    
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.text("RESUMO EXECUTIVO (Gerado por Inteligência Artificial)", 14, currentY);
-    currentY += 5;
-
-    doc.setFont("helvetica", "italic");
-    doc.setFontSize(9);
-    doc.setTextColor(textColor[0], textColor[1], textColor[2]);
-    const splitResumo = doc.splitTextToSize(extraData.resumoIA, pageWidth - 28);
-    doc.text(splitResumo, 14, currentY);
-    currentY += (splitResumo.length * 4) + 10;
-  }
-
-  // --- ASSINATURAS ---
-  if (currentY > 230) { doc.addPage(); currentY = 30; } else { currentY += 30; }
-  
-  doc.setDrawColor(0);
-  doc.line(30, currentY, 80, currentY); // Linha assin 1
-  doc.line(130, currentY, 180, currentY); // Linha assin 2
-  
+  // Responsável de campo
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
-  doc.text("ENG. RESPONSÁVEL", 55, currentY + 5, { align: "center" });
-  doc.text("FISCALIZAÇÃO / CLIENTE", 155, currentY + 5, { align: "center" });
+  doc.setTextColor(...TEXT);
+  doc.text("Responsável pelo RDO:", 14, y);
+  doc.setFont("helvetica", "normal");
+  doc.text(diario.responsavel || "Não informado", 56, y);
+  y += 8;
 
-  // Download
+  // 1. Clima
+  sectionTitle(doc, y, "1", "CONDIÇÕES CLIMÁTICAS E DE OPERAÇÃO");
+  y += 4;
+  autoTable(doc, {
+    startY: y,
+    head: [["Manhã", "Tarde", "Condição da Obra"]],
+    body: [[extraData.climaManha || "—", extraData.climaTarde || "—", extraData.condicaoObra || "—"]],
+    theme: "grid",
+    headStyles: { fillColor: PRIMARY, textColor: 255, fontSize: 9 },
+    styles: { fontSize: 9 },
+    margin: { left: 14, right: 14 },
+  });
+  y = (doc as any).lastAutoTable.finalY + 8;
+
+  // 2. Mão de obra
+  y = ensureSpace(doc, y, 30, redrawHeader);
+  sectionTitle(doc, y, "2", "EFETIVO (MÃO DE OBRA)");
+  y += 4;
+  const equipeBody: any[] = [];
+  (extraData.maoDeObraPropria || []).forEach((m: any) => {
+    if (m.funcao) equipeBody.push(["IU Engenharia (Própria)", m.funcao, m.quantidade || 0]);
+  });
+  (extraData.maoDeObraTerceirizada || []).forEach((m: any) => {
+    if (m.empresa || m.funcao) equipeBody.push([m.empresa || "Terceirizada", m.funcao || "—", m.quantidade || 0]);
+  });
+  if (equipeBody.length === 0) equipeBody.push(["—", "Nenhum efetivo registrado", 0]);
+  autoTable(doc, {
+    startY: y,
+    head: [["Empresa", "Função", "Qtde"]],
+    body: equipeBody,
+    theme: "grid",
+    headStyles: { fillColor: PRIMARY, textColor: 255, fontSize: 9 },
+    styles: { fontSize: 9 },
+    columnStyles: { 2: { halign: "right", cellWidth: 20 } },
+    margin: { left: 14, right: 14 },
+  });
+  y = (doc as any).lastAutoTable.finalY + 8;
+
+  // 3. Equipamentos
+  y = ensureSpace(doc, y, 30, redrawHeader);
+  sectionTitle(doc, y, "3", "EQUIPAMENTOS");
+  y += 4;
+  const equipBody: any[] = [];
+  (extraData.equipamentos || []).forEach((e: any) => {
+    if (e.descricao) equipBody.push([e.descricao, e.quantidade || 0, e.status || "—"]);
+  });
+  if (equipBody.length === 0) equipBody.push(["Nenhum equipamento registrado", 0, "—"]);
+  autoTable(doc, {
+    startY: y,
+    head: [["Equipamento", "Qtde", "Status"]],
+    body: equipBody,
+    theme: "grid",
+    headStyles: { fillColor: PRIMARY, textColor: 255, fontSize: 9 },
+    styles: { fontSize: 9 },
+    columnStyles: { 1: { halign: "right", cellWidth: 20 }, 2: { cellWidth: 35 } },
+    margin: { left: 14, right: 14 },
+  });
+  y = (doc as any).lastAutoTable.finalY + 8;
+
+  // 4. Atividades
+  y = ensureSpace(doc, y, 30, redrawHeader);
+  sectionTitle(doc, y, "4", "ATIVIDADES EXECUTADAS");
+  y += 4;
+  const ativBody: any[] = [];
+  (extraData.atividades || []).forEach((a: any) => {
+    if (a.descricao) ativBody.push([a.descricao, a.local || "—", a.status || "—"]);
+  });
+  if (ativBody.length === 0) ativBody.push(["Nenhuma atividade registrada", "—", "—"]);
+  autoTable(doc, {
+    startY: y,
+    head: [["Descrição", "Local", "Status"]],
+    body: ativBody,
+    theme: "grid",
+    headStyles: { fillColor: PRIMARY, textColor: 255, fontSize: 9 },
+    styles: { fontSize: 9 },
+    columnStyles: { 2: { cellWidth: 35 } },
+    margin: { left: 14, right: 14 },
+  });
+  y = (doc as any).lastAutoTable.finalY + 8;
+
+  // 5. Ocorrências
+  if (diario.ocorrencias) {
+    y = ensureSpace(doc, y, 30, redrawHeader);
+    sectionTitle(doc, y, "5", "OCORRÊNCIAS / OBSERVAÇÕES", [180, 30, 30]);
+    y += 6;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(...TEXT);
+    const lines = doc.splitTextToSize(diario.ocorrencias, pageWidth - 28);
+    doc.text(lines, 14, y);
+    y += lines.length * 4.5 + 6;
+  }
+
+  // 6. Resumo IA
+  if (extraData.resumoIA) {
+    y = ensureSpace(doc, y, 40, redrawHeader);
+    sectionTitle(doc, y, "6", "RESUMO EXECUTIVO (INTELIGÊNCIA ARTIFICIAL)");
+    y += 6;
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9);
+    doc.setTextColor(...TEXT);
+    const lines = doc.splitTextToSize(extraData.resumoIA, pageWidth - 28);
+    // box leve atrás do resumo
+    const boxH = lines.length * 4.2 + 6;
+    doc.setFillColor(245, 248, 240);
+    doc.setDrawColor(...PRIMARY);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(14, y - 4, pageWidth - 28, boxH, 2, 2, "FD");
+    doc.text(lines, 17, y);
+    y += boxH + 4;
+  }
+
+  // 7. Anexos (Fotos)
+  const fotos: Array<{ url: string; descricao?: string }> = extraData.fotos || [];
+  if (fotos.length > 0) {
+    y = ensureSpace(doc, y, 60, redrawHeader);
+    sectionTitle(doc, y, "7", "REGISTRO FOTOGRÁFICO (ANEXOS)");
+    y += 6;
+
+    const colCount = 2;
+    const gap = 6;
+    const usableW = pageWidth - 28;
+    const cellW = (usableW - gap) / colCount;
+    const cellH = 55;
+
+    let col = 0;
+    for (let i = 0; i < fotos.length; i++) {
+      const foto = fotos[i];
+      const data = await loadAsset(foto.url);
+      if (!data) continue;
+
+      if (col === 0) {
+        y = ensureSpace(doc, y, cellH + 12, redrawHeader);
+      }
+      const x = 14 + col * (cellW + gap);
+
+      const dims = await getImageDimensions(data);
+      const ratio = dims.w / dims.h;
+      let drawW = cellW;
+      let drawH = cellW / ratio;
+      if (drawH > cellH) {
+        drawH = cellH;
+        drawW = cellH * ratio;
+      }
+      const ox = x + (cellW - drawW) / 2;
+      const oy = y + (cellH - drawH) / 2;
+
+      // moldura
+      doc.setDrawColor(220, 220, 220);
+      doc.setFillColor(248, 248, 248);
+      doc.roundedRect(x, y, cellW, cellH, 2, 2, "FD");
+      try {
+        doc.addImage(data, detectImageFormat(data), ox, oy, drawW, drawH);
+      } catch { /* ignore */ }
+
+      // legenda
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(8);
+      doc.setTextColor(...MUTED);
+      const cap = `Foto ${i + 1}${foto.descricao ? ` — ${foto.descricao}` : ""}`;
+      const capLines = doc.splitTextToSize(cap, cellW);
+      doc.text(capLines, x + cellW / 2, y + cellH + 4, { align: "center" });
+
+      col++;
+      if (col >= colCount) {
+        col = 0;
+        y += cellH + 10;
+      }
+    }
+    if (col !== 0) y += cellH + 10;
+  }
+
+  // 8. Assinaturas
+  y = ensureSpace(doc, y, 40, redrawHeader);
+  y += 12;
+  doc.setDrawColor(80, 80, 80);
+  doc.setLineWidth(0.3);
+  doc.line(30, y, 90, y);
+  doc.line(120, y, 180, y);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(...TEXT);
+  doc.text("ENG. RESPONSÁVEL", 60, y + 5, { align: "center" });
+  doc.text("FISCALIZAÇÃO / CLIENTE", 150, y + 5, { align: "center" });
+
+  drawFooter(doc);
+
   const filename = `RDO_${obra?.codigo || "OBRA"}_${dataFormatada.replace(/\//g, "-")}.pdf`;
   doc.save(filename);
 };
