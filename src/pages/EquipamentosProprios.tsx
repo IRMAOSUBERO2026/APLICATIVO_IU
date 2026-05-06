@@ -117,6 +117,19 @@ export default function EquipamentosProprios() {
   const [transferObraId, setTransferObraId] = useState("");
   const [transferResponsavel, setTransferResponsavel] = useState("");
   const [uploadingFoto, setUploadingFoto] = useState(false);
+  const [locaisAbertos, setLocaisAbertos] = useState<Record<string, boolean>>({ __almoxarifado__: true });
+
+  function toggleLocal(id: string) {
+    setLocaisAbertos(p => ({ ...p, [id]: !p[id] }));
+  }
+  function expandirTodos(ids: string[]) {
+    const novo: Record<string, boolean> = {};
+    ids.forEach(id => novo[id] = true);
+    setLocaisAbertos(novo);
+  }
+  function recolherTodos() {
+    setLocaisAbertos({});
+  }
 
   async function handleUploadFoto(file: File) {
     if (!file) return;
