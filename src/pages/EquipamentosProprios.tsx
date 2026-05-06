@@ -441,36 +441,63 @@ export default function EquipamentosProprios() {
         <Tabs value={tab} onValueChange={setTab}>
            <TabsList><TabsTrigger value="painel">Localizacoes</TabsTrigger><TabsTrigger value="cadastro">Catalogo</TabsTrigger><TabsTrigger value="manutencao">Manutencoes</TabsTrigger></TabsList>
            
-           <TabsContent value="painel" className="mt-4 space-y-4">
+           <TabsContent value="painel" className="mt-4 space-y-3">
+              {(() => {
+                const locais = Object.entries(equipPorObra).filter(([_, eqs]) => eqs.length > 0);
+                const ids = locais.map(([id]) => id);
+                return (
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground">{locais.length} {locais.length === 1 ? "local" : "locais"} com equipamentos</p>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="ghost" className="h-7 text-xs gap-1" onClick={() => expandirTodos(ids)}>
+                        <ChevronsUpDown size={14} /> Expandir todos
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 text-xs gap-1" onClick={recolherTodos}>
+                        <ChevronsDownUp size={14} /> Recolher todos
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })()}
               {Object.entries(equipPorObra).filter(([_, eqs]) => eqs.length > 0).map(([id, eqs]) => {
                 const isAlmox = id === "__almoxarifado__";
                 const obraInfo = obras.find(o => o.id === id);
+                const aberto = !!locaisAbertos[id];
                 return (
-                <Card key={id} className="overflow-hidden">
-                  <CardHeader className={`py-2 px-4 border-b flex flex-row items-center justify-between ${isAlmox ? "bg-emerald-500/10" : "bg-muted/40"}`}>
-                    <CardTitle className={`text-sm font-bold flex items-center gap-2 ${isAlmox ? "text-emerald-700" : ""}`}>
-                      {isAlmox ? <><Package size={16} /> Almoxarifado / Disponíveis</> : (obraInfo ? `${obraInfo.codigo} — ${obraInfo.nome}` : "Obra")}
-                    </CardTitle>
-                    <Badge variant="outline">{eqs.length}</Badge>
-                  </CardHeader>
-                  <CardContent className="p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {eqs.map(eq => (
-                      <div key={eq.id} className="flex gap-3 p-3 border rounded-xl bg-card hover:shadow-sm transition-shadow">
-                        <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center overflow-hidden border">
-                           {eq.foto_url ? <img src={eq.foto_url} className="w-full h-full object-cover" /> : TIPO_ICON[eq.tipo]}
+                <Collapsible key={id} open={aberto} onOpenChange={() => toggleLocal(id)} asChild>
+                  <Card className="overflow-hidden">
+                    <CollapsibleTrigger asChild>
+                      <button type="button" className={`w-full py-2 px-4 border-b flex items-center justify-between gap-2 text-left transition-colors hover:bg-muted/60 ${isAlmox ? "bg-emerald-500/10" : "bg-muted/40"}`}>
+                        <div className="flex items-center gap-2 min-w-0">
+                          {aberto ? <ChevronDown size={16} className="text-muted-foreground shrink-0" /> : <ChevronRight size={16} className="text-muted-foreground shrink-0" />}
+                          <span className={`text-sm font-bold flex items-center gap-2 truncate ${isAlmox ? "text-emerald-700" : ""}`}>
+                            {isAlmox ? <><Package size={16} /> Almoxarifado / Disponíveis</> : (obraInfo ? `${obraInfo.codigo} — ${obraInfo.nome}` : "Obra")}
+                          </span>
                         </div>
-                        <div className="flex-1 min-w-0">
-                           <p className="text-sm font-bold truncate">{eq.descricao}</p>
-                           <p className="text-[10px] text-muted-foreground font-mono">{eq.codigo}</p>
-                           <div className="flex gap-2 mt-2">
-                              <Button size="sm" variant="ghost" className="h-7 px-2 text-[10px] gap-1" onClick={() => { setSelectedEquip(eq); setTransferObraId(eq.obra_id || "estoque"); setShowTransferForm(true); }}><ArrowRightLeft size={12} /> Transf.</Button>
-                              <Button size="sm" variant="ghost" className="h-7 px-2 text-[10px] gap-1 text-amber-600" onClick={() => quickMaintenance(eq)}><Wrench size={12} /> Oficina</Button>
-                           </div>
-                        </div>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
+                        <Badge variant="outline" className="shrink-0">{eqs.length}</Badge>
+                      </button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <CardContent className="p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {eqs.map(eq => (
+                          <div key={eq.id} className="flex gap-3 p-3 border rounded-xl bg-card hover:shadow-sm transition-shadow">
+                            <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center overflow-hidden border">
+                               {eq.foto_url ? <img src={eq.foto_url} className="w-full h-full object-cover" /> : TIPO_ICON[eq.tipo]}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                               <p className="text-sm font-bold truncate">{eq.descricao}</p>
+                               <p className="text-[10px] text-muted-foreground font-mono">{eq.codigo}</p>
+                               <div className="flex gap-2 mt-2">
+                                  <Button size="sm" variant="ghost" className="h-7 px-2 text-[10px] gap-1" onClick={() => { setSelectedEquip(eq); setTransferObraId(eq.obra_id || "estoque"); setShowTransferForm(true); }}><ArrowRightLeft size={12} /> Transf.</Button>
+                                  <Button size="sm" variant="ghost" className="h-7 px-2 text-[10px] gap-1 text-amber-600" onClick={() => quickMaintenance(eq)}><Wrench size={12} /> Oficina</Button>
+                               </div>
+                            </div>
+                          </div>
+                        ))}
+                      </CardContent>
+                    </CollapsibleContent>
+                  </Card>
+                </Collapsible>
               );})}
            </TabsContent>
 
