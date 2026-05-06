@@ -1,6 +1,6 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { ArrowLeft, Save, Sparkles, Loader2, Upload, Trash2, Camera, CloudRain, Sun, Cloud, AlertTriangle, HardHat, Wrench, Users, CheckCircle2 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { ArrowLeft, Save, Sparkles, Loader2, Upload, Trash2, Camera, CloudRain, Sun, Cloud, AlertTriangle, HardHat, Wrench, Users, CheckCircle2, UserPlus, Plus } from "lucide-react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,44 @@ interface FotoUpload {
   file: File;
   previewUrl: string;
   descricao: string;
+}
+
+interface FuncionarioRow {
+  id: string;
+  nome: string;
+  cargo: string;
+  obra_id: string | null;
+  empresa_id: string;
+}
+
+interface EquipamentoRow {
+  id: string;
+  codigo: string;
+  descricao: string;
+  tipo: string;
+  obra_id: string | null;
+  empresa_id: string;
+  status: string;
+}
+
+interface EquipePresenca {
+  funcionario_id: string;
+  nome: string;
+  cargo: string;
+  presente: boolean;
+  apoio: boolean; // true = funcionário de outra obra/almoxarifado prestando suporte
+  origem?: string; // nome da obra de origem (apenas para apoio)
+  observacao?: string;
+}
+
+interface EquipamentoPresenca {
+  equipamento_id: string;
+  codigo: string;
+  descricao: string;
+  status: string; // Operando / Parado / Manutenção
+  apoio: boolean;
+  origem?: string;
+  observacao?: string;
 }
 
 export default function DiarioObraForm() {
@@ -29,12 +67,20 @@ export default function DiarioObraForm() {
   const [climaTarde, setClimaTarde] = useState("");
   const [condicaoObra, setCondicaoObra] = useState("Operável");
 
-  const [maoDeObraPropria, setMaoDeObraPropria] = useState([{ funcao: "", quantidade: 1 }]);
-  const [maoDeObraTerceirizada, setMaoDeObraTerceirizada] = useState([{ empresa: "", funcao: "", quantidade: 1 }]);
+  // Equipe e equipamentos da empresa
+  const [funcionariosEmpresa, setFuncionariosEmpresa] = useState<FuncionarioRow[]>([]);
+  const [equipamentosEmpresa, setEquipamentosEmpresa] = useState<EquipamentoRow[]>([]);
+  const [obrasMap, setObrasMap] = useState<Record<string, string>>({});
 
-  const [equipamentos, setEquipamentos] = useState([{ descricao: "", quantidade: 1, status: "Operando" }]);
+  const [equipe, setEquipe] = useState<EquipePresenca[]>([]);
+  const [equipamentos, setEquipamentos] = useState<EquipamentoPresenca[]>([]);
 
-  const [atividades, setAtividades] = useState([{ descricao: "", local: "", status: "Em andamento" }]);
+  const [showApoioFuncDialog, setShowApoioFuncDialog] = useState(false);
+  const [showApoioEqpDialog, setShowApoioEqpDialog] = useState(false);
+  const [searchApoioFunc, setSearchApoioFunc] = useState("");
+  const [searchApoioEqp, setSearchApoioEqp] = useState("");
+
+  const [atividades, setAtividades] = useState<Array<{ descricao: string; local: string; status: string; foraContrato: boolean; observacao: string }>>([{ descricao: "", local: "", status: "Em andamento", foraContrato: false, observacao: "" }]);
   const [ocorrencias, setOcorrencias] = useState("");
   
   const [fotos, setFotos] = useState<FotoUpload[]>([]);
@@ -48,10 +94,47 @@ export default function DiarioObraForm() {
 
   useEffect(() => {
     if (obraId) {
-      supabase.from("obras").select("nome, codigo").eq("id", obraId).single()
+      supabase.from("obras").select("nome, codigo, empresa_id").eq("id", obraId).single()
         .then(({ data }) => setObra(data));
     }
   }, [obraId]);
+
+  // Carrega funcionários e equipamentos da empresa (para opção de apoio) e os da obra (presença automática)
+  useEffect(() => {
+    if (!obra?.empresa_id || !obraId) return;
+    (async () => {
+      const [funcRes, eqpRes, obrasRes] = await Promise.all([
+        supabase.from("funcionarios").select("id, nome, cargo, obra_id, empresa_id, status")
+          .eq("empresa_id", obra.empresa_id).eq("status", "ativo").order("nome"),
+        supabase.from("equipamentos_proprios").select("id, codigo, descricao, tipo, obra_id, empresa_id, status")
+          .eq("empresa_id", obra.empresa_id).order("descricao"),
+        supabase.from("obras").select("id, nome, codigo").eq("empresa_id", obra.empresa_id),
+      ]);
+      const funcs = (funcRes.data || []) as FuncionarioRow[];
+      const eqps = (eqpRes.data || []) as EquipamentoRow[];
+      const oMap: Record<string, string> = {};
+      (obrasRes.data || []).forEach((o: any) => { oMap[o.id] = `${o.codigo} - ${o.nome}`; });
+      setObrasMap(oMap);
+      setFuncionariosEmpresa(funcs);
+      setEquipamentosEmpresa(eqps);
+
+      // Em modo NOVO: pré-carrega equipe e equipamentos da obra
+      if (!isEdit) {
+        setEquipe(
+          funcs.filter(f => f.obra_id === obraId).map(f => ({
+            funcionario_id: f.id, nome: f.nome, cargo: f.cargo,
+            presente: true, apoio: false,
+          }))
+        );
+        setEquipamentos(
+          eqps.filter(e => e.obra_id === obraId).map(e => ({
+            equipamento_id: e.id, codigo: e.codigo, descricao: e.descricao,
+            status: "Operando", apoio: false,
+          }))
+        );
+      }
+    })();
+  }, [obra?.empresa_id, obraId, isEdit]);
 
   useEffect(() => {
     if (!isEdit || !diarioId) return;
@@ -76,14 +159,16 @@ export default function DiarioObraForm() {
       setClimaManha(extra.climaManha || (d.clima || "").split("/")[0]?.trim() || "");
       setClimaTarde(extra.climaTarde || (d.clima || "").split("/")[1]?.trim() || "");
       setCondicaoObra(extra.condicaoObra || "Operável");
-      if (Array.isArray(extra.maoDeObraPropria) && extra.maoDeObraPropria.length) setMaoDeObraPropria(extra.maoDeObraPropria);
-      if (Array.isArray(extra.maoDeObraTerceirizada) && extra.maoDeObraTerceirizada.length) setMaoDeObraTerceirizada(extra.maoDeObraTerceirizada);
-      if (Array.isArray(extra.equipamentos) && extra.equipamentos.length) setEquipamentos(extra.equipamentos);
+      if (Array.isArray(extra.equipe)) setEquipe(extra.equipe);
+      if (Array.isArray(extra.equipamentos)) setEquipamentos(extra.equipamentos);
       if (Array.isArray(extra.atividades) && extra.atividades.length) {
-        setAtividades(extra.atividades);
+        setAtividades(extra.atividades.map((a: any) => ({
+          descricao: a.descricao || "", local: a.local || "", status: a.status || "Em andamento",
+          foraContrato: !!a.foraContrato, observacao: a.observacao || "",
+        })));
       } else if (d.atividades_executadas) {
         const linhas = String(d.atividades_executadas).split("\n").filter((l: string) => l.trim());
-        if (linhas.length) setAtividades(linhas.map((linha: string) => ({ descricao: linha, local: "", status: "Concluído" })));
+        if (linhas.length) setAtividades(linhas.map((linha: string) => ({ descricao: linha, local: "", status: "Concluído", foraContrato: false, observacao: "" })));
       }
       setOcorrencias(d.ocorrencias || "");
       setResumoIA(extra.resumoIA || "");
@@ -130,8 +215,9 @@ export default function DiarioObraForm() {
       obra: obra?.nome,
       data,
       clima: `Manhã: ${climaManha}, Tarde: ${climaTarde}. Condição: ${condicaoObra}`,
-      equipe: `Própria: ${maoDeObraPropria.reduce((acc, curr) => acc + (Number(curr.quantidade)||0), 0)} pessoas. Terceiros: ${maoDeObraTerceirizada.reduce((acc, curr) => acc + (Number(curr.quantidade)||0), 0)} pessoas.`,
-      atividades: atividades.map(a => `- ${a.descricao} (${a.local}) [${a.status}]`).join("\n"),
+      equipe: `Próprios: ${equipe.filter(e => e.presente && !e.apoio).length} pessoas. Apoio (outras obras): ${equipe.filter(e => e.presente && e.apoio).length} pessoas.`,
+      equipamentos: equipamentos.map(e => `- ${e.codigo} ${e.descricao} [${e.status}]${e.apoio ? ` (apoio de ${e.origem || "outro local"})` : ""}`).join("\n"),
+      atividades: atividades.map(a => `- ${a.descricao} (${a.local}) [${a.status}]${a.foraContrato ? ` [FORA DE CONTRATO${a.observacao ? ": " + a.observacao : ""}]` : ""}`).join("\n"),
       ocorrencias: ocorrencias || "Nenhuma ocorrência registrada."
     };
 
@@ -205,17 +291,18 @@ export default function DiarioObraForm() {
 
       const rawData = {
         climaManha, climaTarde, condicaoObra,
-        maoDeObraPropria, maoDeObraTerceirizada,
-        equipamentos, atividades, resumoIA, ocorrencias,
+        equipe, equipamentos, atividades, resumoIA, ocorrencias,
         fotos: todasFotos,
       };
+
+      const totalPresentes = equipe.filter(e => e.presente).length;
 
       const payload = {
         obra_id: obraId,
         data,
         responsavel,
         clima: `${climaManha} / ${climaTarde}`,
-        mao_de_obra_presente: maoDeObraPropria.reduce((s, c) => s + (Number(c.quantidade)||0), 0) + maoDeObraTerceirizada.reduce((s, c) => s + (Number(c.quantidade)||0), 0),
+        mao_de_obra_presente: totalPresentes,
         atividades_executadas: atividadesTexto,
         observacoes: JSON.stringify(rawData),
         ocorrencias: ocorrencias || null,
@@ -346,61 +433,127 @@ export default function DiarioObraForm() {
         {/* TAB 2: Equipe e Equipamentos */}
         {activeTab === "equipe" && (
           <div className="grid gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="grid gap-6 lg:grid-cols-2">
-              {/* Mão de Obra Própria */}
-              <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
-                <div className="flex items-center justify-between border-b pb-2">
-                  <h2 className="text-lg font-semibold flex items-center gap-2"><Users className="h-5 w-5 text-primary" /> Equipe Própria</h2>
-                  <button onClick={() => addArrayItem(setMaoDeObraPropria, { funcao: "", quantidade: 1 })} className="text-sm text-primary font-medium hover:underline">+ Adicionar</button>
-                </div>
-                {maoDeObraPropria.map((m, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <Input placeholder="Função (ex: Pedreiro)" value={m.funcao} onChange={e => updateArrayItem(setMaoDeObraPropria, i, "funcao", e.target.value)} className="flex-1" />
-                    <Input type="number" min={1} value={m.quantidade} onChange={e => updateArrayItem(setMaoDeObraPropria, i, "quantidade", e.target.value)} className="w-20" />
-                    <button onClick={() => removeArrayItem(setMaoDeObraPropria, i)} className="p-2 text-destructive hover:bg-destructive/10 rounded"><Trash2 className="h-4 w-4" /></button>
-                  </div>
-                ))}
-              </div>
-
-              {/* Mão de Obra Terceirizada */}
-              <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
-                <div className="flex items-center justify-between border-b pb-2">
-                  <h2 className="text-lg font-semibold flex items-center gap-2"><HardHat className="h-5 w-5 text-warning" /> Equipe Terceirizada</h2>
-                  <button onClick={() => addArrayItem(setMaoDeObraTerceirizada, { empresa: "", funcao: "", quantidade: 1 })} className="text-sm text-primary font-medium hover:underline">+ Adicionar</button>
-                </div>
-                {maoDeObraTerceirizada.map((m, i) => (
-                  <div key={i} className="flex flex-col gap-2 p-3 border rounded-lg bg-muted/20 relative">
-                    <button onClick={() => removeArrayItem(setMaoDeObraTerceirizada, i)} className="absolute top-2 right-2 p-1 text-destructive hover:bg-destructive/10 rounded"><Trash2 className="h-4 w-4" /></button>
-                    <Input placeholder="Nome da Empresa" value={m.empresa} onChange={e => updateArrayItem(setMaoDeObraTerceirizada, i, "empresa", e.target.value)} className="pr-8" />
-                    <div className="flex gap-2">
-                      <Input placeholder="Função" value={m.funcao} onChange={e => updateArrayItem(setMaoDeObraTerceirizada, i, "funcao", e.target.value)} className="flex-1" />
-                      <Input type="number" min={1} value={m.quantidade} onChange={e => updateArrayItem(setMaoDeObraTerceirizada, i, "quantidade", e.target.value)} className="w-20" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Equipamentos */}
+            {/* Equipe da Obra (auto) + Apoio */}
             <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
               <div className="flex items-center justify-between border-b pb-2">
-                <h2 className="text-lg font-semibold flex items-center gap-2"><Wrench className="h-5 w-5 text-muted-foreground" /> Equipamentos Utilizados</h2>
-                <button onClick={() => addArrayItem(setEquipamentos, { descricao: "", quantidade: 1, status: "Operando" })} className="text-sm text-primary font-medium hover:underline">+ Adicionar</button>
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary" /> Equipe da Obra
+                  <span className="text-xs font-normal text-muted-foreground">
+                    ({equipe.filter(e => e.presente).length} presente(s) de {equipe.length})
+                  </span>
+                </h2>
+                <button
+                  onClick={() => { setSearchApoioFunc(""); setShowApoioFuncDialog(true); }}
+                  className="inline-flex items-center gap-1 text-sm text-primary font-medium hover:underline"
+                >
+                  <UserPlus className="h-4 w-4" /> Adicionar funcionário de apoio
+                </button>
               </div>
-              {equipamentos.map((eq, i) => (
-                <div key={i} className="flex flex-col sm:flex-row items-center gap-2">
-                  <Input placeholder="Descrição do Equipamento (Ex: Betoneira, Retroescavadeira)" value={eq.descricao} onChange={e => updateArrayItem(setEquipamentos, i, "descricao", e.target.value)} className="flex-1" />
-                  <div className="flex gap-2 w-full sm:w-auto">
-                    <Input type="number" min={1} value={eq.quantidade} onChange={e => updateArrayItem(setEquipamentos, i, "quantidade", e.target.value)} className="w-20" />
-                    <select className="rounded-md border p-2 text-sm w-full sm:w-32" value={eq.status} onChange={e => updateArrayItem(setEquipamentos, i, "status", e.target.value)}>
-                      <option value="Operando">Operando</option>
-                      <option value="Parado">Parado</option>
-                      <option value="Manutenção">Manutenção</option>
-                    </select>
-                    <button onClick={() => removeArrayItem(setEquipamentos, i)} className="p-2 text-destructive hover:bg-destructive/10 rounded"><Trash2 className="h-4 w-4" /></button>
-                  </div>
+              <p className="text-xs text-muted-foreground">
+                Funcionários cadastrados nesta obra são carregados automaticamente como presentes. Desmarque ausentes ou inclua funcionários de apoio (de outras obras) que prestaram suporte ou tarefa específica.
+              </p>
+
+              {equipe.length === 0 ? (
+                <div className="py-6 text-center text-sm text-muted-foreground border-2 border-dashed rounded-lg">
+                  Nenhum funcionário alocado a esta obra. Use "Adicionar funcionário de apoio" para incluir.
                 </div>
-              ))}
+              ) : (
+                <div className="divide-y border rounded-lg">
+                  {equipe.map((p, i) => (
+                    <div key={`${p.funcionario_id}-${i}`} className={`flex flex-col sm:flex-row sm:items-center gap-2 p-3 ${p.apoio ? "bg-warning/5" : ""}`}>
+                      <label className="flex items-center gap-3 flex-1 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={p.presente}
+                          onChange={e => setEquipe(prev => prev.map((x, idx) => idx === i ? { ...x, presente: e.target.checked } : x))}
+                          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                        />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">
+                            {p.nome}
+                            {p.apoio && <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-warning/20 text-warning-foreground">APOIO</span>}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {p.cargo}{p.apoio && p.origem ? ` • Origem: ${p.origem}` : ""}
+                          </p>
+                        </div>
+                      </label>
+                      <Input
+                        placeholder="Tarefa/observação"
+                        value={p.observacao || ""}
+                        onChange={e => setEquipe(prev => prev.map((x, idx) => idx === i ? { ...x, observacao: e.target.value } : x))}
+                        className="sm:w-64 h-8 text-xs"
+                      />
+                      {p.apoio && (
+                        <button onClick={() => setEquipe(prev => prev.filter((_, idx) => idx !== i))} className="p-2 text-destructive hover:bg-destructive/10 rounded">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Equipamentos da Obra (auto) + Apoio */}
+            <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between border-b pb-2">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <Wrench className="h-5 w-5 text-muted-foreground" /> Equipamentos Utilizados
+                  <span className="text-xs font-normal text-muted-foreground">({equipamentos.length})</span>
+                </h2>
+                <button
+                  onClick={() => { setSearchApoioEqp(""); setShowApoioEqpDialog(true); }}
+                  className="inline-flex items-center gap-1 text-sm text-primary font-medium hover:underline"
+                >
+                  <Plus className="h-4 w-4" /> Adicionar equipamento de apoio
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Equipamentos alocados nesta obra são carregados automaticamente. Inclua equipamentos do almoxarifado ou de outras obras quando necessário.
+              </p>
+
+              {equipamentos.length === 0 ? (
+                <div className="py-6 text-center text-sm text-muted-foreground border-2 border-dashed rounded-lg">
+                  Nenhum equipamento alocado a esta obra.
+                </div>
+              ) : (
+                <div className="divide-y border rounded-lg">
+                  {equipamentos.map((eq, i) => (
+                    <div key={`${eq.equipamento_id}-${i}`} className={`flex flex-col sm:flex-row sm:items-center gap-2 p-3 ${eq.apoio ? "bg-warning/5" : ""}`}>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">
+                          {eq.codigo} • {eq.descricao}
+                          {eq.apoio && <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-warning/20 text-warning-foreground">APOIO</span>}
+                        </p>
+                        {eq.apoio && eq.origem && (
+                          <p className="text-xs text-muted-foreground">Origem: {eq.origem}</p>
+                        )}
+                      </div>
+                      <Input
+                        placeholder="Observação"
+                        value={eq.observacao || ""}
+                        onChange={e => setEquipamentos(prev => prev.map((x, idx) => idx === i ? { ...x, observacao: e.target.value } : x))}
+                        className="sm:w-48 h-8 text-xs"
+                      />
+                      <select
+                        className="rounded-md border p-2 text-sm w-full sm:w-36 bg-background"
+                        value={eq.status}
+                        onChange={e => setEquipamentos(prev => prev.map((x, idx) => idx === i ? { ...x, status: e.target.value } : x))}
+                      >
+                        <option value="Operando">Operando</option>
+                        <option value="Parado">Parado</option>
+                        <option value="Manutenção">Manutenção</option>
+                      </select>
+                      {eq.apoio && (
+                        <button onClick={() => setEquipamentos(prev => prev.filter((_, idx) => idx !== i))} className="p-2 text-destructive hover:bg-destructive/10 rounded">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="flex justify-between">
@@ -416,11 +569,11 @@ export default function DiarioObraForm() {
             <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
               <div className="flex items-center justify-between border-b pb-2">
                 <h2 className="text-lg font-semibold flex items-center gap-2 text-primary">Atividades Executadas</h2>
-                <button onClick={() => addArrayItem(setAtividades, { descricao: "", local: "", status: "Em andamento" })} className="text-sm text-primary font-medium hover:underline">+ Adicionar Atividade</button>
+                <button onClick={() => addArrayItem(setAtividades, { descricao: "", local: "", status: "Em andamento", foraContrato: false, observacao: "" })} className="text-sm text-primary font-medium hover:underline">+ Adicionar Atividade</button>
               </div>
               <div className="space-y-4">
                 {atividades.map((at, i) => (
-                  <div key={i} className="p-4 border rounded-lg bg-muted/10 relative space-y-3">
+                  <div key={i} className={`p-4 border rounded-lg relative space-y-3 ${at.foraContrato ? "bg-warning/5 border-warning/40" : "bg-muted/10"}`}>
                     <button onClick={() => removeArrayItem(setAtividades, i)} className="absolute top-2 right-2 p-1 text-destructive hover:bg-destructive/10 rounded"><Trash2 className="h-4 w-4" /></button>
                     <div className="pr-8">
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Descrição do Serviço</label>
@@ -428,8 +581,8 @@ export default function DiarioObraForm() {
                     </div>
                     <div className="grid sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="text-xs font-medium text-muted-foreground mb-1 block">Local / Eixo</label>
-                        <Input placeholder="Ex: Bloco A, Estaca 10" value={at.local} onChange={e => updateArrayItem(setAtividades, i, "local", e.target.value)} />
+                        <label className="text-xs font-medium text-muted-foreground mb-1 block">Local / Eixo / Item de Contrato</label>
+                        <Input placeholder="Ex: Bloco A, Estaca 10 ou item 1.3" value={at.local} onChange={e => updateArrayItem(setAtividades, i, "local", e.target.value)} />
                       </div>
                       <div>
                         <label className="text-xs font-medium text-muted-foreground mb-1 block">Status</label>
@@ -439,6 +592,30 @@ export default function DiarioObraForm() {
                           <option value="Pausado">Pausado</option>
                         </select>
                       </div>
+                    </div>
+                    <div className="border-t pt-3 space-y-2">
+                      <label className="flex items-center gap-2 text-sm cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={!!at.foraContrato}
+                          onChange={e => updateArrayItem(setAtividades, i, "foraContrato", e.target.checked)}
+                          className="h-4 w-4 rounded border-gray-300 text-warning focus:ring-warning"
+                        />
+                        <span className="font-medium">Serviço fora do contrato</span>
+                        <span className="text-xs text-muted-foreground">(ex: serviço por administração, extra, contingência)</span>
+                      </label>
+                      {at.foraContrato && (
+                        <div>
+                          <label className="text-xs font-medium text-warning mb-1 block">Observação / Justificativa</label>
+                          <Textarea
+                            placeholder="Descreva o motivo do serviço extra (ex: solicitado pela fiscalização, serviço por administração, contingência por chuva...)"
+                            value={at.observacao || ""}
+                            onChange={e => updateArrayItem(setAtividades, i, "observacao", e.target.value)}
+                            rows={2}
+                            className="bg-background"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -579,6 +756,114 @@ export default function DiarioObraForm() {
           </div>
         )}
       </div>
+
+      {/* Diálogo: Adicionar Funcionário de Apoio */}
+      {showApoioFuncDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowApoioFuncDialog(false)}>
+          <div className="bg-card rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b">
+              <h3 className="font-semibold flex items-center gap-2"><UserPlus className="h-5 w-5 text-primary" /> Adicionar Funcionário de Apoio</h3>
+              <p className="text-xs text-muted-foreground mt-1">Selecione funcionários de outras obras/almoxarifado que prestaram suporte ou tarefa específica nesta obra.</p>
+              <Input
+                placeholder="Buscar por nome ou cargo..."
+                className="mt-3"
+                value={searchApoioFunc}
+                onChange={e => setSearchApoioFunc(e.target.value)}
+              />
+            </div>
+            <div className="flex-1 overflow-y-auto divide-y">
+              {funcionariosEmpresa
+                .filter(f => f.obra_id !== obraId)
+                .filter(f => !equipe.some(e => e.funcionario_id === f.id))
+                .filter(f => {
+                  if (!searchApoioFunc) return true;
+                  const s = searchApoioFunc.toLowerCase();
+                  return f.nome.toLowerCase().includes(s) || (f.cargo || "").toLowerCase().includes(s);
+                })
+                .map(f => (
+                  <button
+                    key={f.id}
+                    onClick={() => {
+                      setEquipe(prev => [...prev, {
+                        funcionario_id: f.id, nome: f.nome, cargo: f.cargo,
+                        presente: true, apoio: true,
+                        origem: f.obra_id ? (obrasMap[f.obra_id] || "Outra obra") : "Almoxarifado/Sem alocação",
+                      }]);
+                      setShowApoioFuncDialog(false);
+                    }}
+                    className="w-full text-left p-3 hover:bg-muted/50 transition-colors flex items-center justify-between"
+                  >
+                    <div>
+                      <p className="text-sm font-medium">{f.nome}</p>
+                      <p className="text-xs text-muted-foreground">{f.cargo} • {f.obra_id ? (obrasMap[f.obra_id] || "Outra obra") : "Almoxarifado"}</p>
+                    </div>
+                    <Plus className="h-4 w-4 text-primary" />
+                  </button>
+                ))}
+              {funcionariosEmpresa.filter(f => f.obra_id !== obraId && !equipe.some(e => e.funcionario_id === f.id)).length === 0 && (
+                <p className="p-6 text-center text-sm text-muted-foreground">Nenhum funcionário disponível para apoio.</p>
+              )}
+            </div>
+            <div className="p-3 border-t flex justify-end">
+              <button onClick={() => setShowApoioFuncDialog(false)} className="px-4 py-2 text-sm border rounded-lg hover:bg-muted">Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Diálogo: Adicionar Equipamento de Apoio */}
+      {showApoioEqpDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowApoioEqpDialog(false)}>
+          <div className="bg-card rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b">
+              <h3 className="font-semibold flex items-center gap-2"><Wrench className="h-5 w-5 text-primary" /> Adicionar Equipamento de Apoio</h3>
+              <p className="text-xs text-muted-foreground mt-1">Selecione equipamentos do almoxarifado ou de outras obras.</p>
+              <Input
+                placeholder="Buscar por código, descrição ou tipo..."
+                className="mt-3"
+                value={searchApoioEqp}
+                onChange={e => setSearchApoioEqp(e.target.value)}
+              />
+            </div>
+            <div className="flex-1 overflow-y-auto divide-y">
+              {equipamentosEmpresa
+                .filter(e => e.obra_id !== obraId)
+                .filter(e => !equipamentos.some(x => x.equipamento_id === e.id))
+                .filter(e => {
+                  if (!searchApoioEqp) return true;
+                  const s = searchApoioEqp.toLowerCase();
+                  return (e.codigo || "").toLowerCase().includes(s) || e.descricao.toLowerCase().includes(s) || (e.tipo || "").toLowerCase().includes(s);
+                })
+                .map(e => (
+                  <button
+                    key={e.id}
+                    onClick={() => {
+                      setEquipamentos(prev => [...prev, {
+                        equipamento_id: e.id, codigo: e.codigo, descricao: e.descricao,
+                        status: "Operando", apoio: true,
+                        origem: e.obra_id ? (obrasMap[e.obra_id] || "Outra obra") : "Almoxarifado",
+                      }]);
+                      setShowApoioEqpDialog(false);
+                    }}
+                    className="w-full text-left p-3 hover:bg-muted/50 transition-colors flex items-center justify-between"
+                  >
+                    <div>
+                      <p className="text-sm font-medium">{e.codigo} • {e.descricao}</p>
+                      <p className="text-xs text-muted-foreground">{e.tipo} • {e.obra_id ? (obrasMap[e.obra_id] || "Outra obra") : "Almoxarifado"}</p>
+                    </div>
+                    <Plus className="h-4 w-4 text-primary" />
+                  </button>
+                ))}
+              {equipamentosEmpresa.filter(e => e.obra_id !== obraId && !equipamentos.some(x => x.equipamento_id === e.id)).length === 0 && (
+                <p className="p-6 text-center text-sm text-muted-foreground">Nenhum equipamento disponível para apoio.</p>
+              )}
+            </div>
+            <div className="p-3 border-t flex justify-end">
+              <button onClick={() => setShowApoioEqpDialog(false)} className="px-4 py-2 text-sm border rounded-lg hover:bg-muted">Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 }
