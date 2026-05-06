@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { getLinhaImpressao, NOME_EMPRESA_OFICIAL } from "./usuarioImpressao";
 
 export interface EmpresaBranding {
   razao_social: string;
@@ -177,7 +178,7 @@ export function addPDFFooter(doc: jsPDF, empresa: EmpresaBranding) {
     doc.setTextColor(255, 255, 255);
     doc.setFont("helvetica", "normal");
 
-    const empName = empresa.nome_fantasia || empresa.razao_social;
+    const empName = empresa.nome_fantasia || empresa.razao_social || NOME_EMPRESA_OFICIAL;
     const footerLeft = `${empName} — CNPJ: ${empresa.cnpj}`;
     doc.text(footerLeft, 14, pageHeight - 8);
 
@@ -186,11 +187,8 @@ export function addPDFFooter(doc: jsPDF, empresa: EmpresaBranding) {
       doc.text(contactParts.join(" | "), 14, pageHeight - 4);
     }
 
-    // Responsible
-    if (empresa.nome_responsavel) {
-      const respText = `${empresa.nome_responsavel}${empresa.cargo_responsavel ? ` — ${empresa.cargo_responsavel}` : ""}`;
-      doc.text(respText, pageWidth / 2, pageHeight - 6, { align: "center" });
-    }
+    // Linha do responsável pela impressão (usuário logado / setor)
+    doc.text(getLinhaImpressao(), pageWidth / 2, pageHeight - 6, { align: "center" });
 
     // Page number
     doc.text(`Página ${i} de ${pageCount}`, pageWidth - 14, pageHeight - 6, { align: "right" });
