@@ -20,6 +20,7 @@ import {
 import { format } from "date-fns";
 import { gerarPlanilhaMedicaoPdf } from "@/lib/gerarPlanilhaMedicaoPdf";
 import { OBRA_STATUS_INATIVOS, isObraAtiva } from "@/lib/obraStatus";
+import { sortByItemNumero as sortItensNatural } from "@/lib/sortItens";
 
 // Formatadores Premium
 const fCur = (v: any) => (Number(v) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
