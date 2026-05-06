@@ -478,30 +478,59 @@ export default function DiarioObraForm() {
                 </button>
               </div>
               
-              {fotos.length === 0 ? (
+              {/* Fotos já existentes (modo edição) */}
+              {fotosExistentes.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Fotos já anexadas ({fotosExistentes.length})</p>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {fotosExistentes.map((foto, i) => (
+                      <div key={`ex-${i}`} className="group relative rounded-lg border overflow-hidden bg-muted/20">
+                        <div className="aspect-video w-full bg-black/5 flex items-center justify-center overflow-hidden relative">
+                          <img src={foto.url} alt={`Foto ${i}`} className="object-cover w-full h-full" />
+                          <button onClick={() => removeFotoExistente(i)} className="absolute top-2 right-2 bg-black/60 p-1.5 rounded-full text-white hover:bg-destructive transition-colors">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <div className="p-2 border-t">
+                          <Input placeholder="Legenda" className="h-8 text-xs border-transparent focus-visible:ring-0 px-1" value={foto.descricao} onChange={e => {
+                            const arr = [...fotosExistentes];
+                            arr[i] = { ...arr[i], descricao: e.target.value };
+                            setFotosExistentes(arr);
+                          }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {fotos.length === 0 && fotosExistentes.length === 0 ? (
                 <div className="py-8 text-center border-2 border-dashed rounded-lg bg-muted/20">
                   <Camera className="h-8 w-8 mx-auto text-muted-foreground opacity-50 mb-2" />
                   <p className="text-sm text-muted-foreground">Nenhuma foto anexada. Fotos enriquecem o RDO.</p>
                 </div>
-              ) : (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {fotos.map((foto, i) => (
-                    <div key={i} className="group relative rounded-lg border overflow-hidden bg-muted/20">
-                      <div className="aspect-video w-full bg-black/5 flex items-center justify-center overflow-hidden relative">
-                        <img src={foto.previewUrl} alt={`Preview ${i}`} className="object-cover w-full h-full" />
-                        <button onClick={() => removePhoto(i)} className="absolute top-2 right-2 bg-black/60 p-1.5 rounded-full text-white hover:bg-destructive transition-colors opacity-0 group-hover:opacity-100">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+              ) : fotos.length > 0 && (
+                <div className="space-y-2">
+                  {fotosExistentes.length > 0 && <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Novas fotos ({fotos.length})</p>}
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {fotos.map((foto, i) => (
+                      <div key={i} className="group relative rounded-lg border overflow-hidden bg-muted/20">
+                        <div className="aspect-video w-full bg-black/5 flex items-center justify-center overflow-hidden relative">
+                          <img src={foto.previewUrl} alt={`Preview ${i}`} className="object-cover w-full h-full" />
+                          <button onClick={() => removePhoto(i)} className="absolute top-2 right-2 bg-black/60 p-1.5 rounded-full text-white hover:bg-destructive transition-colors opacity-0 group-hover:opacity-100">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <div className="p-2 border-t">
+                          <Input placeholder="Legenda da foto..." className="h-8 text-xs border-transparent focus-visible:ring-0 px-1" value={foto.descricao} onChange={e => {
+                            const newFotos = [...fotos];
+                            newFotos[i].descricao = e.target.value;
+                            setFotos(newFotos);
+                          }} />
+                        </div>
                       </div>
-                      <div className="p-2 border-t">
-                        <Input placeholder="Legenda da foto..." className="h-8 text-xs border-transparent focus-visible:ring-0 px-1" value={foto.descricao} onChange={e => {
-                          const newFotos = [...fotos];
-                          newFotos[i].descricao = e.target.value;
-                          setFotos(newFotos);
-                        }} />
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
