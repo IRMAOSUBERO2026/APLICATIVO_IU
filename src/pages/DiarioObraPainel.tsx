@@ -1,7 +1,7 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Plus, Search, Calendar, FileText, ArrowLeft, Loader2, Download, Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Search, Calendar, FileText, ArrowLeft, Loader2, Download, Pencil, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
