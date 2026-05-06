@@ -215,21 +215,31 @@ export const generateDiarioPdf = async (diario: any, obra: any) => {
   sectionTitle(doc, y, "2", "EFETIVO (MÃO DE OBRA)");
   y += 4;
   const equipeBody: any[] = [];
-  (extraData.maoDeObraPropria || []).forEach((m: any) => {
-    if (m.funcao) equipeBody.push(["IU Engenharia (Própria)", m.funcao, m.quantidade || 0]);
-  });
-  (extraData.maoDeObraTerceirizada || []).forEach((m: any) => {
-    if (m.empresa || m.funcao) equipeBody.push([m.empresa || "Terceirizada", m.funcao || "—", m.quantidade || 0]);
-  });
-  if (equipeBody.length === 0) equipeBody.push(["—", "Nenhum efetivo registrado", 0]);
+  // Novo formato: equipe estruturada com presença individual
+  if (Array.isArray(extraData.equipe) && extraData.equipe.length > 0) {
+    extraData.equipe.forEach((p: any) => {
+      const origem = p.apoio ? `APOIO (${p.origem || "—"})` : "Própria da obra";
+      const obs = [p.presente ? "Presente" : "Ausente", p.observacao].filter(Boolean).join(" • ");
+      equipeBody.push([p.nome || "—", p.cargo || "—", origem, obs]);
+    });
+  } else {
+    // Compatibilidade com diários antigos (formato anterior)
+    (extraData.maoDeObraPropria || []).forEach((m: any) => {
+      if (m.funcao) equipeBody.push([`${m.quantidade || 0}x`, m.funcao, "IU Engenharia (Própria)", "—"]);
+    });
+    (extraData.maoDeObraTerceirizada || []).forEach((m: any) => {
+      if (m.empresa || m.funcao) equipeBody.push([`${m.quantidade || 0}x`, m.funcao || "—", m.empresa || "Terceirizada", "—"]);
+    });
+  }
+  if (equipeBody.length === 0) equipeBody.push(["—", "Nenhum efetivo registrado", "—", "—"]);
   autoTable(doc, {
     startY: y,
-    head: [["Empresa", "Função", "Qtde"]],
+    head: [["Nome", "Cargo", "Origem", "Status / Tarefa"]],
     body: equipeBody,
     theme: "grid",
     headStyles: { fillColor: PRIMARY, textColor: 255, fontSize: 9 },
-    styles: { fontSize: 9 },
-    columnStyles: { 2: { halign: "right", cellWidth: 20 } },
+    styles: { fontSize: 8 },
+    columnStyles: { 2: { cellWidth: 38 }, 3: { cellWidth: 50 } },
     margin: { left: 14, right: 14 },
   });
   y = (doc as any).lastAutoTable.finalY + 8;
@@ -240,17 +250,22 @@ export const generateDiarioPdf = async (diario: any, obra: any) => {
   y += 4;
   const equipBody: any[] = [];
   (extraData.equipamentos || []).forEach((e: any) => {
-    if (e.descricao) equipBody.push([e.descricao, e.quantidade || 0, e.status || "—"]);
+    // Novo formato (com codigo + apoio) ou antigo (apenas descricao + quantidade)
+    if (e.codigo || e.descricao) {
+      const ident = e.codigo ? `${e.codigo} • ${e.descricao || ""}` : e.descricao;
+      const origem = e.apoio ? `APOIO (${e.origem || "—"})` : (e.quantidade ? `Qtde: ${e.quantidade}` : "Da obra");
+      equipBody.push([ident, origem, e.status || "—", e.observacao || "—"]);
+    }
   });
-  if (equipBody.length === 0) equipBody.push(["Nenhum equipamento registrado", 0, "—"]);
+  if (equipBody.length === 0) equipBody.push(["Nenhum equipamento registrado", "—", "—", "—"]);
   autoTable(doc, {
     startY: y,
-    head: [["Equipamento", "Qtde", "Status"]],
+    head: [["Equipamento", "Origem", "Status", "Observação"]],
     body: equipBody,
     theme: "grid",
     headStyles: { fillColor: PRIMARY, textColor: 255, fontSize: 9 },
-    styles: { fontSize: 9 },
-    columnStyles: { 1: { halign: "right", cellWidth: 20 }, 2: { cellWidth: 35 } },
+    styles: { fontSize: 8 },
+    columnStyles: { 1: { cellWidth: 38 }, 2: { cellWidth: 28 } },
     margin: { left: 14, right: 14 },
   });
   y = (doc as any).lastAutoTable.finalY + 8;
@@ -261,12 +276,17 @@ export const generateDiarioPdf = async (diario: any, obra: any) => {
   y += 4;
   const ativBody: any[] = [];
   (extraData.atividades || []).forEach((a: any) => {
-    if (a.descricao) ativBody.push([a.descricao, a.local || "—", a.status || "—"]);
+    if (a.descricao) {
+      const desc = a.foraContrato
+        ? `${a.descricao}\n[FORA DE CONTRATO]${a.observacao ? ` ${a.observacao}` : ""}`
+        : a.descricao;
+      ativBody.push([desc, a.local || "—", a.status || "—"]);
+    }
   });
   if (ativBody.length === 0) ativBody.push(["Nenhuma atividade registrada", "—", "—"]);
   autoTable(doc, {
     startY: y,
-    head: [["Descrição", "Local", "Status"]],
+    head: [["Descrição", "Local / Item", "Status"]],
     body: ativBody,
     theme: "grid",
     headStyles: { fillColor: PRIMARY, textColor: 255, fontSize: 9 },
