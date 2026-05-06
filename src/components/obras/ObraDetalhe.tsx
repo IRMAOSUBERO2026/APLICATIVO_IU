@@ -28,6 +28,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { createBrandedPDF, addPDFFooter, getAutoTableStyles, addSignatureBlock, type EmpresaBranding } from "@/lib/pdfTemplate";
+import { ordenarItensContrato } from "@/lib/sortItens";
 
 interface Obra {
   id: string; codigo: string; nome: string; empresa_id: string; construtora?: string;
