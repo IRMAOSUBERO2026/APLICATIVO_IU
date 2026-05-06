@@ -1,6 +1,6 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { ArrowLeft, Save, Sparkles, Loader2, Upload, Trash2, Camera, CloudRain, Sun, Cloud, AlertTriangle, HardHat, Wrench, Users, CheckCircle2 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { ArrowLeft, Save, Sparkles, Loader2, Upload, Trash2, Camera, CloudRain, Sun, Cloud, AlertTriangle, HardHat, Wrench, Users, CheckCircle2, UserPlus, Plus } from "lucide-react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,44 @@ interface FotoUpload {
   file: File;
   previewUrl: string;
   descricao: string;
+}
+
+interface FuncionarioRow {
+  id: string;
+  nome: string;
+  cargo: string;
+  obra_id: string | null;
+  empresa_id: string;
+}
+
+interface EquipamentoRow {
+  id: string;
+  codigo: string;
+  descricao: string;
+  tipo: string;
+  obra_id: string | null;
+  empresa_id: string;
+  status: string;
+}
+
+interface EquipePresenca {
+  funcionario_id: string;
+  nome: string;
+  cargo: string;
+  presente: boolean;
+  apoio: boolean; // true = funcionário de outra obra/almoxarifado prestando suporte
+  origem?: string; // nome da obra de origem (apenas para apoio)
+  observacao?: string;
+}
+
+interface EquipamentoPresenca {
+  equipamento_id: string;
+  codigo: string;
+  descricao: string;
+  status: string; // Operando / Parado / Manutenção
+  apoio: boolean;
+  origem?: string;
+  observacao?: string;
 }
 
 export default function DiarioObraForm() {
@@ -29,12 +67,20 @@ export default function DiarioObraForm() {
   const [climaTarde, setClimaTarde] = useState("");
   const [condicaoObra, setCondicaoObra] = useState("Operável");
 
-  const [maoDeObraPropria, setMaoDeObraPropria] = useState([{ funcao: "", quantidade: 1 }]);
-  const [maoDeObraTerceirizada, setMaoDeObraTerceirizada] = useState([{ empresa: "", funcao: "", quantidade: 1 }]);
+  // Equipe e equipamentos da empresa
+  const [funcionariosEmpresa, setFuncionariosEmpresa] = useState<FuncionarioRow[]>([]);
+  const [equipamentosEmpresa, setEquipamentosEmpresa] = useState<EquipamentoRow[]>([]);
+  const [obrasMap, setObrasMap] = useState<Record<string, string>>({});
 
-  const [equipamentos, setEquipamentos] = useState([{ descricao: "", quantidade: 1, status: "Operando" }]);
+  const [equipe, setEquipe] = useState<EquipePresenca[]>([]);
+  const [equipamentos, setEquipamentos] = useState<EquipamentoPresenca[]>([]);
 
-  const [atividades, setAtividades] = useState([{ descricao: "", local: "", status: "Em andamento" }]);
+  const [showApoioFuncDialog, setShowApoioFuncDialog] = useState(false);
+  const [showApoioEqpDialog, setShowApoioEqpDialog] = useState(false);
+  const [searchApoioFunc, setSearchApoioFunc] = useState("");
+  const [searchApoioEqp, setSearchApoioEqp] = useState("");
+
+  const [atividades, setAtividades] = useState<Array<{ descricao: string; local: string; status: string; foraContrato: boolean; observacao: string }>>([{ descricao: "", local: "", status: "Em andamento", foraContrato: false, observacao: "" }]);
   const [ocorrencias, setOcorrencias] = useState("");
   
   const [fotos, setFotos] = useState<FotoUpload[]>([]);
