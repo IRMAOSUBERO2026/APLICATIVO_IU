@@ -9,6 +9,7 @@ import { generateDiarioPdf } from "@/lib/diarioPdfGenerator";
 
 export default function DiarioObraPainel() {
   const { obraId } = useParams();
+  const navigate = useNavigate();
   const [obra, setObra] = useState<any>(null);
   const [diarios, setDiarios] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
