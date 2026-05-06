@@ -179,17 +179,7 @@ export default function Medicoes() {
     }
   }, [selectedObraId, obras]);
 
-  const sortByItemNumero = (a: any, b: any) => {
-    const pa = String(a.item_numero || "").split(".").map((p: string) => parseInt(p, 10) || p);
-    const pb = String(b.item_numero || "").split(".").map((p: string) => parseInt(p, 10) || p);
-    const len = Math.max(pa.length, pb.length);
-    for (let i = 0; i < len; i++) {
-      if (pa[i] === undefined) return -1;
-      if (pb[i] === undefined) return 1;
-      if (pa[i] !== pb[i]) return pa[i] > pb[i] ? 1 : -1;
-    }
-    return 0;
-  };
+  const sortByItemNumero = sortItensNatural;
 
   const loadData = async () => {
     const [c, m, r] = await Promise.all([
