@@ -194,6 +194,13 @@ export default function DiarioObraPainel() {
                           >
                             <Download className="h-3.5 w-3.5 mr-1" /> PDF
                           </button>
+                          <button 
+                            className="inline-flex h-8 items-center justify-center rounded-md bg-rose-50 px-3 text-xs font-medium text-rose-600 hover:bg-rose-100 transition-colors"
+                            onClick={() => handleDelete(d)}
+                            title="Excluir RDO"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
                         </div>
                       </td>
                     </tr>
