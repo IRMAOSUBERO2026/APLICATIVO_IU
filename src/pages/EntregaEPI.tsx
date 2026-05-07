@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import FichasEPIPanel from "@/components/epi/FichasEPIPanel";
+import { ImportarFichasAntigas } from "@/components/epi/ImportarFichasAntigas";
 import { ScrollableTable } from "@/components/shared/ScrollableTable";
 import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 
@@ -210,6 +211,7 @@ export default function EntregaEPI() {
               <Button onClick={() => { setSelectedItems([]); setShowNewDelivery(true); }} className="bg-amber-500 hover:bg-amber-600 text-white border-none h-12 gap-3 px-8 shadow-xl shadow-amber-500/20 rounded-xl font-bold">
                  <Plus size={20} /> Nova Entrega
               </Button>
+              <ImportarFichasAntigas onImported={loadData} />
               <Button variant="outline" asChild className="h-12 rounded-xl border-slate-200">
                  <a href="/entrega-epi-mobile" className="gap-2"><Smartphone size={18} /> Mobile</a>
               </Button>
