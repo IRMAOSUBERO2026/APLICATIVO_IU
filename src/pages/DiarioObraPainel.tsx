@@ -1,5 +1,5 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Plus, Search, Calendar, FileText, ArrowLeft, Loader2, Download, Pencil, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Search, Calendar, FileText, ArrowLeft, Loader2, Download, Pencil, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -73,6 +73,31 @@ export default function DiarioObraPainel() {
       }
     } else {
       toast({ title: "Erro", description: "Dados insuficientes para gerar o PDF.", variant: "destructive" });
+    }
+  };
+
+  const handleDelete = async (d: any) => {
+    const dataStr = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" }).format(new Date(d.data));
+    if (!confirm(`Excluir o RDO de ${dataStr}? Esta ação não pode ser desfeita.`)) return;
+    try {
+      // Remove fotos do storage (se existirem)
+      if (Array.isArray(d.fotos) && d.fotos.length > 0) {
+        const paths = d.fotos
+          .map((url: string) => {
+            const m = url.match(/\/documentos\/(.+)$/);
+            return m ? m[1] : null;
+          })
+          .filter(Boolean) as string[];
+        if (paths.length > 0) {
+          await supabase.storage.from("documentos").remove(paths);
+        }
+      }
+      const { error } = await supabase.from("diarios_obra").delete().eq("id", d.id);
+      if (error) throw error;
+      setDiarios(prev => prev.filter(x => x.id !== d.id));
+      toast({ title: "RDO excluído com sucesso" });
+    } catch (e: any) {
+      toast({ title: "Erro ao excluir", description: e.message, variant: "destructive" });
     }
   };
 
@@ -168,6 +193,13 @@ export default function DiarioObraPainel() {
                             onClick={() => handleGeneratePdf(d.id)}
                           >
                             <Download className="h-3.5 w-3.5 mr-1" /> PDF
+                          </button>
+                          <button 
+                            className="inline-flex h-8 items-center justify-center rounded-md bg-rose-50 px-3 text-xs font-medium text-rose-600 hover:bg-rose-100 transition-colors"
+                            onClick={() => handleDelete(d)}
+                            title="Excluir RDO"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       </td>

@@ -18,6 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
+import { ImportarPlanilha } from "@/components/estoque/ImportarPlanilha";
 
 type TabKey = "produtos" | "movimentacoes" | "alertas";
 type SortKey = "descricao" | "codigo" | "saldo";
@@ -149,7 +150,8 @@ export default function Estoque() {
                  <p className="text-sm text-muted-foreground">Gestão de saldos e materiais globais.</p>
               </div>
            </div>
-           <div className="flex gap-2">
+           <div className="flex gap-2 items-center">
+              <ImportarPlanilha onImportComplete={loadData} />
               <Button onClick={() => setShowNewProduto(true)} variant="outline">Novo Item</Button>
               <Button onClick={() => setShowNewMov(true)}><History className="mr-2 h-4 w-4" /> Movimentar</Button>
            </div>
