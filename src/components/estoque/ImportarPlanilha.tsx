@@ -16,6 +16,7 @@ interface ProdutoRow {
   estoque_minimo: number;
   ncm: string;
   ca_numero: string;
+  preco_unitario: number;
   quantidade_atual: number;
 }
 
