@@ -34,15 +34,25 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
   const downloadTemplate = () => {
     const wb = XLSX.utils.book_new();
     const data = [
-      ["Código", "Descrição", "Categoria", "Unidade", "Estoque Mínimo", "NCM", "CA (EPI)", "Quantidade Atual"],
-      ["EPI-001", "Capacete de Segurança", "EPI", "un", 10, "6506.10.00", "31469", 25],
-      ["EPI-002", "Luva de Proteção", "EPI", "par", 20, "", "12345", 40],
-      ["FER-001", "Furadeira Elétrica", "Ferramentas", "un", 2, "", "", 5],
-      ["MAT-001", "Cimento CP II", "Material", "sc", 50, "2523.29.10", "", 120],
-      ["CON-001", "Disco de Corte 7\"", "Consumível", "un", 30, "", "", 60],
+      ["Código", "Descrição", "Categoria", "Unidade", "Estoque Mínimo", "NCM", "CA (EPI)", "Preço Unitário", "Quantidade Atual"],
+      ["EPI-001", "Capacete de Segurança", "EPI", "un", 10, "6506.10.00", "31469", 25.50, 25],
+      ["EPI-002", "Luva de Proteção", "EPI", "par", 20, "", "12345", 8.90, 40],
+      ["FER-001", "Furadeira Elétrica", "Ferramentas", "un", 2, "", "", 450.00, 5],
+      ["MAT-001", "Cimento CP II", "Material", "sc", 50, "2523.29.10", "", 38.50, 120],
+      ["CON-001", "Disco de Corte 7\"", "Consumível", "un", 30, "", "", 12.00, 60],
     ];
     const ws = XLSX.utils.aoa_to_sheet(data);
-    ws["!cols"] = [{ wch: 14 }, { wch: 30 }, { wch: 16 }, { wch: 10 }, { wch: 16 }, { wch: 14 }, { wch: 12 }, { wch: 16 }];
+    // Força coluna CA como texto para preservar zeros à esquerda
+    const range = XLSX.utils.decode_range(ws["!ref"]!);
+    for (let R = 1; R <= range.e.r; R++) {
+      const cellRef = XLSX.utils.encode_cell({ c: 6, r: R });
+      if (ws[cellRef]) {
+        ws[cellRef].t = "s";
+        ws[cellRef].z = "@";
+        ws[cellRef].v = String(ws[cellRef].v ?? "");
+      }
+    }
+    ws["!cols"] = [{ wch: 14 }, { wch: 30 }, { wch: 16 }, { wch: 10 }, { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 16 }];
     XLSX.utils.book_append_sheet(wb, ws, "Produtos");
 
     const instrucoes = [
@@ -56,14 +66,16 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
       ["• Unidade: un, par, kg, m, m², m³, l, cx, sc"],
       ["• Estoque Mínimo: Número inteiro (0 se não aplicável)"],
       ["• NCM: Opcional (código fiscal)"],
-      ["• CA (EPI): Opcional — número do Certificado de Aprovação para EPIs"],
-      ["• Quantidade Atual: Opcional — saldo inicial em estoque (gera movimentação de entrada)"],
+      ["• CA (EPI): Número do Certificado de Aprovação — TEXTO (preserva zeros à esquerda)"],
+      ["• Preço Unitário: Valor de referência em R$ (ex: 25.50)"],
+      ["• Quantidade Atual: Saldo inicial em estoque (gera movimentação de entrada)"],
       [""],
       ["IMPORTANTE: Apague as linhas de exemplo antes de importar"],
       ["Não altere os cabeçalhos da primeira linha"],
+      ["Para CAs com zeros à esquerda, mantenha a célula como TEXTO"],
     ];
     const ws2 = XLSX.utils.aoa_to_sheet(instrucoes);
-    ws2["!cols"] = [{ wch: 60 }];
+    ws2["!cols"] = [{ wch: 70 }];
     XLSX.utils.book_append_sheet(wb, ws2, "Instruções");
 
     XLSX.writeFile(wb, "modelo_importacao_estoque.xlsx");
