@@ -89,9 +89,10 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
 
     try {
       const buffer = await file.arrayBuffer();
-      const wb = XLSX.read(buffer, { type: "array" });
+      const wb = XLSX.read(buffer, { type: "array", cellText: true, cellDates: false });
       const ws = wb.Sheets[wb.SheetNames[0]];
-      const raw: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
+      // raw:false → usa o valor formatado (texto), preservando CA com zeros à esquerda e evitando notação científica
+      const raw: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: "" });
 
       if (raw.length < 2) {
         setErrors(["Planilha vazia ou sem dados além do cabeçalho."]);
@@ -99,16 +100,18 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
         return;
       }
 
-      const header = raw[0].map((h: any) => String(h).trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+      const header = raw[0].map((h: any) => String(h ?? "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
       const colMap = {
-        codigo: header.findIndex(h => h.includes("codigo")),
-        descricao: header.findIndex(h => h.includes("descricao")),
+        codigo: header.findIndex(h => h === "codigo" || h.startsWith("cod")),
+        descricao: header.findIndex(h => h.includes("descricao") || h === "nome" || h.includes("material")),
         categoria: header.findIndex(h => h.includes("categoria")),
-        unidade: header.findIndex(h => h.includes("unidade")),
-        estoque_minimo: header.findIndex(h => h.includes("minimo") || (h.includes("estoque") && !h.includes("atual"))),
+        unidade: header.findIndex(h => h === "unidade" || h === "un" || h === "und"),
+        estoque_minimo: header.findIndex(h => h.includes("minimo")),
         ncm: header.findIndex(h => h.includes("ncm")),
-        ca_numero: header.findIndex(h => h.includes("ca") && !h.includes("categoria")),
-        quantidade_atual: header.findIndex(h => h.includes("quantidade") || h.includes("atual") || h.includes("saldo")),
+        // CA exato — evita colidir com "categoria", "codigo", etc.
+        ca_numero: header.findIndex(h => h === "ca" || h.startsWith("ca ") || h.startsWith("ca(") || h.includes("ca (epi") || h.includes("certificado")),
+        preco_unitario: header.findIndex(h => h.includes("preco") || h.includes("valor unit") || h.includes("custo")),
+        quantidade_atual: header.findIndex(h => h.includes("quantidade") || h.includes("saldo") || h.includes("qtd")),
       };
 
       if (colMap.descricao === -1) {
@@ -116,6 +119,18 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
         setLoading(false);
         return;
       }
+
+      const parseNum = (v: any): number => {
+        if (v == null || v === "") return 0;
+        const s = String(v).replace(/\s/g, "").replace(/\./g, "").replace(",", ".");
+        const n = Number(s);
+        return isNaN(n) ? 0 : n;
+      };
+      const parseCa = (v: any): string => {
+        if (v == null || v === "") return "";
+        // Mantém apenas dígitos do CA (formato oficial Brasileiro)
+        return String(v).trim().replace(/[^\d]/g, "");
+      };
 
       const rows: ProdutoRow[] = [];
       const errs: string[] = [];
@@ -135,10 +150,11 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
           codigo: colMap.codigo >= 0 ? String(r[colMap.codigo] || "").trim() : "",
           categoria: VALID_CATEGORIES.includes(categoria) ? categoria : categoria || "Outros",
           unidade: VALID_UNITS.includes(unidade) ? unidade : "un",
-          estoque_minimo: colMap.estoque_minimo >= 0 ? Number(r[colMap.estoque_minimo]) || 0 : 0,
+          estoque_minimo: colMap.estoque_minimo >= 0 ? parseNum(r[colMap.estoque_minimo]) : 0,
           ncm: colMap.ncm >= 0 ? String(r[colMap.ncm] || "").trim() : "",
-          ca_numero: colMap.ca_numero >= 0 ? String(r[colMap.ca_numero] || "").trim() : "",
-          quantidade_atual: colMap.quantidade_atual >= 0 ? Number(r[colMap.quantidade_atual]) || 0 : 0,
+          ca_numero: colMap.ca_numero >= 0 ? parseCa(r[colMap.ca_numero]) : "",
+          preco_unitario: colMap.preco_unitario >= 0 ? parseNum(r[colMap.preco_unitario]) : 0,
+          quantidade_atual: colMap.quantidade_atual >= 0 ? parseNum(r[colMap.quantidade_atual]) : 0,
         });
       }
 
