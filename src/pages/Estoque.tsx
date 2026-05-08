@@ -35,7 +35,7 @@ export default function Estoque() {
   const [showEditProduto, setShowEditProduto] = useState(false);
   const [showNewMov, setShowNewMov] = useState(false);
 
-  const [np, setNp] = useState({ descricao: "", codigo: "", categoria: "Material", unidade: "un", estoque_minimo: 0, ncm: "" });
+  const [np, setNp] = useState({ descricao: "", codigo: "", categoria: "Material", unidade: "un", estoque_minimo: 0, ncm: "", ca_numero: "", preco_unitario: 0 });
   const [editingProduto, setEditingProduto] = useState<any>(null);
   const [nm, setNm] = useState({ produto_id: "", tipo: "entrada", quantidade: 0, valor_unitario: 0, obra_id: "", documento: "", observacoes: "" });
 
