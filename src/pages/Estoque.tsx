@@ -293,6 +293,10 @@ export default function Estoque() {
                      <SelectContent>{["Material", "EPI", "Ferramenta", "Consumivel"].map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                   </Select>
                </div>
+               <div className="space-y-1"><Label>Unidade</Label><Input value={np.unidade} onChange={e => setNp({...np, unidade: e.target.value})} /></div>
+               <div className="space-y-1"><Label>CA (EPI)</Label><Input value={np.ca_numero} onChange={e => setNp({...np, ca_numero: e.target.value.replace(/[^\d]/g, "")})} placeholder="Ex: 31469" /></div>
+               <div className="space-y-1"><Label>Preço Unitário (R$)</Label><Input type="number" step="0.01" value={np.preco_unitario} onChange={e => setNp({...np, preco_unitario: Number(e.target.value)})} /></div>
+               <div className="space-y-1"><Label>NCM</Label><Input value={np.ncm} onChange={e => setNp({...np, ncm: e.target.value})} /></div>
             </div>
             <DialogFooter><Button onClick={saveProduto} className="w-full">Cadastrar</Button></DialogFooter>
          </DialogContent>
@@ -303,10 +307,13 @@ export default function Estoque() {
          <DialogContent><DialogHeader><DialogTitle>Editar Informações</DialogTitle></DialogHeader>
             {editingProduto && (
                <div className="grid grid-cols-2 gap-4 py-4">
-                  <div className="col-span-2 space-y-1"><Label>Descrição</Label><Input value={editingProduto.descricao} onChange={e => setEditingProduto({...editingProduto, descricao: e.target.value})} /></div>
-                  <div className="space-y-1"><Label>Código</Label><Input value={editingProduto.codigo} onChange={e => setEditingProduto({...editingProduto, codigo: e.target.value})} /></div>
-                  <div className="space-y-1"><Label>Mínimo</Label><Input type="number" value={editingProduto.estoque_minimo} onChange={e => setEditingProduto({...editingProduto, estoque_minimo: Number(e.target.value)})} /></div>
-                  <div className="space-y-1"><Label>Unidade</Label><Input value={editingProduto.unidade} onChange={e => setEditingProduto({...editingProduto, unidade: e.target.value})} /></div>
+                  <div className="col-span-2 space-y-1"><Label>Descrição</Label><Input value={editingProduto.descricao || ""} onChange={e => setEditingProduto({...editingProduto, descricao: e.target.value})} /></div>
+                  <div className="space-y-1"><Label>Código</Label><Input value={editingProduto.codigo || ""} onChange={e => setEditingProduto({...editingProduto, codigo: e.target.value})} /></div>
+                  <div className="space-y-1"><Label>Mínimo</Label><Input type="number" value={editingProduto.estoque_minimo || 0} onChange={e => setEditingProduto({...editingProduto, estoque_minimo: Number(e.target.value)})} /></div>
+                  <div className="space-y-1"><Label>Unidade</Label><Input value={editingProduto.unidade || ""} onChange={e => setEditingProduto({...editingProduto, unidade: e.target.value})} /></div>
+                  <div className="space-y-1"><Label>Categoria</Label><Input value={editingProduto.categoria || ""} onChange={e => setEditingProduto({...editingProduto, categoria: e.target.value})} /></div>
+                  <div className="space-y-1"><Label>CA (EPI)</Label><Input value={editingProduto.ca_numero || ""} onChange={e => setEditingProduto({...editingProduto, ca_numero: e.target.value.replace(/[^\d]/g, "")})} placeholder="Ex: 31469" /></div>
+                  <div className="space-y-1"><Label>Preço Unitário (R$)</Label><Input type="number" step="0.01" value={editingProduto.preco_unitario || 0} onChange={e => setEditingProduto({...editingProduto, preco_unitario: Number(e.target.value)})} /></div>
                </div>
             )}
             <DialogFooter><Button onClick={updateProduto} className="w-full">Salvar Alterações</Button></DialogFooter>
