@@ -337,6 +337,7 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
                           <th className="px-2 py-1.5 text-center text-muted-foreground">Un</th>
                           <th className="px-2 py-1.5 text-right text-muted-foreground">Mín</th>
                           <th className="px-2 py-1.5 text-left text-muted-foreground">CA</th>
+                          <th className="px-2 py-1.5 text-right text-muted-foreground">Preço R$</th>
                           <th className="px-2 py-1.5 text-right text-muted-foreground">Qtd Atual</th>
                         </tr>
                       </thead>
@@ -348,7 +349,8 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
                             <td className="px-2 py-1.5">{p.categoria}</td>
                             <td className="px-2 py-1.5 text-center">{p.unidade}</td>
                             <td className="px-2 py-1.5 text-right">{p.estoque_minimo}</td>
-                            <td className="px-2 py-1.5">{p.ca_numero || "—"}</td>
+                            <td className="px-2 py-1.5 font-mono">{p.ca_numero || "—"}</td>
+                            <td className="px-2 py-1.5 text-right">{p.preco_unitario ? p.preco_unitario.toFixed(2) : "—"}</td>
                             <td className="px-2 py-1.5 text-right">{p.quantidade_atual || "—"}</td>
                           </tr>
                         ))}
