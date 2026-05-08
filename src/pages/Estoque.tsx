@@ -107,10 +107,20 @@ export default function Estoque() {
 
   const saveProduto = async () => {
     if (!np.descricao) return;
-    const { error } = await supabase.from("produtos").insert({ ...np, estoque_minimo: Number(np.estoque_minimo) || 0 });
+    const payload: any = {
+      descricao: np.descricao,
+      codigo: np.codigo || null,
+      categoria: np.categoria,
+      unidade: np.unidade,
+      estoque_minimo: Number(np.estoque_minimo) || 0,
+      ncm: np.ncm || null,
+      ca_numero: np.ca_numero || null,
+      preco_unitario: Number(np.preco_unitario) || 0,
+    };
+    const { error } = await supabase.from("produtos").insert(payload);
     if (error) { toast({ title: "Erro", variant: "destructive" }); return; }
     toast({ title: "Produto cadastrado!" });
-    setNp({ descricao: "", codigo: "", categoria: "Material", unidade: "un", estoque_minimo: 0, ncm: "" });
+    setNp({ descricao: "", codigo: "", categoria: "Material", unidade: "un", estoque_minimo: 0, ncm: "", ca_numero: "", preco_unitario: 0 });
     setShowNewProduto(false); loadData();
   };
 
@@ -122,7 +132,9 @@ export default function Estoque() {
       categoria: editingProduto.categoria,
       unidade: editingProduto.unidade,
       estoque_minimo: Number(editingProduto.estoque_minimo) || 0,
-    }).eq("id", editingProduto.id);
+      ca_numero: editingProduto.ca_numero || null,
+      preco_unitario: Number(editingProduto.preco_unitario) || 0,
+    } as any).eq("id", editingProduto.id);
     if (error) { toast({ title: "Erro", variant: "destructive" }); return; }
     toast({ title: "Atualizado!" });
     setShowEditProduto(false); loadData();
