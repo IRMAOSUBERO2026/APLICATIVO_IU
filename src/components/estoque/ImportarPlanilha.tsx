@@ -188,7 +188,7 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
 
       const toInsert: any[] = [];
       const toInsertOriginalIdx: number[] = [];
-      const toUpdate: { id: string; ca_numero: string; estoque_minimo: number; ncm: string | null; categoria: string | null; unidade: string }[] = [];
+      const toUpdate: { id: string; ca_numero: string; estoque_minimo: number; ncm: string | null; categoria: string | null; unidade: string; preco_unitario: number }[] = [];
 
       preview.forEach((p, idx) => {
         const matchCode = p.codigo ? byCode.get(p.codigo.trim().toLowerCase()) : undefined;
@@ -196,8 +196,7 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
         const match = matchCode || matchDesc;
 
         if (match) {
-          // Atualiza apenas se houver CA novo na planilha (ou demais campos relevantes)
-          if (p.ca_numero || p.estoque_minimo > 0 || p.ncm) {
+          if (p.ca_numero || p.estoque_minimo > 0 || p.ncm || p.preco_unitario > 0) {
             toUpdate.push({
               id: match.id,
               ca_numero: p.ca_numero,
@@ -205,6 +204,7 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
               ncm: p.ncm || null,
               categoria: p.categoria || null,
               unidade: p.unidade,
+              preco_unitario: p.preco_unitario,
             });
           }
         } else {
@@ -216,12 +216,12 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
             estoque_minimo: p.estoque_minimo,
             ncm: p.ncm || null,
             ca_numero: p.ca_numero || null,
-          });
+            preco_unitario: p.preco_unitario || 0,
+          } as any);
           toInsertOriginalIdx.push(idx);
         }
       });
 
-      // Atualiza produtos existentes (apenas campos com valor — não sobrescreve com vazio)
       let atualizados = 0;
       for (const u of toUpdate) {
         const updatePayload: any = {};
@@ -230,6 +230,7 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
         if (u.ncm) updatePayload.ncm = u.ncm;
         if (u.categoria) updatePayload.categoria = u.categoria;
         if (u.unidade && u.unidade !== "un") updatePayload.unidade = u.unidade;
+        if (u.preco_unitario > 0) updatePayload.preco_unitario = u.preco_unitario;
 
         if (Object.keys(updatePayload).length === 0) continue;
 
@@ -237,8 +238,7 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
         if (!error) atualizados++;
       }
 
-      // Insere novos em lotes
-      const inseridos: { id: string; quantidade_atual: number }[] = [];
+      const inseridos: { id: string; quantidade_atual: number; preco_unitario: number }[] = [];
       for (let i = 0; i < toInsert.length; i += 50) {
         const batch = toInsert.slice(i, i + 50);
         const { data: ins, error } = await supabase.from("produtos").insert(batch).select("id");
@@ -246,16 +246,17 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
         (ins || []).forEach((row, idx) => {
           const origIdx = toInsertOriginalIdx[i + idx];
           const qtd = preview[origIdx]?.quantidade_atual || 0;
-          if (qtd > 0) inseridos.push({ id: row.id, quantidade_atual: qtd });
+          const preco = preview[origIdx]?.preco_unitario || 0;
+          if (qtd > 0) inseridos.push({ id: row.id, quantidade_atual: qtd, preco_unitario: preco });
         });
       }
 
-      // Saldo inicial
       if (inseridos.length > 0) {
         const movs = inseridos.map(p => ({
           produto_id: p.id,
           tipo: "entrada",
           quantidade: p.quantidade_atual,
+          valor_unitario: p.preco_unitario || null,
           observacoes: "Saldo inicial (importação de planilha)",
         }));
         await supabase.from("movimentacoes_estoque").insert(movs);
