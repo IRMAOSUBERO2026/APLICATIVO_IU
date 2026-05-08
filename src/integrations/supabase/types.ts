@@ -2223,6 +2223,7 @@ export type Database = {
           estoque_minimo: number | null
           id: string
           ncm: string | null
+          preco_unitario: number | null
           unidade: string
           updated_at: string
         }
@@ -2236,6 +2237,7 @@ export type Database = {
           estoque_minimo?: number | null
           id?: string
           ncm?: string | null
+          preco_unitario?: number | null
           unidade?: string
           updated_at?: string
         }
@@ -2249,6 +2251,7 @@ export type Database = {
           estoque_minimo?: number | null
           id?: string
           ncm?: string | null
+          preco_unitario?: number | null
           unidade?: string
           updated_at?: string
         }

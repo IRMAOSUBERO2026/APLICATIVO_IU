@@ -16,6 +16,7 @@ interface ProdutoRow {
   estoque_minimo: number;
   ncm: string;
   ca_numero: string;
+  preco_unitario: number;
   quantidade_atual: number;
 }
 
@@ -33,15 +34,25 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
   const downloadTemplate = () => {
     const wb = XLSX.utils.book_new();
     const data = [
-      ["Código", "Descrição", "Categoria", "Unidade", "Estoque Mínimo", "NCM", "CA (EPI)", "Quantidade Atual"],
-      ["EPI-001", "Capacete de Segurança", "EPI", "un", 10, "6506.10.00", "31469", 25],
-      ["EPI-002", "Luva de Proteção", "EPI", "par", 20, "", "12345", 40],
-      ["FER-001", "Furadeira Elétrica", "Ferramentas", "un", 2, "", "", 5],
-      ["MAT-001", "Cimento CP II", "Material", "sc", 50, "2523.29.10", "", 120],
-      ["CON-001", "Disco de Corte 7\"", "Consumível", "un", 30, "", "", 60],
+      ["Código", "Descrição", "Categoria", "Unidade", "Estoque Mínimo", "NCM", "CA (EPI)", "Preço Unitário", "Quantidade Atual"],
+      ["EPI-001", "Capacete de Segurança", "EPI", "un", 10, "6506.10.00", "31469", 25.50, 25],
+      ["EPI-002", "Luva de Proteção", "EPI", "par", 20, "", "12345", 8.90, 40],
+      ["FER-001", "Furadeira Elétrica", "Ferramentas", "un", 2, "", "", 450.00, 5],
+      ["MAT-001", "Cimento CP II", "Material", "sc", 50, "2523.29.10", "", 38.50, 120],
+      ["CON-001", "Disco de Corte 7\"", "Consumível", "un", 30, "", "", 12.00, 60],
     ];
     const ws = XLSX.utils.aoa_to_sheet(data);
-    ws["!cols"] = [{ wch: 14 }, { wch: 30 }, { wch: 16 }, { wch: 10 }, { wch: 16 }, { wch: 14 }, { wch: 12 }, { wch: 16 }];
+    // Força coluna CA como texto para preservar zeros à esquerda
+    const range = XLSX.utils.decode_range(ws["!ref"]!);
+    for (let R = 1; R <= range.e.r; R++) {
+      const cellRef = XLSX.utils.encode_cell({ c: 6, r: R });
+      if (ws[cellRef]) {
+        ws[cellRef].t = "s";
+        ws[cellRef].z = "@";
+        ws[cellRef].v = String(ws[cellRef].v ?? "");
+      }
+    }
+    ws["!cols"] = [{ wch: 14 }, { wch: 30 }, { wch: 16 }, { wch: 10 }, { wch: 16 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 16 }];
     XLSX.utils.book_append_sheet(wb, ws, "Produtos");
 
     const instrucoes = [
@@ -55,14 +66,16 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
       ["• Unidade: un, par, kg, m, m², m³, l, cx, sc"],
       ["• Estoque Mínimo: Número inteiro (0 se não aplicável)"],
       ["• NCM: Opcional (código fiscal)"],
-      ["• CA (EPI): Opcional — número do Certificado de Aprovação para EPIs"],
-      ["• Quantidade Atual: Opcional — saldo inicial em estoque (gera movimentação de entrada)"],
+      ["• CA (EPI): Número do Certificado de Aprovação — TEXTO (preserva zeros à esquerda)"],
+      ["• Preço Unitário: Valor de referência em R$ (ex: 25.50)"],
+      ["• Quantidade Atual: Saldo inicial em estoque (gera movimentação de entrada)"],
       [""],
       ["IMPORTANTE: Apague as linhas de exemplo antes de importar"],
       ["Não altere os cabeçalhos da primeira linha"],
+      ["Para CAs com zeros à esquerda, mantenha a célula como TEXTO"],
     ];
     const ws2 = XLSX.utils.aoa_to_sheet(instrucoes);
-    ws2["!cols"] = [{ wch: 60 }];
+    ws2["!cols"] = [{ wch: 70 }];
     XLSX.utils.book_append_sheet(wb, ws2, "Instruções");
 
     XLSX.writeFile(wb, "modelo_importacao_estoque.xlsx");
@@ -76,9 +89,10 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
 
     try {
       const buffer = await file.arrayBuffer();
-      const wb = XLSX.read(buffer, { type: "array" });
+      const wb = XLSX.read(buffer, { type: "array", cellText: true, cellDates: false });
       const ws = wb.Sheets[wb.SheetNames[0]];
-      const raw: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
+      // raw:false → usa o valor formatado (texto), preservando CA com zeros à esquerda e evitando notação científica
+      const raw: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: "" });
 
       if (raw.length < 2) {
         setErrors(["Planilha vazia ou sem dados além do cabeçalho."]);
@@ -86,16 +100,18 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
         return;
       }
 
-      const header = raw[0].map((h: any) => String(h).trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+      const header = raw[0].map((h: any) => String(h ?? "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
       const colMap = {
-        codigo: header.findIndex(h => h.includes("codigo")),
-        descricao: header.findIndex(h => h.includes("descricao")),
+        codigo: header.findIndex(h => h === "codigo" || h.startsWith("cod")),
+        descricao: header.findIndex(h => h.includes("descricao") || h === "nome" || h.includes("material")),
         categoria: header.findIndex(h => h.includes("categoria")),
-        unidade: header.findIndex(h => h.includes("unidade")),
-        estoque_minimo: header.findIndex(h => h.includes("minimo") || (h.includes("estoque") && !h.includes("atual"))),
+        unidade: header.findIndex(h => h === "unidade" || h === "un" || h === "und"),
+        estoque_minimo: header.findIndex(h => h.includes("minimo")),
         ncm: header.findIndex(h => h.includes("ncm")),
-        ca_numero: header.findIndex(h => h.includes("ca") && !h.includes("categoria")),
-        quantidade_atual: header.findIndex(h => h.includes("quantidade") || h.includes("atual") || h.includes("saldo")),
+        // CA exato — evita colidir com "categoria", "codigo", etc.
+        ca_numero: header.findIndex(h => h === "ca" || h.startsWith("ca ") || h.startsWith("ca(") || h.includes("ca (epi") || h.includes("certificado")),
+        preco_unitario: header.findIndex(h => h.includes("preco") || h.includes("valor unit") || h.includes("custo")),
+        quantidade_atual: header.findIndex(h => h.includes("quantidade") || h.includes("saldo") || h.includes("qtd")),
       };
 
       if (colMap.descricao === -1) {
@@ -103,6 +119,18 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
         setLoading(false);
         return;
       }
+
+      const parseNum = (v: any): number => {
+        if (v == null || v === "") return 0;
+        const s = String(v).replace(/\s/g, "").replace(/\./g, "").replace(",", ".");
+        const n = Number(s);
+        return isNaN(n) ? 0 : n;
+      };
+      const parseCa = (v: any): string => {
+        if (v == null || v === "") return "";
+        // Mantém apenas dígitos do CA (formato oficial Brasileiro)
+        return String(v).trim().replace(/[^\d]/g, "");
+      };
 
       const rows: ProdutoRow[] = [];
       const errs: string[] = [];
@@ -122,10 +150,11 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
           codigo: colMap.codigo >= 0 ? String(r[colMap.codigo] || "").trim() : "",
           categoria: VALID_CATEGORIES.includes(categoria) ? categoria : categoria || "Outros",
           unidade: VALID_UNITS.includes(unidade) ? unidade : "un",
-          estoque_minimo: colMap.estoque_minimo >= 0 ? Number(r[colMap.estoque_minimo]) || 0 : 0,
+          estoque_minimo: colMap.estoque_minimo >= 0 ? parseNum(r[colMap.estoque_minimo]) : 0,
           ncm: colMap.ncm >= 0 ? String(r[colMap.ncm] || "").trim() : "",
-          ca_numero: colMap.ca_numero >= 0 ? String(r[colMap.ca_numero] || "").trim() : "",
-          quantidade_atual: colMap.quantidade_atual >= 0 ? Number(r[colMap.quantidade_atual]) || 0 : 0,
+          ca_numero: colMap.ca_numero >= 0 ? parseCa(r[colMap.ca_numero]) : "",
+          preco_unitario: colMap.preco_unitario >= 0 ? parseNum(r[colMap.preco_unitario]) : 0,
+          quantidade_atual: colMap.quantidade_atual >= 0 ? parseNum(r[colMap.quantidade_atual]) : 0,
         });
       }
 
@@ -159,7 +188,7 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
 
       const toInsert: any[] = [];
       const toInsertOriginalIdx: number[] = [];
-      const toUpdate: { id: string; ca_numero: string; estoque_minimo: number; ncm: string | null; categoria: string | null; unidade: string }[] = [];
+      const toUpdate: { id: string; ca_numero: string; estoque_minimo: number; ncm: string | null; categoria: string | null; unidade: string; preco_unitario: number }[] = [];
 
       preview.forEach((p, idx) => {
         const matchCode = p.codigo ? byCode.get(p.codigo.trim().toLowerCase()) : undefined;
@@ -167,8 +196,7 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
         const match = matchCode || matchDesc;
 
         if (match) {
-          // Atualiza apenas se houver CA novo na planilha (ou demais campos relevantes)
-          if (p.ca_numero || p.estoque_minimo > 0 || p.ncm) {
+          if (p.ca_numero || p.estoque_minimo > 0 || p.ncm || p.preco_unitario > 0) {
             toUpdate.push({
               id: match.id,
               ca_numero: p.ca_numero,
@@ -176,6 +204,7 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
               ncm: p.ncm || null,
               categoria: p.categoria || null,
               unidade: p.unidade,
+              preco_unitario: p.preco_unitario,
             });
           }
         } else {
@@ -187,12 +216,12 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
             estoque_minimo: p.estoque_minimo,
             ncm: p.ncm || null,
             ca_numero: p.ca_numero || null,
-          });
+            preco_unitario: p.preco_unitario || 0,
+          } as any);
           toInsertOriginalIdx.push(idx);
         }
       });
 
-      // Atualiza produtos existentes (apenas campos com valor — não sobrescreve com vazio)
       let atualizados = 0;
       for (const u of toUpdate) {
         const updatePayload: any = {};
@@ -201,6 +230,7 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
         if (u.ncm) updatePayload.ncm = u.ncm;
         if (u.categoria) updatePayload.categoria = u.categoria;
         if (u.unidade && u.unidade !== "un") updatePayload.unidade = u.unidade;
+        if (u.preco_unitario > 0) updatePayload.preco_unitario = u.preco_unitario;
 
         if (Object.keys(updatePayload).length === 0) continue;
 
@@ -208,8 +238,7 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
         if (!error) atualizados++;
       }
 
-      // Insere novos em lotes
-      const inseridos: { id: string; quantidade_atual: number }[] = [];
+      const inseridos: { id: string; quantidade_atual: number; preco_unitario: number }[] = [];
       for (let i = 0; i < toInsert.length; i += 50) {
         const batch = toInsert.slice(i, i + 50);
         const { data: ins, error } = await supabase.from("produtos").insert(batch).select("id");
@@ -217,16 +246,17 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
         (ins || []).forEach((row, idx) => {
           const origIdx = toInsertOriginalIdx[i + idx];
           const qtd = preview[origIdx]?.quantidade_atual || 0;
-          if (qtd > 0) inseridos.push({ id: row.id, quantidade_atual: qtd });
+          const preco = preview[origIdx]?.preco_unitario || 0;
+          if (qtd > 0) inseridos.push({ id: row.id, quantidade_atual: qtd, preco_unitario: preco });
         });
       }
 
-      // Saldo inicial
       if (inseridos.length > 0) {
         const movs = inseridos.map(p => ({
           produto_id: p.id,
           tipo: "entrada",
           quantidade: p.quantidade_atual,
+          valor_unitario: p.preco_unitario || null,
           observacoes: "Saldo inicial (importação de planilha)",
         }));
         await supabase.from("movimentacoes_estoque").insert(movs);
@@ -307,6 +337,7 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
                           <th className="px-2 py-1.5 text-center text-muted-foreground">Un</th>
                           <th className="px-2 py-1.5 text-right text-muted-foreground">Mín</th>
                           <th className="px-2 py-1.5 text-left text-muted-foreground">CA</th>
+                          <th className="px-2 py-1.5 text-right text-muted-foreground">Preço R$</th>
                           <th className="px-2 py-1.5 text-right text-muted-foreground">Qtd Atual</th>
                         </tr>
                       </thead>
@@ -318,7 +349,8 @@ export function ImportarPlanilha({ onImportComplete }: Props) {
                             <td className="px-2 py-1.5">{p.categoria}</td>
                             <td className="px-2 py-1.5 text-center">{p.unidade}</td>
                             <td className="px-2 py-1.5 text-right">{p.estoque_minimo}</td>
-                            <td className="px-2 py-1.5">{p.ca_numero || "—"}</td>
+                            <td className="px-2 py-1.5 font-mono">{p.ca_numero || "—"}</td>
+                            <td className="px-2 py-1.5 text-right">{p.preco_unitario ? p.preco_unitario.toFixed(2) : "—"}</td>
                             <td className="px-2 py-1.5 text-right">{p.quantidade_atual || "—"}</td>
                           </tr>
                         ))}
