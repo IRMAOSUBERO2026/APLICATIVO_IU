@@ -15,7 +15,7 @@ import {
 import { CompraForm } from "@/components/compras/CompraForm";
 import { ImportadorArquivos } from "@/components/compras/ImportadorArquivos";
 import { ConferenciaRecebimento } from "@/components/compras/ConferenciaRecebimento";
-import { CompraStatus, STATUS_LABELS, STATUS_COLORS, ORIGEM_LABELS, OrigemLancamento } from "@/components/compras/types";
+import { CompraStatus, STATUS_LABELS, STATUS_COLORS, ORIGEM_LABELS, OrigemLancamento, Compra } from "@/components/compras/types";
 import { useCompras, useEmpresas, useObras, useCreateCompra, useUpdateCompraStatus, CompraDB } from "@/hooks/useCompras";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -31,6 +31,7 @@ export default function Compras() {
 
   const [showForm, setShowForm] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [importedData, setImportedData] = useState<Partial<Compra> | null>(null);
   const [detalhesCompra, setDetalhesCompra] = useState<CompraDB | null>(null);
   const [conferenciaCompra, setConferenciaCompra] = useState<CompraDB | null>(null);
   const [filtroObra, setFiltroObra] = useState("todas");
@@ -61,11 +62,15 @@ export default function Compras() {
 
   const handleSave = (data: Parameters<typeof createCompra.mutate>[0]) => {
     createCompra.mutate(data, {
-      onSuccess: () => setShowForm(false),
+      onSuccess: () => {
+        setShowForm(false);
+        setImportedData(null);
+      },
     });
   };
 
-  const handleImport = () => {
+  const handleImport = (data: Partial<Compra>) => {
+    setImportedData(data);
     setShowImport(false);
     setShowForm(true);
   };
@@ -197,15 +202,20 @@ export default function Compras() {
         </Dialog>
 
         {/* Form Dialog */}
-        <Dialog open={showForm} onOpenChange={setShowForm}>
+        <Dialog open={showForm} onOpenChange={(o) => { setShowForm(o); if (!o) setImportedData(null); }}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader><DialogTitle>Nova Compra — Lançamento Manual</DialogTitle></DialogHeader>
+            <DialogHeader>
+              <DialogTitle>
+                {importedData ? `Nova Compra — Importado (${importedData.origem?.toUpperCase()})` : "Nova Compra — Lançamento Manual"}
+              </DialogTitle>
+            </DialogHeader>
             <CompraForm
               onSave={handleSave}
-              onCancel={() => setShowForm(false)}
+              onCancel={() => { setShowForm(false); setImportedData(null); }}
               obras={obras}
               empresas={empresas}
               isSaving={createCompra.isPending}
+              initialData={importedData}
             />
           </DialogContent>
         </Dialog>
