@@ -1,54 +1,80 @@
+
+# Migração Segura de Supabase — Backup → Transferência → Validação
+
 ## Objetivo
+Mover todos os dados do banco atual em uso pelo app (`znfxvpggckayokiphglt`) para o repositor da sua conta (`uvrqntfjknojxkiwsibz`, conta `luis@irmaosubero.com`), **sem perder nenhum dado** e sem que o sistema apresente qualquer alteração de comportamento.
 
-Permitir cadastrar bonificações padrão por funcionário (descrição, valor, tipo Fixo Mensal ou Condicional) e usá-las para pré-preencher os campos de Meta e Assiduidade ao abrir o cálculo da folha do mês.
+---
 
-## Como vai funcionar (visão de uso)
+## Avaliação de risco do destino `uvrqntfjknojxkiwsibz`
 
-1. No RH, ao cadastrar (Pré-Cadastro) ou editar um funcionário, surge a seção **"Bonificações Padrão"**:
-   - Lista de bonificações com botões "+ Adicionar" e "Remover".
-   - Cada linha: Descrição (texto livre, com sugestões: Assiduidade, Sem Falta, Meta, Desempenho), Valor (R$), Tipo (Fixo Mensal | Condicional).
-   - Texto de ajuda: "Fixo Mensal = soma sempre. Condicional = vem pré-preenchido, mas você confirma na folha do mês."
+Esse projeto já aparece referenciado no `supabase/config.toml` e nos scripts antigos (`corrigir_bancos.ps1`, `migrar_equipamentos.ps1`) como destino de testes. **Não temos certeza do que existe lá hoje** (pode ter dados parciais antigos, schema desatualizado, ou estar vazio).
 
-2. Na Folha Salarial, ao abrir o cálculo de um funcionário do mês:
-   - Se ainda não houver folha salva (mês em aberto), o sistema lê as bonificações padrão do funcionário e pré-preenche:
-     - **Bonificação Meta** = soma das bonificações cuja descrição contém "meta" ou "desempenho".
-     - **Bonificação Assiduidade** = soma das demais (Assiduidade, Sem Falta, etc.).
-   - Os campos continuam editáveis. Um pequeno aviso aparece: "Pré-preenchido a partir das Bonificações Padrão do funcionário."
-   - Quando a folha já estiver salva (rascunho ou fechada), mantém os valores salvos e não sobrescreve.
+Por segurança eu recomendo **criar um projeto novo e limpo** dentro da sua conta `luis@irmaosubero.com` — assim:
+- Garantimos que nenhum dado do destino seja sobrescrito por engano.
+- Schema é recriado do zero, idêntico ao atual (sem resíduos).
+- Em caso de erro, o banco antigo (`znfxvpggckayokiphglt`) continua intacto e ativo — basta reverter o `.env`.
 
-## Implementação técnica
+Se mesmo assim você quiser usar o `uvrqntfjknojxkiwsibz`, eu trato a primeira etapa como "destino limpo" (TRUNCATE em tudo antes de importar). Vou pedir confirmação no momento.
 
-### 1. Banco de dados (migration)
-Adicionar coluna `bonificacoes_padrao jsonb default '[]'::jsonb` na tabela `funcionarios`. Estrutura:
-```json
-[
-  { "descricao": "Assiduidade", "valor": 150, "tipo": "fixo" },
-  { "descricao": "Meta", "valor": 200, "tipo": "condicional" }
-]
-```
-`tipo` aceita `"fixo"` ou `"condicional"`.
+---
 
-### 2. RH — formulários
-- **`src/components/rh/PreCadastroForm.tsx`**: adicionar nova etapa "Bonificações" (ou seção dentro de "Trabalho") com lista editável. Salvar `bonificacoes_padrao` no insert.
-- **`src/components/rh/EditFuncionarioForm.tsx`**: adicionar a mesma seção, carregando do registro e salvando no update. Como o formulário atual itera sobre `FIELDS`, renderizar a seção de bonificações fora desse loop, no final do form.
+## Etapas
 
-Componente reutilizável: criar `src/components/rh/BonificacoesPadraoEditor.tsx` recebendo `value` (array) e `onChange`, com botão de adicionar/remover linhas.
+### Etapa 1 — Backup completo (zero risco, só leitura)
+Antes de qualquer mudança, gerar e salvar localmente:
 
-### 3. Folha Salarial — pré-preenchimento
-- **`src/pages/Folha.tsx`**:
-  - No `select` de `funcionarios` (linhas 175–177), incluir `bonificacoes_padrao`.
-  - Após montar `list`, para cada funcionário sem folha existente (`!existing`), calcular:
-    - `meta = soma de bons cujo descricao.toLowerCase() contém "meta" ou "desempenho"`
-    - `assiduidade = soma das demais`
-  - Aplicar em `input.bonificacao_meta` e `input.bonificacao_assiduidade`.
-  - Funcionários com folha já salva permanecem com os valores persistidos.
+1. **Dump SQL completo** do schema + dados de todas as 30+ tabelas (`empresas`, `obras`, `funcionarios`, `folhas_pagamento`, `medicoes`, `compras`, `entregas_epi`, etc.).
+2. **Export CSV por tabela** (redundância, fácil de inspecionar no Excel).
+3. **Dump dos arquivos do Storage** (bucket `documentos` — fotos de funcionários, PDFs, fichas EPI, documentação mensal).
+4. **Lista de usuários do Auth** (e-mails + metadata; senhas não são exportáveis, usuários precisarão usar "esqueci senha" se trocarmos de Auth).
 
-### 4. Tipos
-- Atualizar `src/integrations/supabase/types.ts` é automático após a migration.
-- Criar tipo local `BonificacaoPadrao` em `src/components/rh/types.ts` para reuso.
+Tudo salvo em `/mnt/documents/backup_supabase_AAAA-MM-DD/` para você baixar.
 
-## Observações
+### Etapa 2 — Preparar o destino
+- Você cria o projeto novo no painel do Supabase (ou confirma usar `uvrqntfjknojxkiwsibz`).
+- Você me passa **SERVICE_ROLE_KEY** e **URL** do destino via secret seguro.
+- Eu recrio o schema completo (todas as tabelas, RLS, função `tg_solicitacoes_diario_updated`, bucket `documentos`).
 
-- Não altera o motor de cálculo (`motorFolha.ts`) — continua somando `bonificacao_meta + bonificacao_assiduidade` como hoje.
-- O usuário sempre pode editar antes de fechar o mês, conforme solicitado.
-- Mantém compatibilidade com funcionários existentes (campo default `[]`).
+### Etapa 3 — Importar dados
+- Importar tabelas em ordem de dependência (empresas → obras → funcionários → resto).
+- IDs originais preservados (sem remapeamento) para não quebrar referências.
+- Reupload dos arquivos do Storage mantendo a mesma estrutura de pastas.
+- Validação por contagem: cada tabela deve ter o mesmo número de linhas no destino.
+
+### Etapa 4 — Trocar o app para o novo banco
+- Atualizar `.env` (`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_PROJECT_ID`).
+- Atualizar `supabase/config.toml` (`project_id`).
+- Regenerar `src/integrations/supabase/types.ts` para o novo projeto.
+- **Banco antigo permanece intacto** como fallback por pelo menos 30 dias.
+
+### Etapa 5 — Validação no sistema
+Checklist navegando o app pós-migração:
+- Login + lista de empresas/obras carrega.
+- Folha de pagamento de um mês conhecido bate o valor antigo.
+- Diário de obra: fotos abrem corretamente.
+- Documentação mensal: PDFs antigos baixam.
+- Entrega de EPI, Compras, Medições: dados visíveis.
+- Edge function `resumo-diario` responde.
+
+Só depois dessa validação consideramos a migração concluída.
+
+---
+
+## Plano de rollback
+Se qualquer coisa falhar em qualquer etapa:
+1. Reverter `.env` e `config.toml` para `znfxvpggckayokiphglt` (1 commit).
+2. App volta a operar com o banco original — nenhum dado perdido, pois o original nunca foi tocado.
+
+---
+
+## O que preciso de você antes de começar
+
+1. **Decisão**: criar projeto Supabase novo (recomendado) **ou** usar o `uvrqntfjknojxkiwsibz` existente?
+2. Após criar/confirmar o projeto destino, fornecer via secret seguro:
+   - `DEST_SUPABASE_URL`
+   - `DEST_SUPABASE_SERVICE_ROLE_KEY` (encontrada em Settings → API → service_role)
+   - `DEST_SUPABASE_ANON_KEY`
+3. Confirmar se quer migrar também usuários do **Auth** (se houver login configurado).
+
+Assim que aprovar este plano, começo pela **Etapa 1 (backup)** que é totalmente segura e não toca em nada.
