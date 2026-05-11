@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Obras from "./pages/Obras";
 import RH from "./pages/RH";
+import ImportacaoAFD from "./pages/ponto/ImportacaoAFD";
+import PontoConsolidado from "./pages/ponto/PontoConsolidado";
 import Folha from "./pages/Folha";
 import Estoque from "./pages/Estoque";
 import EquipamentosProprios from "./pages/EquipamentosProprios";
@@ -53,6 +55,8 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/obras" element={<Obras />} />
           <Route path="/rh" element={<RH />} />
+          <Route path="/rh/ponto/importar" element={<ImportacaoAFD />} />
+          <Route path="/rh/ponto/consolidado" element={<PontoConsolidado />} />
           <Route path="/folha" element={<Folha />} />
           <Route path="/estoque" element={<Estoque />} />
           <Route path="/equipamentos-proprios" element={<EquipamentosProprios />} />
