@@ -364,10 +364,25 @@ export function GeradorDocumentos() {
                 </Select>
               </div>
 
+              {tipoDoc === "recibo" && (
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold">Valor (R$)</Label>
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0,00"
+                    value={reciboValor}
+                    onChange={e => setReciboValor(e.target.value)}
+                    className="bg-background font-mono"
+                  />
+                  <p className="text-[10px] text-muted-foreground">Valor em reais — o sistema gera automaticamente o valor por extenso.</p>
+                </div>
+              )}
+
               <div className="space-y-1">
-                <Label className="text-xs font-semibold">3. Contexto / Motivo</Label>
+                <Label className="text-xs font-semibold">{tipoDoc === "recibo" ? "Referência do pagamento" : "3. Contexto / Motivo"}</Label>
                 <Textarea
-                  placeholder="Ex: Miguel foi flagrado sem cinto de segurança em trabalho em altura na obra Terrace, mesmo após advertência verbal..."
+                  placeholder={tipoDoc === "recibo" ? "Ex: Adiantamento salarial referente à obra Terrace - novembro/2025" : "Ex: Miguel foi flagrado sem cinto de segurança em trabalho em altura na obra Terrace, mesmo após advertência verbal..."}
                   className="bg-background resize-none"
                   rows={5}
                   value={contextoUsuario}
