@@ -10,6 +10,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { gerarTextoDocumentoOficial, TipoDocumentoOficial } from "@/lib/motorIaDocumentos";
 import { gerarPdfA4, downloadBlob, imprimirBlob, EmpresaPdf } from "@/lib/gerarPdfOficial";
+import { gerarReciboPdf } from "@/lib/gerarReciboPdf";
+import { Input } from "@/components/ui/input";
 
 interface FuncionarioSimplificado {
   id: string;
@@ -17,6 +19,8 @@ interface FuncionarioSimplificado {
   cargo: string;
   telefone: string | null;
   email: string | null;
+  cpf: string | null;
+  rg: string | null;
   empresa_id: string | null;
   empresa: EmpresaPdf | null;
 }
@@ -59,6 +63,7 @@ export function GeradorDocumentos() {
   const [funcId, setFuncId] = useState<string>("");
   const [tipoDoc, setTipoDoc] = useState<TipoDocumentoOficial>("advertencia");
   const [contextoUsuario, setContextoUsuario] = useState("");
+  const [reciboValor, setReciboValor] = useState<string>("");
 
   // Resultado
   const [textoGerado, setTextoGerado] = useState("");
@@ -74,7 +79,7 @@ export function GeradorDocumentos() {
     async function load() {
       const { data } = await supabase
         .from("funcionarios")
-        .select("id, nome, cargo, telefone, email, empresa_id")
+        .select("id, nome, cargo, telefone, email, cpf, rg, empresa_id")
         .eq("status", "ativo")
         .order("nome");
 
@@ -93,6 +98,8 @@ export function GeradorDocumentos() {
           cargo: f.cargo || "Não Informado",
           telefone: f.telefone,
           email: f.email,
+          cpf: (f as any).cpf || null,
+          rg: (f as any).rg || null,
           empresa_id: f.empresa_id,
           empresa: f.empresa_id ? (empMap.get(f.empresa_id) as EmpresaPdf) || null : null,
         }));
@@ -192,17 +199,38 @@ export function GeradorDocumentos() {
   // ---- Ações sobre o documento atualmente gerado ----
   const funcSelecionado = funcionarios.find(f => f.id === funcId);
 
+  const buildBlob = async (): Promise<Blob | null> => {
+    if (!funcSelecionado) return null;
+    if (tipoDoc === "recibo") {
+      const valorNum = parseFloat((reciboValor || "0").replace(/\./g, "").replace(",", "."));
+      if (!valorNum || valorNum <= 0) {
+        toast({ title: "Informe o valor do recibo", variant: "destructive" });
+        return null;
+      }
+      return await gerarReciboPdf({
+        empresa: (funcSelecionado.empresa || { razao_social: "Empresa" }) as any,
+        funcionario: {
+          nome: funcSelecionado.nome,
+          cargo: funcSelecionado.cargo,
+          cpf: funcSelecionado.cpf,
+          rg: funcSelecionado.rg,
+        },
+        valor: valorNum,
+        referencia: contextoUsuario || "Pagamento avulso",
+      });
+    }
+    return await gerarPdfA4(textoGerado, "doc.pdf", funcSelecionado.empresa);
+  };
+
   const handleDownload = async () => {
-    if (!textoGerado || !funcSelecionado) return;
-    const fname = formatFileName(tipoDoc, funcSelecionado.nome);
-    const blob = await gerarPdfA4(textoGerado, fname, funcSelecionado.empresa);
-    downloadBlob(blob, fname);
+    const blob = await buildBlob();
+    if (!blob || !funcSelecionado) return;
+    downloadBlob(blob, formatFileName(tipoDoc, funcSelecionado.nome));
   };
 
   const handleImprimir = async () => {
-    if (!textoGerado || !funcSelecionado) return;
-    const fname = formatFileName(tipoDoc, funcSelecionado.nome);
-    const blob = await gerarPdfA4(textoGerado, fname, funcSelecionado.empresa);
+    const blob = await buildBlob();
+    if (!blob) return;
     imprimirBlob(blob);
   };
 
@@ -226,11 +254,12 @@ export function GeradorDocumentos() {
   };
 
   const handleSalvarRh = async () => {
-    if (!textoGerado || !funcSelecionado) return;
+    if (!funcSelecionado) return;
     setSalvando(true);
     try {
+      const blob = await buildBlob();
+      if (!blob) { setSalvando(false); return; }
       const fname = formatFileName(tipoDoc, funcSelecionado.nome);
-      const blob = await gerarPdfA4(textoGerado, fname, funcSelecionado.empresa);
       const file = new File([blob], fname, { type: "application/pdf" });
       const pasta = PASTAS_DOC[tipoDoc];
       const filePath = `funcionarios/${funcSelecionado.id}/${pasta}/${fname}`;
@@ -335,10 +364,25 @@ export function GeradorDocumentos() {
                 </Select>
               </div>
 
+              {tipoDoc === "recibo" && (
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold">Valor (R$)</Label>
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0,00"
+                    value={reciboValor}
+                    onChange={e => setReciboValor(e.target.value)}
+                    className="bg-background font-mono"
+                  />
+                  <p className="text-[10px] text-muted-foreground">Valor em reais — o sistema gera automaticamente o valor por extenso.</p>
+                </div>
+              )}
+
               <div className="space-y-1">
-                <Label className="text-xs font-semibold">3. Contexto / Motivo</Label>
+                <Label className="text-xs font-semibold">{tipoDoc === "recibo" ? "Referência do pagamento" : "3. Contexto / Motivo"}</Label>
                 <Textarea
-                  placeholder="Ex: Miguel foi flagrado sem cinto de segurança em trabalho em altura na obra Terrace, mesmo após advertência verbal..."
+                  placeholder={tipoDoc === "recibo" ? "Ex: Adiantamento salarial referente à obra Terrace - novembro/2025" : "Ex: Miguel foi flagrado sem cinto de segurança em trabalho em altura na obra Terrace, mesmo após advertência verbal..."}
                   className="bg-background resize-none"
                   rows={5}
                   value={contextoUsuario}
