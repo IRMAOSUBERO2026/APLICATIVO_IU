@@ -10,6 +10,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { gerarTextoDocumentoOficial, TipoDocumentoOficial } from "@/lib/motorIaDocumentos";
 import { gerarPdfA4, downloadBlob, imprimirBlob, EmpresaPdf } from "@/lib/gerarPdfOficial";
+import { gerarReciboPdf } from "@/lib/gerarReciboPdf";
+import { Input } from "@/components/ui/input";
 
 interface FuncionarioSimplificado {
   id: string;
@@ -17,6 +19,8 @@ interface FuncionarioSimplificado {
   cargo: string;
   telefone: string | null;
   email: string | null;
+  cpf: string | null;
+  rg: string | null;
   empresa_id: string | null;
   empresa: EmpresaPdf | null;
 }
@@ -74,7 +78,7 @@ export function GeradorDocumentos() {
     async function load() {
       const { data } = await supabase
         .from("funcionarios")
-        .select("id, nome, cargo, telefone, email, empresa_id")
+        .select("id, nome, cargo, telefone, email, cpf, rg, empresa_id")
         .eq("status", "ativo")
         .order("nome");
 
@@ -93,6 +97,8 @@ export function GeradorDocumentos() {
           cargo: f.cargo || "Não Informado",
           telefone: f.telefone,
           email: f.email,
+          cpf: (f as any).cpf || null,
+          rg: (f as any).rg || null,
           empresa_id: f.empresa_id,
           empresa: f.empresa_id ? (empMap.get(f.empresa_id) as EmpresaPdf) || null : null,
         }));
