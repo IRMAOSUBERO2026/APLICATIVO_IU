@@ -2,9 +2,10 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-// USANDO SUPABASE EXTERNO (Sincronização com o projeto Real)
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+// USANDO SUPABASE EXTERNO wtrefsziscauokudnxgz (Aplicativo Bancodedados)
+// Sobrescreve o .env gerenciado pelo Lovable Cloud para apontar ao banco migrado.
+const SUPABASE_URL = "https://wtrefsziscauokudnxgz.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_DLAlIkksoQ-2qO40Y0hfzA_0pazWsNk";
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
