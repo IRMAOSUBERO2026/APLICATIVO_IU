@@ -199,17 +199,38 @@ export function GeradorDocumentos() {
   // ---- Ações sobre o documento atualmente gerado ----
   const funcSelecionado = funcionarios.find(f => f.id === funcId);
 
+  const buildBlob = async (): Promise<Blob | null> => {
+    if (!funcSelecionado) return null;
+    if (tipoDoc === "recibo") {
+      const valorNum = parseFloat((reciboValor || "0").replace(/\./g, "").replace(",", "."));
+      if (!valorNum || valorNum <= 0) {
+        toast({ title: "Informe o valor do recibo", variant: "destructive" });
+        return null;
+      }
+      return await gerarReciboPdf({
+        empresa: (funcSelecionado.empresa || { razao_social: "Empresa" }) as any,
+        funcionario: {
+          nome: funcSelecionado.nome,
+          cargo: funcSelecionado.cargo,
+          cpf: funcSelecionado.cpf,
+          rg: funcSelecionado.rg,
+        },
+        valor: valorNum,
+        referencia: contextoUsuario || "Pagamento avulso",
+      });
+    }
+    return await gerarPdfA4(textoGerado, "doc.pdf", funcSelecionado.empresa);
+  };
+
   const handleDownload = async () => {
-    if (!textoGerado || !funcSelecionado) return;
-    const fname = formatFileName(tipoDoc, funcSelecionado.nome);
-    const blob = await gerarPdfA4(textoGerado, fname, funcSelecionado.empresa);
-    downloadBlob(blob, fname);
+    const blob = await buildBlob();
+    if (!blob || !funcSelecionado) return;
+    downloadBlob(blob, formatFileName(tipoDoc, funcSelecionado.nome));
   };
 
   const handleImprimir = async () => {
-    if (!textoGerado || !funcSelecionado) return;
-    const fname = formatFileName(tipoDoc, funcSelecionado.nome);
-    const blob = await gerarPdfA4(textoGerado, fname, funcSelecionado.empresa);
+    const blob = await buildBlob();
+    if (!blob) return;
     imprimirBlob(blob);
   };
 
@@ -233,11 +254,12 @@ export function GeradorDocumentos() {
   };
 
   const handleSalvarRh = async () => {
-    if (!textoGerado || !funcSelecionado) return;
+    if (!funcSelecionado) return;
     setSalvando(true);
     try {
+      const blob = await buildBlob();
+      if (!blob) { setSalvando(false); return; }
       const fname = formatFileName(tipoDoc, funcSelecionado.nome);
-      const blob = await gerarPdfA4(textoGerado, fname, funcSelecionado.empresa);
       const file = new File([blob], fname, { type: "application/pdf" });
       const pasta = PASTAS_DOC[tipoDoc];
       const filePath = `funcionarios/${funcSelecionado.id}/${pasta}/${fname}`;
