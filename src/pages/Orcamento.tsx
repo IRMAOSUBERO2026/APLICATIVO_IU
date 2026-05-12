@@ -170,85 +170,116 @@ export default function Orcamento() {
     setActiveTab("lista");
   };
 
-  const gerarPDFProposta = (orc?: Orcamento) => {
+  const gerarPDFProposta = async (orc?: Orcamento) => {
     const c = orc?.cliente || cliente;
     const p = orc?.proposta || proposta;
     const e = orc?.etapas || etapas;
     const total = e.reduce((sum, et) => sum + et.area * et.valorM2 * et.taxa, 0);
     const areaTot = e.reduce((sum, et) => sum + et.area, 0);
 
-    const doc = new jsPDF();
-    const green = [60, 80, 45] as [number, number, number];
-    const darkGreen = [40, 55, 30] as [number, number, number];
-    const pageW = doc.internal.pageSize.getWidth();
-    const pageH = doc.internal.pageSize.getHeight();
+    // Empresa fixa Irmãos Ubero (não vinculada a registro de empresa do banco)
+    const empresa = {
+      razao_social: "IRMÃOS UBERO ENGENHARIA",
+      nome_fantasia: "IRMÃOS UBERO",
+      cnpj: null, telefone: null, email: null,
+      endereco: null, cidade: null, uf: null,
+    } as any;
 
-    // === CAPA ===
-    doc.setFillColor(...darkGreen);
+    const ctx = await initBrandedDoc({ empresa, documentTitle: "Proposta Comercial" });
+    const { doc, pageW, pageH, marginX } = ctx;
+
+    // ===== CAPA PREMIUM (substitui o cabeçalho padrão) =====
+    // Limpa fundo branco e desenha capa monocromática verde escuro
+    doc.setFillColor(BRAND.greenDark[0], BRAND.greenDark[1], BRAND.greenDark[2]);
     doc.rect(0, 0, pageW, pageH, "F");
+    drawWatermark(ctx); // watermark sobre a capa também
+
+    // Faixa superior fina branca + verde claro
+    doc.setFillColor(BRAND.green[0], BRAND.green[1], BRAND.green[2]);
+    doc.rect(0, pageH * 0.42, pageW, 1, "F");
+    doc.rect(0, pageH * 0.58, pageW, 1, "F");
+
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(32);
-    doc.text("PROPOSTA COMERCIAL", pageW / 2, 80, { align: "center" });
-    doc.setFontSize(12);
-    doc.setDrawColor(255, 255, 255);
-    doc.line(60, 90, pageW - 60, 90);
-    doc.setFontSize(16);
-    doc.text(c.empreendimento || "Empreendimento", pageW / 2, 110, { align: "center" });
-    doc.setFontSize(12);
-    doc.text(c.construtora || "Construtora", pageW / 2, 125, { align: "center" });
-    doc.text(c.cidade || "Cidade", pageW / 2, 138, { align: "center" });
-    doc.setFontSize(10);
-    doc.text(`Data: ${p.data ? format(new Date(p.data), "dd/MM/yyyy") : "—"}`, pageW / 2, 160, { align: "center" });
-    doc.setFontSize(22);
-    doc.text("IRMÃOS UBERO", pageW / 2, 220, { align: "center" });
-    doc.setFontSize(10);
-    doc.text("Engenharia", pageW / 2, 230, { align: "center" });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.text("PROPOSTA Nº " + format(new Date(p.data || new Date()), "yyyyMMdd"), marginX, 30);
+    doc.text(format(new Date(p.data || new Date()), "dd 'de' MMMM 'de' yyyy"), pageW - marginX, 30, { align: "right" });
 
-    // === APRESENTAÇÃO ===
-    doc.addPage();
-    doc.setFillColor(255, 255, 255);
-    doc.rect(0, 0, pageW, pageH, "F");
-    doc.setFillColor(...green);
-    doc.rect(0, 0, pageW, 8, "F");
-    doc.setTextColor(40, 55, 30);
-    doc.setFontSize(18);
-    doc.text("1. APRESENTAÇÃO DA EMPRESA", 14, 30);
-    doc.setDrawColor(...green);
-    doc.line(14, 34, 120, 34);
-    doc.setFontSize(10);
-    doc.setTextColor(60, 60, 60);
-    const splitText = doc.splitTextToSize(textoInstitucional, pageW - 28);
-    doc.text(splitText, 14, 45);
+    doc.setFontSize(11);
+    doc.text("PROPOSTA COMERCIAL", pageW / 2, pageH * 0.46, { align: "center" });
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(34);
+    const empName = (c.empreendimento || "Empreendimento").toUpperCase();
+    const empLines = doc.splitTextToSize(empName, pageW - marginX * 2);
+    doc.text(empLines, pageW / 2, pageH * 0.5, { align: "center" });
+    doc.setFont("helvetica", "normal");
     doc.setFontSize(12);
-    doc.setTextColor(40, 55, 30);
-    doc.text("Nossos Diferenciais:", 14, 80);
+    doc.text(c.construtora || "Construtora", pageW / 2, pageH * 0.55, { align: "center" });
     doc.setFontSize(10);
-    doc.setTextColor(60, 60, 60);
-    diferenciais.forEach((d, i) => {
-      doc.text(`✓  ${d}`, 18, 92 + i * 10);
+    doc.text(c.cidade || "Cidade", pageW / 2, pageH * 0.555 + 5, { align: "center" });
+
+    // Marca embaixo
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.text("IRMÃOS UBERO", pageW / 2, pageH * 0.85, { align: "center" });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(200, 210, 195);
+    doc.text("ENGENHARIA  •  ESTRUTURAS DE CONCRETO ARMADO", pageW / 2, pageH * 0.85 + 5, { align: "center" });
+
+    // ===== APRESENTAÇÃO =====
+    let y = brandedAddPage(ctx);
+    y = sectionTitle(ctx, y, "Apresentação da Empresa", 1);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(BRAND.graphite[0], BRAND.graphite[1], BRAND.graphite[2]);
+    const splitText = doc.splitTextToSize(textoInstitucional, pageW - marginX * 2);
+    doc.text(splitText, marginX, y);
+    y += splitText.length * 5 + 6;
+
+    y = sectionTitle(ctx, y, "Diferenciais", 2);
+    diferenciais.forEach((d) => {
+      y = ensureSpace(ctx, y, 7);
+      doc.setFillColor(ctx.primary[0], ctx.primary[1], ctx.primary[2]);
+      doc.circle(marginX + 1.5, y - 1.5, 1.2, "F");
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(BRAND.graphite[0], BRAND.graphite[1], BRAND.graphite[2]);
+      doc.text(d, marginX + 6, y);
+      y += 6;
     });
 
-    // === OBJETO ===
-    doc.setFontSize(18);
-    doc.setTextColor(40, 55, 30);
-    doc.text("2. OBJETO DA PROPOSTA", 14, 170);
-    doc.setDrawColor(...green);
-    doc.line(14, 174, 120, 174);
+    // ===== OBJETO + RESUMO EXECUTIVO =====
+    y = brandedAddPage(ctx);
+    y = sectionTitle(ctx, y, "Objeto da Proposta", 3);
+    doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
-    doc.setTextColor(60, 60, 60);
+    doc.setTextColor(BRAND.graphite[0], BRAND.graphite[1], BRAND.graphite[2]);
     const objText = `Execução completa da estrutura em concreto armado do empreendimento ${c.empreendimento || "—"}, localizado em ${c.cidade || "—"}, sob responsabilidade da construtora ${c.construtora || "—"}.`;
-    doc.text(doc.splitTextToSize(objText, pageW - 28), 14, 185);
+    const objLines = doc.splitTextToSize(objText, pageW - marginX * 2);
+    doc.text(objLines, marginX, y);
+    y += objLines.length * 5 + 6;
 
-    // === ESCOPO ===
-    doc.addPage();
-    doc.setFillColor(...green);
-    doc.rect(0, 0, pageW, 8, "F");
-    doc.setTextColor(40, 55, 30);
-    doc.setFontSize(18);
-    doc.text("3. ESCOPO DOS SERVIÇOS", 14, 30);
-    doc.line(14, 34, 120, 34);
-    let yPos = 48;
-    const escopoEntries = [
+    y = sectionTitle(ctx, y, "Resumo Executivo", 4);
+    autoTable(doc, {
+      startY: y,
+      body: [
+        ["Área total da estrutura", `${areaTot.toLocaleString("pt-BR")} m²`],
+        ["Etapas previstas", `${e.length}`],
+        ["Valor médio por m²", formatCurrency(areaTot > 0 ? total / areaTot : 0)],
+        ["Investimento total estimado", formatCurrency(total)],
+      ],
+      ...autoTableTheme(ctx.primary),
+      bodyStyles: { fontSize: 10, cellPadding: 4 },
+      columnStyles: { 0: { fontStyle: "bold", cellWidth: 80 }, 1: { halign: "right" } },
+      margin: { left: marginX, right: marginX },
+    });
+    y = (doc as any).lastAutoTable.finalY + 6;
+
+    // ===== ESCOPO =====
+    y = brandedAddPage(ctx);
+    y = sectionTitle(ctx, y, "Escopo dos Serviços", 5);
+    const escopoEntries: [string, string][] = [
       ["Carpintaria", escopoServicos.carpintaria],
       ["Armação", escopoServicos.armacao],
       ["Concretagem", escopoServicos.concretagem],
@@ -256,27 +287,24 @@ export default function Orcamento() {
       ["Gestão Técnica", escopoServicos.gestao],
     ];
     escopoEntries.forEach(([title, desc]) => {
-      doc.setFontSize(11);
-      doc.setTextColor(40, 55, 30);
-      doc.text(`▸ ${title}`, 14, yPos);
+      y = ensureSpace(ctx, y, 16);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10.5);
+      doc.setTextColor(BRAND.black[0], BRAND.black[1], BRAND.black[2]);
+      doc.text(`▸ ${title}`, marginX, y);
+      doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
-      doc.setTextColor(80, 80, 80);
-      const lines = doc.splitTextToSize(desc, pageW - 35);
-      doc.text(lines, 20, yPos + 7);
-      yPos += 7 + lines.length * 5 + 8;
+      doc.setTextColor(BRAND.graphite[0], BRAND.graphite[1], BRAND.graphite[2]);
+      const lines = doc.splitTextToSize(desc, pageW - marginX * 2 - 6);
+      doc.text(lines, marginX + 6, y + 5);
+      y += 6 + lines.length * 4.5 + 4;
     });
 
-    // === TABELA ORÇAMENTO ===
-    doc.addPage();
-    doc.setFillColor(...green);
-    doc.rect(0, 0, pageW, 8, "F");
-    doc.setTextColor(40, 55, 30);
-    doc.setFontSize(18);
-    doc.text("4. TABELA DE ORÇAMENTO", 14, 30);
-    doc.line(14, 34, 120, 34);
-
+    // ===== TABELA ORÇAMENTO =====
+    y = brandedAddPage(ctx);
+    y = sectionTitle(ctx, y, "Tabela de Orçamento", 6);
     autoTable(doc, {
-      startY: 42,
+      startY: y,
       head: [["Etapa", "Área (m²)", "Valor/m²", "Taxa", "Subtotal"]],
       body: e.map(et => [
         et.etapa,
@@ -286,62 +314,40 @@ export default function Orcamento() {
         formatCurrency(et.area * et.valorM2 * et.taxa),
       ]),
       foot: [["TOTAL", areaTot.toLocaleString("pt-BR") + " m²", "", "", formatCurrency(total)]],
-      styles: { fontSize: 9, cellPadding: 4 },
-      headStyles: { fillColor: green, textColor: [255, 255, 255], fontStyle: "bold" },
-      footStyles: { fillColor: darkGreen, textColor: [255, 255, 255], fontStyle: "bold" },
-      alternateRowStyles: { fillColor: [245, 248, 242] },
+      ...autoTableTheme(ctx.primary),
+      footStyles: { fillColor: BRAND.greenDark, textColor: [255,255,255], fontStyle: "bold" },
+      columnStyles: { 1: { halign: "right" }, 2: { halign: "right" }, 3: { halign: "center" }, 4: { halign: "right" } },
+      margin: { left: marginX, right: marginX },
     });
+    y = (doc as any).lastAutoTable.finalY + 8;
+    y = highlightValueBox(ctx, y, "Investimento total da proposta", formatCurrency(total), `${areaTot.toLocaleString("pt-BR")} m² de estrutura`);
 
-    // Valor destaque
-    const finalY = (doc as any).lastAutoTable.finalY + 15;
-    doc.setFillColor(...darkGreen);
-    doc.roundedRect(30, finalY, pageW - 60, 30, 4, 4, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(12);
-    doc.text("VALOR TOTAL DA PROPOSTA", pageW / 2, finalY + 12, { align: "center" });
-    doc.setFontSize(18);
-    doc.text(formatCurrency(total), pageW / 2, finalY + 24, { align: "center" });
-
-    // === SERVIÇOS POR ADMINISTRAÇÃO ===
-    doc.addPage();
-    doc.setFillColor(...green);
-    doc.rect(0, 0, pageW, 8, "F");
-    doc.setTextColor(40, 55, 30);
-    doc.setFontSize(18);
-    doc.text("5. SERVIÇOS POR ADMINISTRAÇÃO", 14, 30);
-    doc.line(14, 34, 120, 34);
-
+    // ===== ADMINISTRAÇÃO =====
+    y = brandedAddPage(ctx);
+    y = sectionTitle(ctx, y, "Serviços por Administração — Diárias", 7);
     autoTable(doc, {
-      startY: 42,
-      head: [["Profissional", "Valor/Dia"]],
+      startY: y,
+      head: [["Profissional", "Valor / Dia"]],
       body: servicosAdmin.map(s => [s.profissional, formatCurrency(s.valor)]),
-      styles: { fontSize: 10 },
-      headStyles: { fillColor: green, textColor: [255, 255, 255] },
+      ...autoTableTheme(ctx.primary),
+      columnStyles: { 1: { halign: "right", cellWidth: 50 } },
+      margin: { left: marginX, right: marginX },
+    });
+    y = (doc as any).lastAutoTable.finalY + 8;
+
+    y = sectionTitle(ctx, y, "Itens Não Inclusos", 8);
+    itensNaoInclusos.forEach((item) => {
+      y = ensureSpace(ctx, y, 6);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9.5);
+      doc.setTextColor(BRAND.graphite[0], BRAND.graphite[1], BRAND.graphite[2]);
+      doc.text("•  " + item, marginX, y);
+      y += 5;
     });
 
-    // === CONDIÇÕES ===
-    let condY = (doc as any).lastAutoTable.finalY + 15;
-    doc.setFontSize(18);
-    doc.setTextColor(40, 55, 30);
-    doc.text("6. CONDIÇÕES E OBSERVAÇÕES", 14, condY);
-    doc.line(14, condY + 4, 130, condY + 4);
-    doc.setFontSize(10);
-    doc.setTextColor(60, 60, 60);
-    doc.text("Itens não inclusos na proposta:", 14, condY + 15);
-    itensNaoInclusos.forEach((item, i) => {
-      doc.text(`•  ${item}`, 18, condY + 25 + i * 7);
-    });
-
-    // === ENCERRAMENTO ===
-    doc.addPage();
-    doc.setFillColor(...green);
-    doc.rect(0, 0, pageW, 8, "F");
-    doc.setTextColor(40, 55, 30);
-    doc.setFontSize(18);
-    doc.text("7. COMPROMISSOS", 14, 30);
-    doc.line(14, 34, 80, 34);
-    doc.setFontSize(10);
-    doc.setTextColor(60, 60, 60);
+    // ===== ENCERRAMENTO =====
+    y = brandedAddPage(ctx);
+    y = sectionTitle(ctx, y, "Compromissos", 9);
     const compromissos = [
       "Cumprimento rigoroso das normas de segurança do trabalho",
       "Manutenção da documentação atualizada de todos os colaboradores",
@@ -349,20 +355,35 @@ export default function Orcamento() {
       "Qualidade técnica na execução de todos os serviços",
       "Comunicação transparente e relatórios periódicos",
     ];
-    compromissos.forEach((c2, i) => {
-      doc.text(`✓  ${c2}`, 18, 48 + i * 10);
+    compromissos.forEach((c2) => {
+      y = ensureSpace(ctx, y, 7);
+      doc.setFillColor(ctx.primary[0], ctx.primary[1], ctx.primary[2]);
+      doc.circle(marginX + 1.5, y - 1.5, 1.2, "F");
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(BRAND.graphite[0], BRAND.graphite[1], BRAND.graphite[2]);
+      doc.text(c2, marginX + 6, y);
+      y += 6;
     });
 
-    doc.setFontSize(16);
-    doc.setTextColor(40, 55, 30);
-    doc.text("Agradecemos a oportunidade.", pageW / 2, 130, { align: "center" });
-    doc.setFontSize(11);
-    doc.text("IRMÃOS UBERO ENGENHARIA", pageW / 2, 150, { align: "center" });
+    y += 8;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    doc.setTextColor(BRAND.black[0], BRAND.black[1], BRAND.black[2]);
+    doc.text("Agradecemos a oportunidade.", pageW / 2, y, { align: "center" });
+    y += 8;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(BRAND.graphite[0], BRAND.graphite[1], BRAND.graphite[2]);
+    doc.text("IRMÃOS UBERO ENGENHARIA", pageW / 2, y, { align: "center" });
+    y += 6;
     doc.setFontSize(9);
-    doc.setTextColor(100, 100, 100);
-    doc.text(`Responsável: ${p.responsavel || "—"}`, pageW / 2, 165, { align: "center" });
-    doc.text(`Contato: ${c.telefone || "—"} | ${c.email || "—"}`, pageW / 2, 175, { align: "center" });
+    doc.setTextColor(BRAND.muted[0], BRAND.muted[1], BRAND.muted[2]);
+    doc.text(`Responsável: ${p.responsavel || "—"}`, pageW / 2, y, { align: "center" });
+    y += 5;
+    doc.text(`Contato: ${c.telefone || "—"}  •  ${c.email || "—"}`, pageW / 2, y, { align: "center" });
 
+    finalizeBranded(ctx);
     doc.save(`proposta-${c.empreendimento || "orcamento"}.pdf`);
   };
 
