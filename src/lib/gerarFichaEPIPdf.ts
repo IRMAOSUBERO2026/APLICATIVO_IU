@@ -1,32 +1,7 @@
-import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-
-function hexToRgb(hex?: string | null): [number, number, number] {
-  const fallback: [number, number, number] = [60, 80, 45];
-  if (!hex) return fallback;
-  const h = hex.replace("#", "").trim();
-  if (h.length !== 6) return fallback;
-  const n = parseInt(h, 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}
-
-async function loadImageAsBase64(url: string): Promise<string | null> {
-  try {
-    const res = await fetch(url, { mode: "cors" });
-    if (!res.ok) return null;
-    const blob = await res.blob();
-    return await new Promise<string>((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = () => resolve(null as any);
-      reader.readAsDataURL(blob);
-    });
-  } catch {
-    return null;
-  }
-}
+import { supabase } from "@/integrations/supabase/client";
+import { initBrandedDoc, finalizeBranded, sectionTitle, infoGrid, signatureBlock, autoTableTheme, BRAND, ensureSpace } from "./pdfBrand";
 
 function safeDate(d: any): string {
   if (!d) return "—";
@@ -34,154 +9,109 @@ function safeDate(d: any): string {
     const dt = new Date(d);
     if (isNaN(dt.getTime())) return "—";
     return format(dt, "dd/MM/yyyy");
-  } catch {
-    return "—";
-  }
+  } catch { return "—"; }
 }
 
-export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string): Promise<Blob> {
-  console.log("PDF: Iniciando geração para", funcionarioId);
+const TERMO_RESPONSABILIDADE = `Declaro ter recebido(a) equipamento(s) de proteção(ões) individual(ais) descritos nessa ficha, destinados ao meu uso pessoal durante o serviço.
+Declaro ter recebido treinamento(s) e orientação(ões) sobre o uso, guarda e conservação dos mesmos, responsabilizando-me também por sua devolução à empresa na eventual rescisão do meu contrato de trabalho, ou quando não mais se fizerem necessários ao fim a que se destinam.
+Conforme descrito no item 6.7.1 da NR-6 e artigo 461 da CLT, o prejuízo decorrente do extravio ou danificação do equipamento a mim confiado poderá ser descontado do meu salário, salvo quando causado pelo desgaste natural de utilização.
+Que na não observância do seu uso, por negligência, os danos e/ou lesões resultantes de acidentes serão de minha inteira responsabilidade.
+É obrigatória a devolução na rescisão do contrato de trabalho, sob pena de ser descontada a falta de entrega destes, podendo agora ser descontado: Camisa R$ 15,00 — Calça R$ 40,00 — Sapatão R$ 25,00 — Cinto R$ 350,00.`;
 
-  // 1. Buscar Dados Mestre
+export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string): Promise<Blob> {
   const { data: func } = await supabase.from("funcionarios").select("*").eq("id", funcionarioId).single();
   const { data: empresa } = await supabase.from("empresas").select("*").eq("id", empresaId).single();
-  
-  if (!func || !empresa) throw new Error("Dados base não localizados no sistema.");
+  if (!func || !empresa) throw new Error("Dados base não localizados.");
 
-  // 2. BUSCA ULTRA RESILIENTE (Explicit Left Joins)
-  // Usamos a sintaxe !left para garantir que a entrega apareça mesmo que o produto falhe no join
-  const { data: entregas, error: entErr } = await supabase
+  const { data: entregas } = await supabase
     .from("entregas_epi")
-    .select(`
-      id,
-      data_entrega,
-      quantidade,
-      ca_numero,
-      motivo,
-      observacoes,
+    .select(`id, data_entrega, quantidade, ca_numero, motivo, observacoes,
       produto:produtos!left (descricao, ca_numero),
-      obra:obras!left (codigo, nome)
-    `)
+      obra:obras!left (codigo, nome)`)
     .eq("funcionario_id", funcionarioId)
     .order("data_entrega", { ascending: true });
 
-  if (entErr) {
-    console.error("Erro Crítico Supabase PDF:", entErr);
-  }
+  const ctx = await initBrandedDoc({ empresa: empresa as any, documentTitle: "Ficha de EPI — NR-6" });
+  const { doc, pageW, marginX } = ctx;
 
-  console.log(`PDF: ${entregas?.length || 0} entregas localizadas.`);
+  let y = ctx.contentTop;
 
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
-  const pageW = doc.internal.pageSize.getWidth();
-  const pageH = doc.internal.pageSize.getHeight();
-  const primary = hexToRgb(empresa.cor_primaria);
-  const secondary = hexToRgb(empresa.cor_secundaria);
+  // Título principal
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.setTextColor(BRAND.black[0], BRAND.black[1], BRAND.black[2]);
+  doc.text("FICHA DE CONTROLE DE EPI", marginX, y);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.setTextColor(BRAND.muted[0], BRAND.muted[1], BRAND.muted[2]);
+  doc.text("Equipamento de Proteção Individual • Norma Regulamentadora nº 6 do MTE", marginX, y + 5);
+  y += 12;
 
-  // Layout Header
-  doc.setFillColor(primary[0], primary[1], primary[2]);
-  doc.rect(0, 0, pageW, 4, "F");
+  y = sectionTitle(ctx, y, "Identificação do Colaborador", 1);
+  y = infoGrid(ctx, y, [
+    ["Nome", func.nome || "—"],
+    ["Cargo", func.cargo || "—"],
+    ["CPF", func.cpf || "—"],
+    ["RG", func.rg || "—"],
+    ["Admissão", safeDate(func.data_admissao)],
+    ["Registro", func.numero_registro || "—"],
+  ]);
 
-  let textX = 14;
-  if (empresa.logo_url) {
-    try {
-      const logo = await loadImageAsBase64(empresa.logo_url);
-      if (logo) { doc.addImage(logo, "PNG", 14, 8, 28, 18); textX = 46; }
-    } catch { /* ignore */ }
-  }
+  y = sectionTitle(ctx, y, "Equipamentos Entregues", 2);
 
-  doc.setTextColor(secondary[0], secondary[1], secondary[2]);
-  doc.setFont("helvetica", "bold").setFontSize(12);
-  doc.text(empresa.nome_fantasia || empresa.razao_social, textX, 13);
-  doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(80, 80, 80);
-  let y = 18;
-  doc.text(`${empresa.razao_social} • CNPJ: ${empresa.cnpj}`, textX, y); y += 4;
-  doc.text(`${empresa.endereco || ""} - ${empresa.cidade || ""} ${empresa.uf || ""}`, textX, y); y += 4;
-
-  y = 36;
-  doc.setDrawColor(primary[0], primary[1], primary[2]).setLineWidth(0.5).line(14, y, pageW - 14, y);
-  y += 6;
-  doc.setFont("helvetica", "bold").setFontSize(13).setTextColor(primary[0], primary[1], primary[2]);
-  doc.text("FICHA DE CONTROLE DE EPI – NR-6", pageW / 2, y, { align: "center" });
-  y += 4;
-  doc.setFontSize(8).setTextColor(100, 100, 100).text("Equipamento de Proteção Individual • Norma Regulamentadora nº 6 do MTE", pageW / 2, y, { align: "center" });
-  y += 6;
-
-  // Bloco Funcionario
-  doc.setFillColor(245, 247, 242).rect(14, y, pageW - 28, 22, "F");
-  doc.setTextColor(40, 40, 40).setFont("helvetica", "bold").setFontSize(9).text("DADOS DO FUNCIONÁRIO", 17, y + 5);
-  doc.setFont("helvetica", "normal").text(`Nome: ${func.nome}`, 17, y + 11);
-  doc.text(`CPF: ${func.cpf || "—"}`, 17, y + 16);
-  doc.text(`RG: ${func.rg || "—"}`, 80, y + 16);
-  doc.text(`Cargo: ${func.cargo || "—"}`, 17, y + 21);
-  doc.text(`Admissão: ${safeDate(func.data_admissao)}`, 110, y + 21);
-  y += 28;
-
-  // Montagem das Linhas
-  const linhas = (entregas || []).map((e: any, i: number) => {
-    // Resolvemos os dados com fallbacks seguros
-    const desc = e.produto?.descricao || "Equipamento / EPI";
-    const ca = e.ca_numero || e.produto?.ca_numero || "—";
-    const motivoStr = e.motivo || e.observacoes || "—";
-    return [
-      String(i + 1),
-      safeDate(e.data_entrega),
-      desc,
-      ca,
-      String(e.quantidade),
-      motivoStr,
-      e.obra?.codigo || "—",
-      "", 
-    ];
-  });
+  const linhas = (entregas || []).map((e: any, i: number) => [
+    String(i + 1).padStart(2, "0"),
+    safeDate(e.data_entrega),
+    e.produto?.descricao || "Equipamento / EPI",
+    e.ca_numero || e.produto?.ca_numero || "—",
+    String(e.quantidade ?? 1),
+    e.motivo || e.observacoes || "—",
+    e.obra?.codigo || e.obra?.nome || "—",
+    "",
+  ]);
 
   autoTable(doc, {
     startY: y,
     head: [["#", "Data", "EPI / Equipamento", "Nº CA", "Qtd", "Motivo", "Obra", "Rubrica"]],
-    body: linhas.length ? linhas : [["—", "—", "Nenhuma entrega registrada para este colaborador", "—", "—", "—", "—", ""]],
-    theme: "grid",
-    headStyles: { fillColor: primary, textColor: 255, fontSize: 8, halign: "center" },
-    bodyStyles: { fontSize: 8 },
-    columnStyles: { 0: { halign: "center", cellWidth: 8 }, 1: { halign: "center", cellWidth: 20 }, 3: { halign: "center", cellWidth: 18 }, 4: { halign: "center", cellWidth: 10 }, 6: { halign: "center", cellWidth: 16 }, 7: { minCellHeight: 12, cellWidth: 28 } },
-    margin: { left: 14, right: 14 },
+    body: linhas.length ? linhas : [["—", "—", "Nenhuma entrega registrada para este colaborador.", "—", "—", "—", "—", ""]],
+    ...autoTableTheme(ctx.primary),
+    columnStyles: {
+      0: { halign: "center", cellWidth: 8 },
+      1: { halign: "center", cellWidth: 20 },
+      3: { halign: "center", cellWidth: 18 },
+      4: { halign: "center", cellWidth: 10 },
+      6: { halign: "center", cellWidth: 18 },
+      7: { minCellHeight: 11, cellWidth: 28 },
+    },
+    margin: { left: marginX, right: marginX },
+    didDrawPage: () => { /* watermark/header já desenhados via brandedAddPage seria ideal; aceitável */ },
   });
 
-  y = (doc as any).lastAutoTable.finalY + 10;
-  if (y > pageH - 80) { doc.addPage(); y = 20; }
-  doc.setFont("helvetica", "bold").setFontSize(9).setTextColor(primary[0], primary[1], primary[2]);
-  doc.text("TERMO DE RESPONSABILIDADE – NR-6", 14, y);
-  y += 6;
-  doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(40, 40, 40);
-  const termo = [
-    "Declaro ter recebido da empresa, gratuitamente, os Equipamentos de Proteção Individual (EPIs) acima discriminados, em perfeitas condições de uso, comprometendo-me a:",
-    "1. Usar os EPIs apenas para a finalidade a que se destinam, durante toda a jornada de trabalho.",
-    "2. Responsabilizar-me pela guarda e conservação dos EPIs recebidos.",
-    "3. Comunicar ao empregador qualquer alteração que torne os EPIs impróprios para o uso.",
-    "4. Cumprir as determinações do empregador sobre o uso adequado dos EPIs.",
-    "5. Devolver os EPIs ao empregador quando do desligamento, troca por novos ou em caso de transferência.",
-    "Estou ciente de que o não cumprimento das obrigações constitui ato faltoso, conforme art. 158 da CLT e NR-6 do MTE.",
-  ];
-  termo.forEach(linha => {
-    const split = doc.splitTextToSize(linha, pageW - 28);
-    doc.text(split, 14, y);
-    y += split.length * 4.2;
-  });
+  y = (doc as any).lastAutoTable.finalY + 8;
 
-  y += 4;
-  doc.setFontSize(6.5).setTextColor(150, 150, 150);
-  doc.text("Valores referenciais para reposição (em caso de extravio, perda ou não devolução): Camiseta R$ 25,00 | Calça R$ 60,00 | Bota R$ 50,00 | Cinto+Talabarte R$ 300,00 | Capacete R$ 30,00.", 14, y);
+  // Termo de Responsabilidade
+  y = sectionTitle(ctx, y, "Termo de Responsabilidade — NR-6 / CLT", 3);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.setTextColor(BRAND.graphite[0], BRAND.graphite[1], BRAND.graphite[2]);
+  const linhasTermo = doc.splitTextToSize(TERMO_RESPONSABILIDADE, pageW - marginX * 2);
+  y = ensureSpace(ctx, y, linhasTermo.length * 4 + 4);
+  doc.text(linhasTermo, marginX, y);
+  y += linhasTermo.length * 4 + 6;
+
+  // Local + data
+  y = ensureSpace(ctx, y, 40);
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(9);
+  doc.setTextColor(BRAND.graphite[0], BRAND.graphite[1], BRAND.graphite[2]);
+  doc.text(`${empresa.cidade || "—"}, ${format(new Date(), "dd 'de' MMMM 'de' yyyy")}`, pageW - marginX, y, { align: "right" });
   y += 10;
 
-  if (y > pageH - 40) { doc.addPage(); y = 20; }
+  y = signatureBlock(ctx, y, [
+    { nome: func.nome, papel: "Colaborador", documento: func.cpf ? `CPF ${func.cpf}` : undefined },
+    { nome: empresa.nome_responsavel || empresa.nome_fantasia || empresa.razao_social, papel: empresa.cargo_responsavel || "Responsável — Empregador" },
+  ]);
 
-  // Assinaturas
-  const local = `${empresa.cidade || ""}, ${format(new Date(), "dd/MM/yyyy")}`;
-  doc.setFontSize(9).text(local, pageW - 14, y, { align: "right" });
-  y += 18;
-  doc.setDrawColor(0).line((pageW - 80) / 2, y, (pageW + 80) / 2, y);
-  y += 5;
-  doc.setFontSize(8).text(func.nome, pageW / 2, y, { align: "center" });
-  y += 4;
-  doc.text(`CPF: ${func.cpf || "—"}`, pageW / 2, y, { align: "center" });
-
+  finalizeBranded(ctx);
   return doc.output("blob");
 }
