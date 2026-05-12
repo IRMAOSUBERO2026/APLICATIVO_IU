@@ -63,6 +63,7 @@ export function GeradorDocumentos() {
   const [funcId, setFuncId] = useState<string>("");
   const [tipoDoc, setTipoDoc] = useState<TipoDocumentoOficial>("advertencia");
   const [contextoUsuario, setContextoUsuario] = useState("");
+  const [reciboValor, setReciboValor] = useState<string>("");
 
   // Resultado
   const [textoGerado, setTextoGerado] = useState("");
