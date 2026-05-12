@@ -11,10 +11,8 @@ import { Plus, Trash2, Download, FileText, Save, Eye, ChevronDown } from "lucide
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
-import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
-import logoPreto from "@/assets/logo-preto.png";
 import { initBrandedDoc, finalizeBranded, brandedAddPage, sectionTitle, highlightValueBox, autoTableTheme, BRAND, ensureSpace, drawWatermark } from "@/lib/pdfBrand";
 
 interface EtapaOrcamento {
