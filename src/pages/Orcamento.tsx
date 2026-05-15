@@ -271,6 +271,7 @@ export default function Orcamento() {
       bodyStyles: { fontSize: 10, cellPadding: 4 },
       columnStyles: { 0: { fontStyle: "bold", cellWidth: 80 }, 1: { halign: "right" } },
       margin: { left: marginX, right: marginX },
+      didDrawPage: () => { decorateCurrentPage(ctx); },
     });
     y = (doc as any).lastAutoTable.finalY + 6;
 
@@ -316,6 +317,7 @@ export default function Orcamento() {
       footStyles: { fillColor: BRAND.greenDark, textColor: [255,255,255], fontStyle: "bold" },
       columnStyles: { 1: { halign: "right" }, 2: { halign: "right" }, 3: { halign: "center" }, 4: { halign: "right" } },
       margin: { left: marginX, right: marginX },
+      didDrawPage: () => { decorateCurrentPage(ctx); },
     });
     y = (doc as any).lastAutoTable.finalY + 8;
     y = highlightValueBox(ctx, y, "Investimento total da proposta", formatCurrency(total), `${areaTot.toLocaleString("pt-BR")} m² de estrutura`);
@@ -330,6 +332,7 @@ export default function Orcamento() {
       ...autoTableTheme(ctx.primary),
       columnStyles: { 1: { halign: "right", cellWidth: 50 } },
       margin: { left: marginX, right: marginX },
+      didDrawPage: () => { decorateCurrentPage(ctx); },
     });
     y = (doc as any).lastAutoTable.finalY + 8;
 
