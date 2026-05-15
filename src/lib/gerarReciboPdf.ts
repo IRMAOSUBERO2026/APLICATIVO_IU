@@ -1,6 +1,6 @@
 import { format } from "date-fns";
 import autoTable from "jspdf-autotable";
-import { initBrandedDoc, finalizeBranded, sectionTitle, infoGrid, signatureBlock, highlightValueBox, BRAND, autoTableTheme, ensureSpace, BrandEmpresa } from "./pdfBrand";
+import { initBrandedDoc, finalizeBranded, sectionTitle, infoGrid, signatureBlock, highlightValueBox, BRAND, autoTableTheme, ensureSpace, BrandEmpresa, decorateCurrentPage } from "./pdfBrand";
 import { valorPorExtenso } from "./numeroPorExtenso";
 
 export interface ReciboInput {
@@ -79,6 +79,7 @@ export async function gerarReciboPdf(input: ReciboInput): Promise<Blob> {
       footStyles: { fillColor: BRAND.greenDark, textColor: [255,255,255], fontStyle: "bold" },
       columnStyles: { 1: { halign: "right", cellWidth: 40 } },
       margin: { left: marginX, right: marginX },
+      didDrawPage: () => { decorateCurrentPage(ctx); },
     });
     y = (doc as any).lastAutoTable.finalY + 6;
   } else {

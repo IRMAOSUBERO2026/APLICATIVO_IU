@@ -81,6 +81,8 @@ export interface BrandContext {
   secondary: [number, number, number];
   /** título usado no cabeçalho compacto das páginas seguintes */
   documentTitle: string;
+  /** páginas já decoradas com watermark+header (evita duplicação) */
+  decoratedPages: Set<number>;
 }
 
 export interface InitBrandedOptions {
@@ -114,11 +116,27 @@ export async function initBrandedDoc(opts: InitBrandedOptions): Promise<BrandCon
     empresa, logoData, watermarkData,
     primary, secondary,
     documentTitle: opts.documentTitle,
+    decoratedPages: new Set<number>([1]),
   };
 
   drawWatermark(ctx);
   drawHeader(ctx, true);
   return ctx;
+}
+
+/**
+ * Desenha watermark + cabeçalho compacto na página atual se ainda não foi decorada.
+ * Usar dentro de `didDrawPage` do autoTable para garantir que páginas adicionadas
+ * automaticamente também recebam marca d'água e cabeçalho institucional.
+ */
+export function decorateCurrentPage(ctx: BrandContext) {
+  const p = (ctx.doc as any).getCurrentPageInfo
+    ? (ctx.doc as any).getCurrentPageInfo().pageNumber
+    : (ctx.doc as any).internal.getCurrentPageInfo().pageNumber;
+  if (ctx.decoratedPages.has(p)) return;
+  ctx.decoratedPages.add(p);
+  drawWatermark(ctx);
+  drawHeader(ctx, false);
 }
 
 /** Marca d'água central com baixa opacidade (4-8%). */
@@ -265,6 +283,8 @@ export function finalizeBranded(ctx: BrandContext) {
 /** Adiciona uma página, redesenhando watermark e cabeçalho compacto. */
 export function brandedAddPage(ctx: BrandContext) {
   ctx.doc.addPage();
+  const p = ctx.doc.getNumberOfPages();
+  ctx.decoratedPages.add(p);
   drawWatermark(ctx);
   drawHeader(ctx, false);
   return 24; // y inicial do conteúdo nas páginas internas

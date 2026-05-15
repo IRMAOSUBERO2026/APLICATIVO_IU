@@ -1,7 +1,7 @@
 import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
-import { initBrandedDoc, finalizeBranded, sectionTitle, infoGrid, signatureBlock, autoTableTheme, BRAND, ensureSpace } from "./pdfBrand";
+import { initBrandedDoc, finalizeBranded, sectionTitle, infoGrid, signatureBlock, autoTableTheme, BRAND, ensureSpace, decorateCurrentPage } from "./pdfBrand";
 
 function safeDate(d: any): string {
   if (!d) return "—";
@@ -84,7 +84,7 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
       7: { minCellHeight: 11, cellWidth: 28 },
     },
     margin: { left: marginX, right: marginX },
-    didDrawPage: () => { /* watermark/header já desenhados via brandedAddPage seria ideal; aceitável */ },
+    didDrawPage: () => { decorateCurrentPage(ctx); },
   });
 
   y = (doc as any).lastAutoTable.finalY + 8;
