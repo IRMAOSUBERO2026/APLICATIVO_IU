@@ -267,7 +267,7 @@ export default function RH() {
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Recursos Humanos / DP - PORTAL ATIVO</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Recursos Humanos / DP</h1>
             <p className="text-sm text-muted-foreground">{allFuncionarios.length} funcionários cadastrados</p>
           </div>
           <div className="flex flex-wrap gap-2">
