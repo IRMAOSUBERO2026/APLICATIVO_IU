@@ -13,7 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { format } from "date-fns";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
-import { initBrandedDoc, finalizeBranded, brandedAddPage, sectionTitle, highlightValueBox, autoTableTheme, BRAND, ensureSpace, drawWatermark } from "@/lib/pdfBrand";
+import { initBrandedDoc, finalizeBranded, brandedAddPage, sectionTitle, highlightValueBox, autoTableTheme, BRAND, ensureSpace, drawWatermark, decorateCurrentPage } from "@/lib/pdfBrand";
 
 interface EtapaOrcamento {
   id: string;
