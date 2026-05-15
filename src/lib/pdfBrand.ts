@@ -81,6 +81,8 @@ export interface BrandContext {
   secondary: [number, number, number];
   /** título usado no cabeçalho compacto das páginas seguintes */
   documentTitle: string;
+  /** páginas já decoradas com watermark+header (evita duplicação) */
+  decoratedPages: Set<number>;
 }
 
 export interface InitBrandedOptions {
