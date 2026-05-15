@@ -1,80 +1,50 @@
-
-# Migração Segura de Supabase — Backup → Transferência → Validação
-
 ## Objetivo
-Mover todos os dados do banco atual em uso pelo app (`znfxvpggckayokiphglt`) para o repositor da sua conta (`uvrqntfjknojxkiwsibz`, conta `luis@irmaosubero.com`), **sem perder nenhum dado** e sem que o sistema apresente qualquer alteração de comportamento.
+Garantir que a logo apareça sempre legível, sobre **fundo branco**, em todos os PDFs gerados — com prioridade na Ficha de EPI — e padronizar o cabeçalho/marca d'água em todos os geradores.
 
----
+## Diagnóstico
+Hoje, em `src/lib/pdfBrand.ts` (usado por Ficha EPI, Recibo, Orçamento, PDF Oficial), a logo é desenhada **diretamente sobre a faixa verde** do cabeçalho usando `logo-preto.png`. Resultado: contraste fraco / quase invisível.
 
-## Avaliação de risco do destino `uvrqntfjknojxkiwsibz`
+Além disso, há geradores que **não usam** o pdfBrand e seguem padrão antigo:
+- `src/lib/diarioPdfGenerator.ts`
+- `src/lib/gerarPlanilhaMedicaoPdf.ts`
+- `src/lib/pdfTemplate.ts` (utilizado por `Ferias`, `Compras`, `EquipamentosProprios`, `FolhaResumoObra`, `ObraDetalhe`)
 
-Esse projeto já aparece referenciado no `supabase/config.toml` e nos scripts antigos (`corrigir_bancos.ps1`, `migrar_equipamentos.ps1`) como destino de testes. **Não temos certeza do que existe lá hoje** (pode ter dados parciais antigos, schema desatualizado, ou estar vazio).
+## Mudanças
 
-Por segurança eu recomendo **criar um projeto novo e limpo** dentro da sua conta `luis@irmaosubero.com` — assim:
-- Garantimos que nenhum dado do destino seja sobrescrito por engano.
-- Schema é recriado do zero, idêntico ao atual (sem resíduos).
-- Em caso de erro, o banco antigo (`znfxvpggckayokiphglt`) continua intacto e ativo — basta reverter o `.env`.
+### 1. `src/lib/pdfBrand.ts` — Logo em cartão branco no cabeçalho
+- Em `drawHeader`, antes de `addImage` da logo, desenhar um **retângulo branco arredondado** (com leve sombra/borda hairline) atrás da logo, tanto na página 1 (tamanho maior) quanto nas páginas internas (compacto).
+- Usar `logo-preto.png` por padrão (já é o ativo escuro) sobre o card branco — máximo contraste.
+- Marca d'água central permanece com `logo-preto.png` em opacidade ~6%, mas será também envolvida por sutil clareamento (mantém legibilidade do texto).
+- Pequeno ajuste de padding interno do card (2 mm) para a logo não encostar nas bordas.
 
-Se mesmo assim você quiser usar o `uvrqntfjknojxkiwsibz`, eu trato a primeira etapa como "destino limpo" (TRUNCATE em tudo antes de importar). Vou pedir confirmação no momento.
+### 2. `src/lib/gerarFichaEPIPdf.ts` — Reforço visual
+- Sem mudança de layout além do que vem automaticamente do pdfBrand.
+- Validar que o cabeçalho da página 1 fica com selo branco da logo + faixa verde + título "FICHA DE EPI".
 
----
+### 3. Migrar geradores legados para pdfBrand
+Para padronizar **todos** os PDFs com o mesmo cabeçalho/rodapé/marca d'água/logo em fundo branco:
+- `src/lib/diarioPdfGenerator.ts` → substituir cabeçalho manual por `initBrandedDoc` + `sectionTitle` + `finalizeBranded`. Preservar conteúdo (atividades, fotos, assinaturas).
+- `src/lib/gerarPlanilhaMedicaoPdf.ts` → idem; preservar tabela de medições e totais.
+- `src/lib/pdfTemplate.ts` → reescrever a função pública para delegar ao pdfBrand mantendo a mesma assinatura (compatibilidade com Férias, Compras, Equipamentos Próprios, Folha Resumo Obra, Obra Detalhe — sem mexer nesses callers).
 
-## Etapas
+### 4. QA visual
+Após implementar, gerar um exemplo de cada PDF (Ficha EPI, Recibo, Orçamento, Diário, Medição, Férias) e revisar via screenshot para confirmar logo visível sobre fundo branco e padrão idêntico.
 
-### Etapa 1 — Backup completo (zero risco, só leitura)
-Antes de qualquer mudança, gerar e salvar localmente:
+## Detalhes técnicos
+```text
+Cabeçalho página 1:
+┌────────────────────────────────────────────────┐
+│ [█ faixa preta 3mm] ← topo                     │
+│ ┌──────┐                                       │
+│ │ LOGO │  IRMÃOS UBERO ENGENHARIA   FICHA EPI  │ ← faixa verde
+│ │(white)│  CNPJ • Endereço • Contato  Emitido… │
+│ └──────┘                                       │
+│ ────── hairline verde escuro ──────            │
+└────────────────────────────────────────────────┘
+```
+- Card branco: `roundedRect(x, y, w, h, 1.5, 1.5, "F")` com `setFillColor(255,255,255)` antes do `addImage`.
+- Borda fina opcional `setDrawColor(BRAND.hairline)` + `setLineWidth(0.2)` + `"S"`.
 
-1. **Dump SQL completo** do schema + dados de todas as 30+ tabelas (`empresas`, `obras`, `funcionarios`, `folhas_pagamento`, `medicoes`, `compras`, `entregas_epi`, etc.).
-2. **Export CSV por tabela** (redundância, fácil de inspecionar no Excel).
-3. **Dump dos arquivos do Storage** (bucket `documentos` — fotos de funcionários, PDFs, fichas EPI, documentação mensal).
-4. **Lista de usuários do Auth** (e-mails + metadata; senhas não são exportáveis, usuários precisarão usar "esqueci senha" se trocarmos de Auth).
-
-Tudo salvo em `/mnt/documents/backup_supabase_AAAA-MM-DD/` para você baixar.
-
-### Etapa 2 — Preparar o destino
-- Você cria o projeto novo no painel do Supabase (ou confirma usar `uvrqntfjknojxkiwsibz`).
-- Você me passa **SERVICE_ROLE_KEY** e **URL** do destino via secret seguro.
-- Eu recrio o schema completo (todas as tabelas, RLS, função `tg_solicitacoes_diario_updated`, bucket `documentos`).
-
-### Etapa 3 — Importar dados
-- Importar tabelas em ordem de dependência (empresas → obras → funcionários → resto).
-- IDs originais preservados (sem remapeamento) para não quebrar referências.
-- Reupload dos arquivos do Storage mantendo a mesma estrutura de pastas.
-- Validação por contagem: cada tabela deve ter o mesmo número de linhas no destino.
-
-### Etapa 4 — Trocar o app para o novo banco
-- Atualizar `.env` (`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_PROJECT_ID`).
-- Atualizar `supabase/config.toml` (`project_id`).
-- Regenerar `src/integrations/supabase/types.ts` para o novo projeto.
-- **Banco antigo permanece intacto** como fallback por pelo menos 30 dias.
-
-### Etapa 5 — Validação no sistema
-Checklist navegando o app pós-migração:
-- Login + lista de empresas/obras carrega.
-- Folha de pagamento de um mês conhecido bate o valor antigo.
-- Diário de obra: fotos abrem corretamente.
-- Documentação mensal: PDFs antigos baixam.
-- Entrega de EPI, Compras, Medições: dados visíveis.
-- Edge function `resumo-diario` responde.
-
-Só depois dessa validação consideramos a migração concluída.
-
----
-
-## Plano de rollback
-Se qualquer coisa falhar em qualquer etapa:
-1. Reverter `.env` e `config.toml` para `znfxvpggckayokiphglt` (1 commit).
-2. App volta a operar com o banco original — nenhum dado perdido, pois o original nunca foi tocado.
-
----
-
-## O que preciso de você antes de começar
-
-1. **Decisão**: criar projeto Supabase novo (recomendado) **ou** usar o `uvrqntfjknojxkiwsibz` existente?
-2. Após criar/confirmar o projeto destino, fornecer via secret seguro:
-   - `DEST_SUPABASE_URL`
-   - `DEST_SUPABASE_SERVICE_ROLE_KEY` (encontrada em Settings → API → service_role)
-   - `DEST_SUPABASE_ANON_KEY`
-3. Confirmar se quer migrar também usuários do **Auth** (se houver login configurado).
-
-Assim que aprovar este plano, começo pela **Etapa 1 (backup)** que é totalmente segura e não toca em nada.
+## Fora de escopo
+- Nenhuma alteração de regra de negócio, dados, ou conteúdo dos PDFs.
+- Sem mudança em rotas, componentes de UI ou banco.
