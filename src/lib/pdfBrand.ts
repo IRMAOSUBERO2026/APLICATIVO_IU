@@ -283,6 +283,8 @@ export function finalizeBranded(ctx: BrandContext) {
 /** Adiciona uma página, redesenhando watermark e cabeçalho compacto. */
 export function brandedAddPage(ctx: BrandContext) {
   ctx.doc.addPage();
+  const p = ctx.doc.getNumberOfPages();
+  ctx.decoratedPages.add(p);
   drawWatermark(ctx);
   drawHeader(ctx, false);
   return 24; // y inicial do conteúdo nas páginas internas
