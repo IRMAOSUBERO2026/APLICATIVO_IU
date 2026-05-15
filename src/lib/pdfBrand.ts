@@ -150,14 +150,27 @@ export function drawHeader(ctx: BrandContext, primeiraPagina = false) {
   doc.setFillColor(primary[0], primary[1], primary[2]);
   doc.rect(0, 3, pageW, primeiraPagina ? 30 : 14, "F");
 
-  // Logo
+  // Logo sempre sobre cartão BRANCO para garantir contraste em qualquer cabeçalho colorido
   let textX = marginX;
   if (logoData) {
     try {
       const h = primeiraPagina ? 22 : 9;
       const w = h;
-      doc.addImage(logoData, "PNG", marginX, 5.5, w, h, undefined, "FAST");
-      textX = marginX + w + 5;
+      const pad = primeiraPagina ? 2 : 1;
+      const cardX = marginX;
+      const cardY = 5.5 - pad;
+      const cardW = w + pad * 2;
+      const cardH = h + pad * 2;
+      // Cartão branco arredondado
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(cardX, cardY, cardW, cardH, 1.5, 1.5, "F");
+      // Borda hairline sutil
+      doc.setDrawColor(BRAND.hairline[0], BRAND.hairline[1], BRAND.hairline[2]);
+      doc.setLineWidth(0.2);
+      doc.roundedRect(cardX, cardY, cardW, cardH, 1.5, 1.5, "S");
+      // Logo dentro do cartão
+      doc.addImage(logoData, "PNG", cardX + pad, cardY + pad, w, h, undefined, "FAST");
+      textX = cardX + cardW + 5;
     } catch { /* ignore */ }
   }
 
