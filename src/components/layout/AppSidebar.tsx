@@ -35,7 +35,7 @@ const menuSections = [
     label: "Principal",
     items: [
       { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-      { icon: CalendarDays, label: "Área do Funcionário", path: "/area-funcionario" },
+      { icon: CalendarDays, label: "Portal Colaborador", path: "/portal" },
     ],
   },
   {

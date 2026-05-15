@@ -19,19 +19,14 @@
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@Lovable" />
-    
-    
-  
-  
-  
-  <meta property="og:title" content="IRMÃƒOS UBERO ENGENHARIA">
-  <meta name="twitter:title" content="IRMÃƒOS UBERO ENGENHARIA">
-  <meta property="og:description" content="Lovable Generated Project">
-    <meta name="twitter:description" content="Lovable Generated Project">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#3b82f6">
     <script>
-      // Força o modo claro e remove rastros de temas antigos
-      document.documentElement.classList.remove('dark');
-      localStorage.removeItem('theme');
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js');
+        });
+      }
     </script>
   </head>
 

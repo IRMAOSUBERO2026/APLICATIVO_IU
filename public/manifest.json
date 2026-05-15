@@ -1,0 +1,17 @@
+{
+  "name": "Irmãos Ubero - Portal",
+  "short_name": "Portal Ubero",
+  "description": "Portal do Colaborador - Irmãos Ubero Engenharia",
+  "start_url": "/portal",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

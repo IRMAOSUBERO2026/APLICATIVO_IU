@@ -1,15 +1,15 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Search, Upload, MessageCircle, UserPlus, FolderOpen, Stethoscope, ArrowRightLeft, Save, Filter, Calendar, LogOut, Pencil, FileSpreadsheet, FileDown, Trash2 } from "lucide-react";
+import { Search, Upload, UserPlus, FolderOpen, Stethoscope, ArrowRightLeft, Save, Filter, Calendar, LogOut, Pencil, FileSpreadsheet, FileDown, Trash2, LayoutDashboard } from "lucide-react";
 import { baixarModeloFuncionarios, importarPlanilhaFuncionarios } from "@/lib/funcionariosPlanilha";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { toast } from "@/hooks/use-toast";
 import { Funcionario, funcionariosData, getExamStatus } from "@/components/rh/types";
 import { ExamBadge } from "@/components/rh/ExamBadge";
 import { FuncionarioAvatar } from "@/components/rh/FuncionarioAvatar";
-import { WhatsAppSender } from "@/components/rh/WhatsAppSender";
 import { PreCadastroForm } from "@/components/rh/PreCadastroForm";
 import { DocumentManager } from "@/components/rh/DocumentManager";
 import { ExamesModule } from "@/components/rh/ExamesModule";
+import { GestaoPinsModule } from "@/components/rh/GestaoPinsModule";
 import { TransferirFuncionario } from "@/components/rh/TransferirFuncionario";
 import { EditFuncionarioForm } from "@/components/rh/EditFuncionarioForm";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollableTable } from "@/components/shared/ScrollableTable";
 
-type TabKey = "lista" | "exames_tab" | "exames_modulo";
+type TabKey = "lista" | "exames_tab" | "exames_modulo" | "gestao_pins";
 
 const STATUS_OPTIONS = [
   { value: "ativo", label: "Ativo" },
@@ -72,7 +72,6 @@ export default function RH() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const xlsxInputRef = useRef<HTMLInputElement>(null);
   const [funcionarios] = useState(funcionariosData);
-  const [whatsOpen, setWhatsOpen] = useState(false);
   const [preCadastroOpen, setPreCadastroOpen] = useState(false);
   const [docManagerOpen, setDocManagerOpen] = useState(false);
   const [selectedFuncDoc, setSelectedFuncDoc] = useState<{ id: string; nome: string } | null>(null);
@@ -268,13 +267,10 @@ export default function RH() {
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Recursos Humanos / DP</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Recursos Humanos / DP - PORTAL ATIVO</h1>
             <p className="text-sm text-muted-foreground">{allFuncionarios.length} funcionários cadastrados</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button onClick={() => setWhatsOpen(true)} className="inline-flex items-center gap-2 rounded-lg bg-success px-4 py-2.5 text-sm font-medium text-success-foreground shadow-sm hover:bg-success/90 transition-colors">
-              <MessageCircle className="h-4 w-4" /> WhatsApp
-            </button>
             <button onClick={() => fileInputRef.current?.click()} className="inline-flex items-center gap-2 rounded-lg border bg-card px-4 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">
               <Upload className="h-4 w-4" /> Importar CSV
             </button>
@@ -388,7 +384,7 @@ export default function RH() {
         </div>
 
         {/* Quick Actions - Ações Rápidas do RH (Master Design) */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           <div onClick={() => setPreCadastroOpen(true)} className="group bg-card hover:bg-primary/5 cursor-pointer border-2 border-transparent hover:border-primary/20 rounded-2xl p-5 flex flex-col items-center justify-center gap-3 transition-all duration-300 shadow-sm hover:shadow-md active:scale-95">
             <div className="h-12 w-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
               <UserPlus size={24} />
@@ -419,7 +415,17 @@ export default function RH() {
             </div>
           </div>
 
-          <div className="group bg-card hover:bg-destructive/5 cursor-pointer border-2 border-transparent hover:border-destructive/20 rounded-2xl p-5 flex flex-col items-center justify-center gap-3 transition-all duration-300 shadow-sm hover:shadow-md active:scale-95 opacity-80 hover:opacity-100">
+          <div onClick={() => setTab("gestao_pins")} className="group bg-card hover:bg-blue-500/5 cursor-pointer border-2 border-transparent hover:border-blue-500/20 rounded-2xl p-5 flex flex-col items-center justify-center gap-3 transition-all duration-300 shadow-sm hover:shadow-md active:scale-95">
+            <div className="h-12 w-12 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
+              <LayoutDashboard size={24} />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-bold text-foreground">Portal Colaborador</p>
+              <p className="text-[10px] text-muted-foreground">Gestão de Acessos</p>
+            </div>
+          </div>
+
+          <div onClick={() => setTab("lista")} className="group bg-card hover:bg-destructive/5 cursor-pointer border-2 border-transparent hover:border-destructive/20 rounded-2xl p-5 flex flex-col items-center justify-center gap-3 transition-all duration-300 shadow-sm hover:shadow-md active:scale-95 opacity-80 hover:opacity-100">
             <div className="h-12 w-12 bg-destructive/10 rounded-xl flex items-center justify-center text-destructive group-hover:scale-110 transition-transform">
               <LogOut size={24} />
             </div>
@@ -442,9 +448,14 @@ export default function RH() {
           <button onClick={() => setTab("exames_modulo")} className={`min-w-max flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${tab === "exames_modulo" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
             <span className="flex items-center justify-center gap-1.5"><Stethoscope className="h-3.5 w-3.5" /> Gestão de Exames</span>
           </button>
+          <button onClick={() => setTab("gestao_pins")} className={`min-w-max flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${tab === "gestao_pins" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+            Acessos ao Portal
+          </button>
         </div>
 
-        {tab === "exames_modulo" ? (
+        {tab === "gestao_pins" ? (
+          <GestaoPinsModule />
+        ) : tab === "exames_modulo" ? (
           <ExamesModule />
         ) : tab === "exames_tab" ? (
           <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
@@ -699,7 +710,6 @@ export default function RH() {
       </div>
 
       {/* Modals */}
-      <WhatsAppSender open={whatsOpen} onOpenChange={setWhatsOpen} funcionarios={funcionarios} />
       <PreCadastroForm open={preCadastroOpen} onOpenChange={setPreCadastroOpen} onSave={() => loadDbFuncionarios()} nextId={funcionarios.length + 1} />
       {selectedFuncDoc && (
         <DocumentManager open={docManagerOpen} onOpenChange={setDocManagerOpen} funcionarioId={selectedFuncDoc.id} funcionarioNome={selectedFuncDoc.nome} />
