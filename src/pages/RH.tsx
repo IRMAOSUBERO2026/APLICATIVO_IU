@@ -12,6 +12,7 @@ import { ExamesModule } from "@/components/rh/ExamesModule";
 import { GestaoPinsModule } from "@/components/rh/GestaoPinsModule";
 import { TransferirFuncionario } from "@/components/rh/TransferirFuncionario";
 import { EditFuncionarioForm } from "@/components/rh/EditFuncionarioForm";
+import { MonitorAtividadesRH } from "@/components/rh/MonitorAtividadesRH";
 import { supabase } from "@/integrations/supabase/client";
 import { differenceInDays, parseISO, format, addDays } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -20,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollableTable } from "@/components/shared/ScrollableTable";
 
-type TabKey = "lista" | "exames_tab" | "exames_modulo" | "gestao_pins";
+type TabKey = "lista" | "exames_tab" | "exames_modulo" | "gestao_pins" | "monitor";
 
 const STATUS_OPTIONS = [
   { value: "ativo", label: "Ativo" },
@@ -262,6 +263,22 @@ export default function RH() {
     }
   };
 
+  const sendPortalInvite = (funcionario: any) => {
+    if (!funcionario.telefone) {
+      toast({ title: "Erro", description: "Funcionário sem telefone cadastrado.", variant: "destructive" });
+      return;
+    }
+    
+    const cleanPhone = funcionario.telefone.replace(/\D/g, "");
+    const cleanCpf = (funcionario.cpf || "").replace(/\D/g, "");
+    const url = "https://iuengenharia.lovable.app/login-portal";
+    
+    const message = `Olá *${funcionario.nome}*,\n\nEste é o seu link de acesso ao *Portal do Colaborador Irmãos Ubero*: ${url}\n\n*Seu Login:* ${cleanCpf}\n*Sua Senha (PIN):* Solicite ao RH seu código de 4 dígitos para o primeiro acesso.\n\n_Dica: Ao abrir o link no celular, clique em "Adicionar à tela de início" para instalar como aplicativo._`;
+    
+    window.open(`https://wa.me/55${cleanPhone}?text=${encodeURIComponent(message)}`, "_blank");
+    toast({ title: "Convite preparado", description: "Redirecionando para o WhatsApp..." });
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -425,6 +442,16 @@ export default function RH() {
             </div>
           </div>
 
+          <div onClick={() => setTab("monitor")} className="group bg-card hover:bg-success/5 cursor-pointer border-2 border-transparent hover:border-success/20 rounded-2xl p-5 flex flex-col items-center justify-center gap-3 transition-all duration-300 shadow-sm hover:shadow-md active:scale-95">
+            <div className="h-12 w-12 bg-success/10 rounded-xl flex items-center justify-center text-success group-hover:scale-110 transition-transform">
+              <LayoutDashboard size={24} />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-bold text-foreground">Monitor/Mural</p>
+              <p className="text-[10px] text-muted-foreground">Atividades Portal</p>
+            </div>
+          </div>
+
           <div onClick={() => setTab("lista")} className="group bg-card hover:bg-destructive/5 cursor-pointer border-2 border-transparent hover:border-destructive/20 rounded-2xl p-5 flex flex-col items-center justify-center gap-3 transition-all duration-300 shadow-sm hover:shadow-md active:scale-95 opacity-80 hover:opacity-100">
             <div className="h-12 w-12 bg-destructive/10 rounded-xl flex items-center justify-center text-destructive group-hover:scale-110 transition-transform">
               <LogOut size={24} />
@@ -451,9 +478,14 @@ export default function RH() {
           <button onClick={() => setTab("gestao_pins")} className={`min-w-max flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${tab === "gestao_pins" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
             Acessos ao Portal
           </button>
+          <button onClick={() => setTab("monitor")} className={`min-w-max flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${tab === "monitor" ? "bg-card shadow-sm text-success" : "text-muted-foreground hover:text-foreground"}`}>
+            Monitor / Mural
+          </button>
         </div>
 
-        {tab === "gestao_pins" ? (
+        {tab === "monitor" ? (
+          <MonitorAtividadesRH />
+        ) : tab === "gestao_pins" ? (
           <GestaoPinsModule />
         ) : tab === "exames_modulo" ? (
           <ExamesModule />
@@ -693,6 +725,13 @@ export default function RH() {
                                   <LogOut className="h-4 w-4" />
                                 </button>
                               )}
+                              <button 
+                                onClick={() => sendPortalInvite(f)} 
+                                className="p-1.5 rounded-lg text-muted-foreground hover:text-success hover:bg-success/10 transition-colors" 
+                                title="Enviar Convite Portal (WhatsApp)"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </button>
                             </div>
                           </td>
                         </tr>

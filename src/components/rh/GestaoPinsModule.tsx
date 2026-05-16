@@ -220,6 +220,20 @@ export function GestaoPinsModule() {
             <Button onClick={handleSavePin} disabled={isSubmitting || pin.length < 4}>
               {isSubmitting ? "Salvando..." : "Salvar e Liberar Acesso"}
             </Button>
+            {selectedFunc?.pin_configurado && (
+              <Button 
+                variant="secondary" 
+                className="bg-success hover:bg-success/90 text-white gap-2"
+                onClick={() => {
+                  const cleanPhone = (selectedFunc as any).telefone?.replace(/\D/g, "") || "";
+                  const cleanCpf = (selectedFunc.cpf || "").replace(/\D/g, "");
+                  const msg = `Olá *${selectedFunc.nome}*,\n\nSeu acesso ao *Portal do Colaborador* está liberado!\n\n*Link:* https://iuengenharia.lovable.app/login-portal\n*Login:* ${cleanCpf}\n*Senha (PIN):* ${pin}\n\n_Guarde este código para acessar seus recibos e ponto._`;
+                  window.open(`https://wa.me/55${cleanPhone}?text=${encodeURIComponent(msg)}`, "_blank");
+                }}
+              >
+                Enviar via WhatsApp
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>
