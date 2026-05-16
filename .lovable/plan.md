@@ -1,54 +1,50 @@
 ## Objetivo
+Garantir que a logo apareça sempre legível, sobre **fundo branco**, em todos os PDFs gerados — com prioridade na Ficha de EPI — e padronizar o cabeçalho/marca d'água em todos os geradores.
 
-Permitir cadastrar bonificações padrão por funcionário (descrição, valor, tipo Fixo Mensal ou Condicional) e usá-las para pré-preencher os campos de Meta e Assiduidade ao abrir o cálculo da folha do mês.
+## Diagnóstico
+Hoje, em `src/lib/pdfBrand.ts` (usado por Ficha EPI, Recibo, Orçamento, PDF Oficial), a logo é desenhada **diretamente sobre a faixa verde** do cabeçalho usando `logo-preto.png`. Resultado: contraste fraco / quase invisível.
 
-## Como vai funcionar (visão de uso)
+Além disso, há geradores que **não usam** o pdfBrand e seguem padrão antigo:
+- `src/lib/diarioPdfGenerator.ts`
+- `src/lib/gerarPlanilhaMedicaoPdf.ts`
+- `src/lib/pdfTemplate.ts` (utilizado por `Ferias`, `Compras`, `EquipamentosProprios`, `FolhaResumoObra`, `ObraDetalhe`)
 
-1. No RH, ao cadastrar (Pré-Cadastro) ou editar um funcionário, surge a seção **"Bonificações Padrão"**:
-   - Lista de bonificações com botões "+ Adicionar" e "Remover".
-   - Cada linha: Descrição (texto livre, com sugestões: Assiduidade, Sem Falta, Meta, Desempenho), Valor (R$), Tipo (Fixo Mensal | Condicional).
-   - Texto de ajuda: "Fixo Mensal = soma sempre. Condicional = vem pré-preenchido, mas você confirma na folha do mês."
+## Mudanças
 
-2. Na Folha Salarial, ao abrir o cálculo de um funcionário do mês:
-   - Se ainda não houver folha salva (mês em aberto), o sistema lê as bonificações padrão do funcionário e pré-preenche:
-     - **Bonificação Meta** = soma das bonificações cuja descrição contém "meta" ou "desempenho".
-     - **Bonificação Assiduidade** = soma das demais (Assiduidade, Sem Falta, etc.).
-   - Os campos continuam editáveis. Um pequeno aviso aparece: "Pré-preenchido a partir das Bonificações Padrão do funcionário."
-   - Quando a folha já estiver salva (rascunho ou fechada), mantém os valores salvos e não sobrescreve.
+### 1. `src/lib/pdfBrand.ts` — Logo em cartão branco no cabeçalho
+- Em `drawHeader`, antes de `addImage` da logo, desenhar um **retângulo branco arredondado** (com leve sombra/borda hairline) atrás da logo, tanto na página 1 (tamanho maior) quanto nas páginas internas (compacto).
+- Usar `logo-preto.png` por padrão (já é o ativo escuro) sobre o card branco — máximo contraste.
+- Marca d'água central permanece com `logo-preto.png` em opacidade ~6%, mas será também envolvida por sutil clareamento (mantém legibilidade do texto).
+- Pequeno ajuste de padding interno do card (2 mm) para a logo não encostar nas bordas.
 
-## Implementação técnica
+### 2. `src/lib/gerarFichaEPIPdf.ts` — Reforço visual
+- Sem mudança de layout além do que vem automaticamente do pdfBrand.
+- Validar que o cabeçalho da página 1 fica com selo branco da logo + faixa verde + título "FICHA DE EPI".
 
-### 1. Banco de dados (migration)
-Adicionar coluna `bonificacoes_padrao jsonb default '[]'::jsonb` na tabela `funcionarios`. Estrutura:
-```json
-[
-  { "descricao": "Assiduidade", "valor": 150, "tipo": "fixo" },
-  { "descricao": "Meta", "valor": 200, "tipo": "condicional" }
-]
+### 3. Migrar geradores legados para pdfBrand
+Para padronizar **todos** os PDFs com o mesmo cabeçalho/rodapé/marca d'água/logo em fundo branco:
+- `src/lib/diarioPdfGenerator.ts` → substituir cabeçalho manual por `initBrandedDoc` + `sectionTitle` + `finalizeBranded`. Preservar conteúdo (atividades, fotos, assinaturas).
+- `src/lib/gerarPlanilhaMedicaoPdf.ts` → idem; preservar tabela de medições e totais.
+- `src/lib/pdfTemplate.ts` → reescrever a função pública para delegar ao pdfBrand mantendo a mesma assinatura (compatibilidade com Férias, Compras, Equipamentos Próprios, Folha Resumo Obra, Obra Detalhe — sem mexer nesses callers).
+
+### 4. QA visual
+Após implementar, gerar um exemplo de cada PDF (Ficha EPI, Recibo, Orçamento, Diário, Medição, Férias) e revisar via screenshot para confirmar logo visível sobre fundo branco e padrão idêntico.
+
+## Detalhes técnicos
+```text
+Cabeçalho página 1:
+┌────────────────────────────────────────────────┐
+│ [█ faixa preta 3mm] ← topo                     │
+│ ┌──────┐                                       │
+│ │ LOGO │  IRMÃOS UBERO ENGENHARIA   FICHA EPI  │ ← faixa verde
+│ │(white)│  CNPJ • Endereço • Contato  Emitido… │
+│ └──────┘                                       │
+│ ────── hairline verde escuro ──────            │
+└────────────────────────────────────────────────┘
 ```
-`tipo` aceita `"fixo"` ou `"condicional"`.
+- Card branco: `roundedRect(x, y, w, h, 1.5, 1.5, "F")` com `setFillColor(255,255,255)` antes do `addImage`.
+- Borda fina opcional `setDrawColor(BRAND.hairline)` + `setLineWidth(0.2)` + `"S"`.
 
-### 2. RH — formulários
-- **`src/components/rh/PreCadastroForm.tsx`**: adicionar nova etapa "Bonificações" (ou seção dentro de "Trabalho") com lista editável. Salvar `bonificacoes_padrao` no insert.
-- **`src/components/rh/EditFuncionarioForm.tsx`**: adicionar a mesma seção, carregando do registro e salvando no update. Como o formulário atual itera sobre `FIELDS`, renderizar a seção de bonificações fora desse loop, no final do form.
-
-Componente reutilizável: criar `src/components/rh/BonificacoesPadraoEditor.tsx` recebendo `value` (array) e `onChange`, com botão de adicionar/remover linhas.
-
-### 3. Folha Salarial — pré-preenchimento
-- **`src/pages/Folha.tsx`**:
-  - No `select` de `funcionarios` (linhas 175–177), incluir `bonificacoes_padrao`.
-  - Após montar `list`, para cada funcionário sem folha existente (`!existing`), calcular:
-    - `meta = soma de bons cujo descricao.toLowerCase() contém "meta" ou "desempenho"`
-    - `assiduidade = soma das demais`
-  - Aplicar em `input.bonificacao_meta` e `input.bonificacao_assiduidade`.
-  - Funcionários com folha já salva permanecem com os valores persistidos.
-
-### 4. Tipos
-- Atualizar `src/integrations/supabase/types.ts` é automático após a migration.
-- Criar tipo local `BonificacaoPadrao` em `src/components/rh/types.ts` para reuso.
-
-## Observações
-
-- Não altera o motor de cálculo (`motorFolha.ts`) — continua somando `bonificacao_meta + bonificacao_assiduidade` como hoje.
-- O usuário sempre pode editar antes de fechar o mês, conforme solicitado.
-- Mantém compatibilidade com funcionários existentes (campo default `[]`).
+## Fora de escopo
+- Nenhuma alteração de regra de negócio, dados, ou conteúdo dos PDFs.
+- Sem mudança em rotas, componentes de UI ou banco.

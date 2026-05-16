@@ -285,7 +285,7 @@ export function FolhaCalculoIndividual({
         {/* RIGHT: Live summary */}
         <div className="space-y-3">
           {result ? (
-            <FolhaResultado result={result} />
+            <FolhaResultado result={result} input={input} />
           ) : (
             <Card className="border-dashed">
               <CardContent className="py-8 text-center">

@@ -14,10 +14,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Textarea } from "@/components/ui/textarea";
 import {
   Calculator, RefreshCw, Download, CheckCircle2, History, Save, Trash2, Edit, FileCheck2, CalendarClock,
-  Ruler, Plus, FileText, TrendingUp, DollarSign, ChevronRight, AlertCircle, LayoutGrid, ListChecks, ArrowRightLeft, Percent
+  Ruler, Plus, FileText, TrendingUp, DollarSign, ChevronRight, AlertCircle, LayoutGrid, ListChecks, ArrowRightLeft, Percent,
+  Building2, Archive, ArrowLeft
 } from "lucide-react";
 import { format } from "date-fns";
 import { gerarPlanilhaMedicaoPdf } from "@/lib/gerarPlanilhaMedicaoPdf";
+import { OBRA_STATUS_INATIVOS, isObraAtiva } from "@/lib/obraStatus";
+import { sortByItemNumero as sortItensNatural } from "@/lib/sortItens";
 
 // Formatadores Premium
 const fCur = (v: any) => (Number(v) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -134,7 +137,7 @@ export default function Medicoes() {
     try {
       const { data, error } = await supabase.from("obras").select("*").order("codigo", { ascending: true });
       if (error) throw error;
-      const all = (data || []) as Obra[];
+      const all = (data || []) as unknown as Obra[];
       setObras(all);
       loadTotaisObras(all.map(o => o.id));
     } catch (err) {
@@ -176,17 +179,7 @@ export default function Medicoes() {
     }
   }, [selectedObraId, obras]);
 
-  const sortByItemNumero = (a: any, b: any) => {
-    const pa = String(a.item_numero || "").split(".").map((p: string) => parseInt(p, 10) || p);
-    const pb = String(b.item_numero || "").split(".").map((p: string) => parseInt(p, 10) || p);
-    const len = Math.max(pa.length, pb.length);
-    for (let i = 0; i < len; i++) {
-      if (pa[i] === undefined) return -1;
-      if (pb[i] === undefined) return 1;
-      if (pa[i] !== pb[i]) return pa[i] > pb[i] ? 1 : -1;
-    }
-    return 0;
-  };
+  const sortByItemNumero = sortItensNatural;
 
   const loadData = async () => {
     const [c, m, r] = await Promise.all([
@@ -412,18 +405,152 @@ export default function Medicoes() {
              </div>
              <div>
                 <h1 className="text-2xl font-black tracking-tight text-slate-800 uppercase italic">Boletim de Medição</h1>
-                <p className="text-[10px] uppercase font-bold text-slate-400 tracking-[0.2em]">{selectedObra?.nome || "Selecione uma obra"}</p>
+                <p className="text-[10px] uppercase font-bold text-slate-400 tracking-[0.2em]">{selectedObra?.nome || "Selecione uma obra para começar"}</p>
              </div>
           </div>
-          <div className="w-72">
-             <Select value={selectedObraId} onValueChange={setSelectedObraId}>
-                <SelectTrigger className="border-none bg-slate-50 h-12 rounded-xl font-bold text-slate-600"><SelectValue placeholder="Obra..." /></SelectTrigger>
-                <SelectContent className="rounded-xl border-none shadow-2xl">
-                   {obras.map(o => <SelectItem key={o.id} value={o.id} className="font-bold">{o.codigo} - {o.nome}</SelectItem>)}
-                </SelectContent>
-             </Select>
+          <div className="flex items-center gap-3">
+            {selectedObraId && (
+              <Button variant="outline" className="rounded-xl gap-2 font-bold text-xs h-12" onClick={() => setSelectedObraId("")}>
+                <ArrowLeft size={14} /> Voltar às obras
+              </Button>
+            )}
+            <div className="w-72">
+               <Select value={selectedObraId} onValueChange={setSelectedObraId}>
+                  <SelectTrigger className="border-none bg-slate-50 h-12 rounded-xl font-bold text-slate-600"><SelectValue placeholder="Obra..." /></SelectTrigger>
+                  <SelectContent className="rounded-xl border-none shadow-2xl">
+                     {obras.map(o => <SelectItem key={o.id} value={o.id} className="font-bold">{o.codigo} - {o.nome}</SelectItem>)}
+                  </SelectContent>
+               </Select>
+            </div>
           </div>
         </div>
+
+        {!selectedObraId && (
+          <>
+            {isLoadingObras ? (
+              <div className="flex items-center justify-center h-64 bg-white rounded-[2rem] border shadow-sm">
+                <RefreshCw className="animate-spin text-slate-400" size={28} />
+              </div>
+            ) : obrasError ? (
+              <div className="bg-rose-50 border border-rose-200 rounded-2xl p-6 text-rose-700 text-sm font-bold">{obrasError}</div>
+            ) : (
+              <>
+                {/* OBRAS ATIVAS - PAINÉIS */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3 px-2">
+                    <Building2 size={16} className="text-emerald-600" />
+                    <h2 className="text-xs font-black uppercase tracking-widest text-slate-700">
+                      Obras em execução para medir ({obras.filter(o => isObraAtiva(o.status)).length})
+                    </h2>
+                  </div>
+                  {obras.filter(o => isObraAtiva(o.status)).length === 0 ? (
+                    <div className="bg-white rounded-2xl border p-8 text-center text-sm text-slate-400">
+                      Nenhuma obra ativa no momento.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                      {obras.filter(o => isObraAtiva(o.status)).map(o => {
+                        const t = totaisObras[o.id] || { contrato: 0, medido: 0 };
+                        const pct = t.contrato > 0 ? (t.medido / t.contrato) * 100 : 0;
+                        return (
+                          <button
+                            key={o.id}
+                            onClick={() => setSelectedObraId(o.id)}
+                            className="group text-left bg-white rounded-[1.5rem] border border-slate-100 hover:border-emerald-300 hover:shadow-xl transition-all p-5 flex flex-col gap-3"
+                          >
+                            <div className="flex items-start justify-between">
+                              <div className="rounded-xl bg-emerald-50 p-2 text-emerald-600">
+                                <Calculator size={18} />
+                              </div>
+                              <Badge className="bg-emerald-100 text-emerald-700 border-none font-black text-[9px] uppercase">Ativa</Badge>
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">{o.codigo}</p>
+                              <h3 className="font-black text-slate-800 text-sm leading-tight line-clamp-2">{o.nome}</h3>
+                              {o.cliente && (
+                                <p className="text-[10px] text-slate-400 mt-1 truncate">{o.cliente}</p>
+                              )}
+                            </div>
+                            <div className="border-t border-slate-50 pt-3 grid grid-cols-2 gap-2">
+                              <div>
+                                <p className="text-[8px] uppercase font-black text-slate-400 tracking-wider">Contrato</p>
+                                <p className="text-xs font-black text-slate-700">{fCur(t.contrato)}</p>
+                              </div>
+                              <div>
+                                <p className="text-[8px] uppercase font-black text-slate-400 tracking-wider">Medido</p>
+                                <p className="text-xs font-black text-emerald-600">{fCur(t.medido)}</p>
+                              </div>
+                            </div>
+                            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                              <div className="h-full bg-emerald-500 transition-all" style={{ width: `${Math.min(100, pct)}%` }} />
+                            </div>
+                            <div className="flex items-center justify-between text-[10px] font-black">
+                              <span className="text-slate-400 uppercase">Progresso</span>
+                              <span className="text-emerald-600">{pct.toFixed(1)}%</span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* OBRAS FINALIZADAS - LISTAGEM */}
+                <div className="mt-8">
+                  <div className="flex items-center gap-2 mb-3 px-2">
+                    <Archive size={16} className="text-slate-500" />
+                    <h2 className="text-xs font-black uppercase tracking-widest text-slate-700">
+                      Obras finalizadas — eventuais medições ({obras.filter(o => !isObraAtiva(o.status)).length})
+                    </h2>
+                  </div>
+                  {obras.filter(o => !isObraAtiva(o.status)).length === 0 ? (
+                    <div className="bg-white rounded-2xl border p-6 text-center text-xs text-slate-400">
+                      Nenhuma obra finalizada cadastrada.
+                    </div>
+                  ) : (
+                    <div className="bg-white rounded-2xl border shadow-sm overflow-hidden">
+                      <Table>
+                        <TableHeader className="bg-slate-50">
+                          <TableRow>
+                            <TableHead className="text-[9px] font-black uppercase tracking-widest text-slate-400">Código</TableHead>
+                            <TableHead className="text-[9px] font-black uppercase tracking-widest text-slate-400">Obra</TableHead>
+                            <TableHead className="text-[9px] font-black uppercase tracking-widest text-slate-400">Cliente</TableHead>
+                            <TableHead className="text-[9px] font-black uppercase tracking-widest text-slate-400">Status</TableHead>
+                            <TableHead className="text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">Contrato</TableHead>
+                            <TableHead className="text-[9px] font-black uppercase tracking-widest text-slate-400 text-right">Medido</TableHead>
+                            <TableHead className="w-32"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {obras.filter(o => !isObraAtiva(o.status)).map(o => {
+                            const t = totaisObras[o.id] || { contrato: 0, medido: 0 };
+                            return (
+                              <TableRow key={o.id} className="hover:bg-slate-50/50 transition-colors">
+                                <TableCell className="font-mono text-[10px] font-black text-slate-500">{o.codigo}</TableCell>
+                                <TableCell className="font-bold text-sm text-slate-700">{o.nome}</TableCell>
+                                <TableCell className="text-xs text-slate-500">{o.cliente || "—"}</TableCell>
+                                <TableCell>
+                                  <Badge className="bg-slate-100 text-slate-600 border-none font-black text-[9px] uppercase">{o.status}</Badge>
+                                </TableCell>
+                                <TableCell className="text-right text-xs font-black text-slate-700">{fCur(t.contrato)}</TableCell>
+                                <TableCell className="text-right text-xs font-black text-emerald-600">{fCur(t.medido)}</TableCell>
+                                <TableCell className="text-right">
+                                  <Button variant="outline" size="sm" className="rounded-lg gap-1 font-bold text-[10px] h-8" onClick={() => setSelectedObraId(o.id)}>
+                                    Acessar <ChevronRight size={12} />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </>
+        )}
 
         {selectedObraId && (
           <>

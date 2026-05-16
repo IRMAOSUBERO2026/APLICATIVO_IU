@@ -28,6 +28,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { createBrandedPDF, addPDFFooter, getAutoTableStyles, addSignatureBlock, type EmpresaBranding } from "@/lib/pdfTemplate";
+import { ordenarItensContrato } from "@/lib/sortItens";
 
 interface Obra {
   id: string; codigo: string; nome: string; empresa_id: string; construtora?: string;
@@ -118,7 +119,7 @@ export default function ObraDetalhe({ obra, empresas, onBack, onEdit, subpastasD
       supabase.from("funcionarios").select("id", { count: "exact", head: true }).eq("obra_id", currentObra.id).eq("status", "ativo"),
       supabase.from("medicoes").select("id", { count: "exact", head: true }).eq("obra_id", currentObra.id),
     ]);
-    if (itensRes.data) setContratoItens(itensRes.data as ContratoItem[]);
+    if (itensRes.data) setContratoItens(ordenarItensContrato(itensRes.data as ContratoItem[]));
     if (reajRes.data) setReajustes(reajRes.data as Reajuste[]);
     setFuncionariosCount(funcRes.count || 0);
     setMedicoesCount(medRes.count || 0);

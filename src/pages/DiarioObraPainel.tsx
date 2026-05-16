@@ -1,7 +1,7 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Plus, Search, Calendar, FileText, ArrowLeft, Loader2, Download, Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Search, Calendar, FileText, ArrowLeft, Loader2, Download, Pencil, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
@@ -9,6 +9,7 @@ import { generateDiarioPdf } from "@/lib/diarioPdfGenerator";
 
 export default function DiarioObraPainel() {
   const { obraId } = useParams();
+  const navigate = useNavigate();
   const [obra, setObra] = useState<any>(null);
   const [diarios, setDiarios] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,13 +62,42 @@ export default function DiarioObraPainel() {
   const totalPages = Math.ceil(filteredDiarios.length / itemsPerPage);
   const paginatedDiarios = filteredDiarios.slice((page - 1) * itemsPerPage, page * itemsPerPage);
 
-  const handleGeneratePdf = (id: string) => {
+  const handleGeneratePdf = async (id: string) => {
     const diarioToExport = diarios.find(d => d.id === id);
     if (diarioToExport && obra) {
-      toast({ title: "Gerando PDF", description: "O download iniciará em instantes." });
-      generateDiarioPdf(diarioToExport, obra);
+      toast({ title: "Gerando PDF", description: "Carregando logo, fotos e resumo IA..." });
+      try {
+        await generateDiarioPdf(diarioToExport, obra);
+      } catch (e: any) {
+        toast({ title: "Erro ao gerar PDF", description: e?.message || "Falha desconhecida", variant: "destructive" });
+      }
     } else {
       toast({ title: "Erro", description: "Dados insuficientes para gerar o PDF.", variant: "destructive" });
+    }
+  };
+
+  const handleDelete = async (d: any) => {
+    const dataStr = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" }).format(new Date(d.data));
+    if (!confirm(`Excluir o RDO de ${dataStr}? Esta ação não pode ser desfeita.`)) return;
+    try {
+      // Remove fotos do storage (se existirem)
+      if (Array.isArray(d.fotos) && d.fotos.length > 0) {
+        const paths = d.fotos
+          .map((url: string) => {
+            const m = url.match(/\/documentos\/(.+)$/);
+            return m ? m[1] : null;
+          })
+          .filter(Boolean) as string[];
+        if (paths.length > 0) {
+          await supabase.storage.from("documentos").remove(paths);
+        }
+      }
+      const { error } = await supabase.from("diarios_obra").delete().eq("id", d.id);
+      if (error) throw error;
+      setDiarios(prev => prev.filter(x => x.id !== d.id));
+      toast({ title: "RDO excluído com sucesso" });
+    } catch (e: any) {
+      toast({ title: "Erro ao excluir", description: e.message, variant: "destructive" });
     }
   };
 
@@ -153,16 +183,23 @@ export default function DiarioObraPainel() {
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button 
-                            className="inline-flex h-8 items-center justify-center rounded-md border bg-background px-3 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                            onClick={() => toast({ title: "Visualizar", description: "Em construção" })}
+                            className="inline-flex h-8 items-center justify-center rounded-md border bg-background px-3 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                            onClick={() => navigate(`/diario-obra/${obraId}/${d.id}/editar`)}
                           >
-                            <Eye className="h-3.5 w-3.5 mr-1" /> Ver
+                            <Pencil className="h-3.5 w-3.5 mr-1" /> Ver / Editar
                           </button>
                           <button 
                             className="inline-flex h-8 items-center justify-center rounded-md bg-primary/10 px-3 text-xs font-medium text-primary hover:bg-primary/20 transition-colors"
                             onClick={() => handleGeneratePdf(d.id)}
                           >
                             <Download className="h-3.5 w-3.5 mr-1" /> PDF
+                          </button>
+                          <button 
+                            className="inline-flex h-8 items-center justify-center rounded-md bg-rose-50 px-3 text-xs font-medium text-rose-600 hover:bg-rose-100 transition-colors"
+                            onClick={() => handleDelete(d)}
+                            title="Excluir RDO"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       </td>

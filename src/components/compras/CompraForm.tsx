@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2, Save } from "lucide-react";
-import { CATEGORIAS_MATERIAL, UNIDADES } from "./types";
+import { CATEGORIAS_MATERIAL, UNIDADES, Compra } from "./types";
 import { ObraOption, EmpresaOption } from "@/hooks/useCompras";
 
 interface ItemForm {
@@ -39,22 +39,33 @@ interface CompraFormProps {
   obras: ObraOption[];
   empresas: EmpresaOption[];
   isSaving?: boolean;
+  initialData?: Partial<Compra> | null;
 }
 
-export function CompraForm({ onSave, onCancel, obras, empresas, isSaving }: CompraFormProps) {
+export function CompraForm({ onSave, onCancel, obras, empresas, isSaving, initialData }: CompraFormProps) {
   const [empresaId, setEmpresaId] = useState(empresas[0]?.id || "");
-  const [fornecedor, setFornecedor] = useState("");
-  const [cnpj, setCnpj] = useState("");
-  const [dataEmissao, setDataEmissao] = useState(new Date().toISOString().split("T")[0]);
+  const [fornecedor, setFornecedor] = useState(initialData?.fornecedor || "");
+  const [cnpj, setCnpj] = useState(initialData?.cnpjFornecedor || "");
+  const [dataEmissao, setDataEmissao] = useState(initialData?.dataEmissao || new Date().toISOString().split("T")[0]);
   const [dataEntrega, setDataEntrega] = useState("");
   const [obraId, setObraId] = useState("");
   const [formaPagamento, setFormaPagamento] = useState("boleto");
   const [parcelas, setParcelas] = useState(1);
-  const [observacoes, setObservacoes] = useState("");
-  const [nfeNumero, setNfeNumero] = useState("");
-  const [itens, setItens] = useState<ItemForm[]>([
-    { id: crypto.randomUUID(), descricao: "", unidade: "un", quantidade: 1, valorUnitario: 0, subtotal: 0, categoria: "Outros" },
-  ]);
+  const [observacoes, setObservacoes] = useState(initialData?.observacoes || "");
+  const [nfeNumero, setNfeNumero] = useState(initialData?.nfeNumero || "");
+  const [itens, setItens] = useState<ItemForm[]>(
+    initialData?.itens && initialData.itens.length > 0
+      ? initialData.itens.map(i => ({
+          id: i.id || crypto.randomUUID(),
+          descricao: i.descricao,
+          unidade: i.unidade || "un",
+          quantidade: i.quantidade,
+          valorUnitario: i.valorUnitario,
+          subtotal: i.subtotal,
+          categoria: i.categoria || "Outros",
+        }))
+      : [{ id: crypto.randomUUID(), descricao: "", unidade: "un", quantidade: 1, valorUnitario: 0, subtotal: 0, categoria: "Outros" }]
+  );
 
   const addItem = () => {
     setItens([...itens, { id: crypto.randomUUID(), descricao: "", unidade: "un", quantidade: 1, valorUnitario: 0, subtotal: 0, categoria: "Outros" }]);
