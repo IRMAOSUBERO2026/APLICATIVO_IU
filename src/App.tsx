@@ -64,6 +64,17 @@ const App = () => (
         <ScrollToTop />
         <Routes>
           <Route path="/" element={<Index />} />
+          
+          {/* Rotas do Portal do Colaborador - Prioridade Máxima */}
+          <Route path="/login-portal" element={<LoginPortal />} />
+          <Route path="/portal" element={<PortalColaborador />} />
+          <Route path="/portal/ponto" element={<MeuPonto />} />
+          <Route path="/portal/justificativas" element={<Justificativas />} />
+          <Route path="/portal/mural" element={<Mural />} />
+          <Route path="/portal/atendimento" element={<AtendimentoRH />} />
+          <Route path="/portal/sugestoes" element={<Sugestoes />} />
+          <Route path="/portal/meus-dados" element={<MeusDados />} />
+
           <Route path="/obras" element={<Obras />} />
           <Route path="/rh" element={<RH />} />
           <Route path="/folha" element={<Folha />} />
@@ -96,16 +107,6 @@ const App = () => (
           <Route path="/custos-obra" element={<CustosObra />} />
           <Route path="/clientes" element={<Clientes />} />
           <Route path="/solicitacoes" element={<Solicitacoes />} />
-          
-          {/* Rotas do Portal do Colaborador */}
-          <Route path="/login-portal" element={<LoginPortal />} />
-          <Route path="/portal" element={<PortalColaborador />} />
-          <Route path="/portal/ponto" element={<MeuPonto />} />
-          <Route path="/portal/justificativas" element={<Justificativas />} />
-          <Route path="/portal/mural" element={<Mural />} />
-          <Route path="/portal/atendimento" element={<AtendimentoRH />} />
-          <Route path="/portal/sugestoes" element={<Sugestoes />} />
-          <Route path="/portal/meus-dados" element={<MeusDados />} />
 
           <Route path="/ponto-afd" element={<ImportacaoAFD />} />
           <Route path="/ponto-consolidado" element={<PontoConsolidado />} />
