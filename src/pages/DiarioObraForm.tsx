@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
+import { normalizeStorageUrl } from "@/lib/storageUrl";
 
 interface FotoUpload {
   file: File;
