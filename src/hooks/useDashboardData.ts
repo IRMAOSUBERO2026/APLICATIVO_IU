@@ -163,7 +163,7 @@ export function useDashboardData() {
       }
 
       // ---- Série de faturamento (últimos 6 meses) — em paralelo ----
-      const seriePromises: Promise<FaturamentoPonto>[] = [];
+      const seriePromises: PromiseLike<FaturamentoPonto>[] = [];
       for (let i = 5; i >= 0; i--) {
         const d = new Date(ano, mes - 1 - i, 1);
         const a = d.getFullYear(); const m = d.getMonth() + 1;
