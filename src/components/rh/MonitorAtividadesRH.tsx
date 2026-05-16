@@ -59,18 +59,18 @@ export function MonitorAtividadesRH() {
       // Combinar para o mural (Timeline)
       const timeline: any[] = [];
       
-      justs?.forEach(j => timeline.push({
+      justs?.forEach((j: any) => timeline.push({
         id: j.id,
         tipo: "justificativa",
-        msg: `Nova justificativa (${j.tipo}) enviada por ${j.funcionarios?.nome}`,
+        msg: `Nova justificativa (${j.tipo}) enviada por ${j.funcionarios?.nome ?? 'funcionário'}`,
         data: j.created_at,
         status: "pendente"
       }));
 
-      updates?.forEach(u => timeline.push({
+      updates?.forEach((u: any) => timeline.push({
         id: u.id,
         tipo: "atualizacao",
-        msg: `Solicitação de alteração de dados: ${u.funcionarios?.nome}`,
+        msg: `Solicitação de alteração de dados: ${u.funcionarios?.nome ?? 'funcionário'}`,
         data: u.created_at,
         status: "pendente"
       }));

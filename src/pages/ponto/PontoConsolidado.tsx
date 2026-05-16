@@ -50,7 +50,7 @@ export default function PontoConsolidado() {
         supabase.from('obras').select('id, nome').order('nome'),
       ]);
 
-      setRegistros(regs ?? []);
+      setRegistros((regs ?? []) as any);
       setObras(obrasData ?? []);
       setCarregando(false);
     }

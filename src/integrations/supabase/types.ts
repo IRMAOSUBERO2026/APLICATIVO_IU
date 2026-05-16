@@ -14,6 +14,102 @@ export type Database = {
   }
   public: {
     Tables: {
+      afd_funcionarios_relogio: {
+        Row: {
+          cpf: string | null
+          data_hora: string | null
+          id: string
+          importacao_id: string
+          nome: string | null
+          operacao: string | null
+        }
+        Insert: {
+          cpf?: string | null
+          data_hora?: string | null
+          id?: string
+          importacao_id: string
+          nome?: string | null
+          operacao?: string | null
+        }
+        Update: {
+          cpf?: string | null
+          data_hora?: string | null
+          id?: string
+          importacao_id?: string
+          nome?: string | null
+          operacao?: string | null
+        }
+        Relationships: []
+      }
+      afd_importacoes: {
+        Row: {
+          created_at: string
+          data_fim: string | null
+          data_inicio: string | null
+          empresa: string | null
+          formato: string | null
+          id: string
+          nome_arquivo: string
+          obra_id: string | null
+          relogio_serial: string | null
+          total_registros: number
+        }
+        Insert: {
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string | null
+          empresa?: string | null
+          formato?: string | null
+          id?: string
+          nome_arquivo: string
+          obra_id?: string | null
+          relogio_serial?: string | null
+          total_registros?: number
+        }
+        Update: {
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string | null
+          empresa?: string | null
+          formato?: string | null
+          id?: string
+          nome_arquivo?: string
+          obra_id?: string | null
+          relogio_serial?: string | null
+          total_registros?: number
+        }
+        Relationships: []
+      }
+      afd_registros_ponto: {
+        Row: {
+          cpf: string
+          created_at: string
+          data_hora: string
+          id: string
+          importacao_id: string
+          nsr: number | null
+          obra_id: string | null
+        }
+        Insert: {
+          cpf: string
+          created_at?: string
+          data_hora: string
+          id?: string
+          importacao_id: string
+          nsr?: number | null
+          obra_id?: string | null
+        }
+        Update: {
+          cpf?: string
+          created_at?: string
+          data_hora?: string
+          id?: string
+          importacao_id?: string
+          nsr?: number | null
+          obra_id?: string | null
+        }
+        Relationships: []
+      }
       assinaturas_digitais: {
         Row: {
           cpf_confirmado: boolean | null
@@ -1549,6 +1645,42 @@ export type Database = {
           },
         ]
       }
+      justificativas_ponto: {
+        Row: {
+          anexo_url: string | null
+          created_at: string
+          data_ocorrencia: string
+          descricao: string | null
+          funcionario_id: string
+          id: string
+          status: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          anexo_url?: string | null
+          created_at?: string
+          data_ocorrencia: string
+          descricao?: string | null
+          funcionario_id: string
+          id?: string
+          status?: string
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          anexo_url?: string | null
+          created_at?: string
+          data_ocorrencia?: string
+          descricao?: string | null
+          funcionario_id?: string
+          id?: string
+          status?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       manutencoes_equipamento: {
         Row: {
           created_at: string
@@ -2212,6 +2344,36 @@ export type Database = {
           },
         ]
       }
+      portal_credentials: {
+        Row: {
+          created_at: string
+          funcionario_id: string
+          id: string
+          pin: string | null
+          pin_configurado: boolean
+          ultimo_acesso: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          funcionario_id: string
+          id?: string
+          pin?: string | null
+          pin_configurado?: boolean
+          ultimo_acesso?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          funcionario_id?: string
+          id?: string
+          pin?: string | null
+          pin_configurado?: boolean
+          ultimo_acesso?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       produtos: {
         Row: {
           ativo: boolean
@@ -2253,6 +2415,30 @@ export type Database = {
           ncm?: string | null
           preco_unitario?: number | null
           unidade?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          funcionario_id: string | null
+          id: string
+          role: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          funcionario_id?: string | null
+          id: string
+          role?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          funcionario_id?: string | null
+          id?: string
+          role?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -2307,6 +2493,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      solicitacoes_atualizacao: {
+        Row: {
+          created_at: string
+          dados_novos: Json
+          funcionario_id: string
+          id: string
+          motivo_reprovacao: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          dados_novos?: Json
+          funcionario_id: string
+          id?: string
+          motivo_reprovacao?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          dados_novos?: Json
+          funcionario_id?: string
+          id?: string
+          motivo_reprovacao?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       solicitacoes_compra_equipamento: {
         Row: {
@@ -2511,6 +2727,36 @@ export type Database = {
           },
         ]
       }
+      sugestoes: {
+        Row: {
+          anonimo: boolean
+          created_at: string
+          descricao: string | null
+          funcionario_id: string | null
+          id: string
+          status: string
+          titulo: string
+        }
+        Insert: {
+          anonimo?: boolean
+          created_at?: string
+          descricao?: string | null
+          funcionario_id?: string | null
+          id?: string
+          status?: string
+          titulo: string
+        }
+        Update: {
+          anonimo?: boolean
+          created_at?: string
+          descricao?: string | null
+          funcionario_id?: string | null
+          id?: string
+          status?: string
+          titulo?: string
+        }
+        Relationships: []
+      }
       tabela_precos_exames: {
         Row: {
           ativo: boolean
@@ -2666,7 +2912,20 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      vw_ponto_consolidado: {
+        Row: {
+          cpf: string | null
+          created_at: string | null
+          data_hora: string | null
+          id: string | null
+          importacao_id: string | null
+          nome_funcionario: string | null
+          nsr: number | null
+          obra_id: string | null
+          obra_nome: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
