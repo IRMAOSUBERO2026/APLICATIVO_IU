@@ -173,9 +173,12 @@ export default function DiarioObraForm() {
       setOcorrencias(d.ocorrencias || "");
       setResumoIA(extra.resumoIA || "");
       if (Array.isArray(extra.fotos) && extra.fotos.length) {
-        setFotosExistentes(extra.fotos.map((f: any) => typeof f === "string" ? { url: f, descricao: "" } : f));
+        setFotosExistentes(extra.fotos.map((f: any) => {
+          const raw = typeof f === "string" ? { url: f, descricao: "" } : f;
+          return { ...raw, url: normalizeStorageUrl(raw.url) };
+        }));
       } else if (Array.isArray(d.fotos) && d.fotos.length) {
-        setFotosExistentes(d.fotos.map((url: string) => ({ url, descricao: "" })));
+        setFotosExistentes(d.fotos.map((url: string) => ({ url: normalizeStorageUrl(url), descricao: "" })));
       }
       setAprovado(true);
       setLoadingDiario(false);
