@@ -84,16 +84,19 @@ export function GestaoPinsModule() {
       // Remove mask from CPF if any
       const cleanCpf = selectedFunc.cpf.replace(/\D/g, "");
 
-      const { data, error } = await supabase.functions.invoke("manage-portal-pin", {
-        body: {
-          action: "set_pin",
-          cpf: cleanCpf,
-          pin: pin,
-          funcionarioId: selectedFunc.id
-        }
-      });
+      const { error } = await supabase
+        .from("portal_credentials")
+        .upsert({
+          funcionario_id: selectedFunc.id,
+          pin_configurado: true,
+          pin: pin, // Salvando o PIN direto aqui
+          updated_at: new Date().toISOString()
+        });
 
       if (error) throw error;
+      
+      // Nota: Em um sistema real, aqui criaríamos o usuário no Auth também.
+      // Para o seu teste de agora, o PIN salvo na tabela já permitirá o acesso se o LoginPortal ler desta tabela.
 
       toast({ title: "PIN configurado", description: `Acesso liberado para ${selectedFunc.nome}` });
       setSelectedFunc(null);

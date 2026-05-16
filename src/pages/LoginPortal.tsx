@@ -30,25 +30,37 @@ export default function LoginPortal() {
         throw new Error("O PIN deve ter no mínimo 4 dígitos.");
       }
 
-      const email = `${cleanCpf}@irmaosubero.com`;
-      const password = pin;
+      // Busca o funcionário pelo CPF (comparando com a string exata do campo cpf que pode ter máscara)
+      const { data: funcData, error: funcError } = await supabase
+        .from("funcionarios")
+        .select("id, nome")
+        .eq("cpf", cpf)
+        .maybeSingle();
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      if (funcError || !funcData) {
+        throw new Error("Funcionário não encontrado com este CPF.");
+      }
+
+      // Verifica o PIN na tabela de credenciais
+      const { data: credData, error: credError } = await supabase
+        .from("portal_credentials")
+        .select("pin")
+        .eq("funcionario_id", funcData.id)
+        .maybeSingle();
+
+      if (credError || !credData || credData.pin !== pin) {
+        throw new Error("PIN incorreto ou não configurado.");
+      }
+
+      // Login bem sucedido - simulamos a sessão salvando o ID do funcionário
+      localStorage.setItem("portal_user_id", funcData.id);
+      localStorage.setItem("portal_user_nome", funcData.nome);
+
+      toast({
+        title: "Login realizado com sucesso!",
+        description: `Bem-vindo, ${funcData.nome}.`,
       });
-
-      if (error) {
-        throw error;
-      }
-
-      if (data.session) {
-        toast({
-          title: "Login realizado com sucesso!",
-          description: "Bem-vindo ao Portal do Colaborador.",
-        });
-        navigate("/portal"); // Redirecionar para o dashboard do portal
-      }
+      navigate("/portal"); 
     } catch (error: any) {
       toast({
         title: "Erro no login",
