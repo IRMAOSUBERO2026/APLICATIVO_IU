@@ -162,8 +162,8 @@ export function useDashboardData() {
         }).length;
       }
 
-      // ---- Série de faturamento (últimos 6 meses) ----
-      const serie: FaturamentoPonto[] = [];
+      // ---- Série de faturamento (últimos 6 meses) — em paralelo ----
+      const seriePromises: PromiseLike<FaturamentoPonto>[] = [];
       for (let i = 5; i >= 0; i--) {
         const d = new Date(ano, mes - 1 - i, 1);
         const a = d.getFullYear(); const m = d.getMonth() + 1;
@@ -171,42 +171,54 @@ export function useDashboardData() {
         const fim = new Date(a, m, 0).toISOString().slice(0, 10);
         let q = supabase.from("medicoes").select("valor_liquido").gte("data_emissao", ini).lte("data_emissao", fim);
         q = filtroEmpresa(q); q = filtroObra(q);
-        const { data } = await q;
-        const total = (data || []).reduce((s, r: any) => s + Number(r.valor_liquido || 0), 0);
-        serie.push({ mes: MESES_CURTOS[d.getMonth()], valor: total });
+        seriePromises.push(q.then(({ data }) => ({
+          mes: MESES_CURTOS[d.getMonth()],
+          valor: (data || []).reduce((s, r: any) => s + Number(r.valor_liquido || 0), 0),
+        })));
       }
+      const serie: FaturamentoPonto[] = await Promise.all(seriePromises);
 
-      // ---- Margem por obra (top 4) ----
-      const margemArr: MargemObra[] = [];
-      for (const o of obrasAtivasArr) {
-        const [{ data: rec }, { data: cust }, { data: fol }] = await Promise.all([
-          supabase.from("medicoes").select("valor_liquido").eq("obra_id", o.id),
-          supabase.from("compras").select("total").eq("obra_id", o.id),
-          supabase.from("folhas_pagamento").select("custo_total_empresa, salario_final").eq("obra_id", o.id),
-        ]);
-        const receita = (rec || []).reduce((s, r: any) => s + Number(r.valor_liquido || 0), 0);
-        const custos = (cust || []).reduce((s, r: any) => s + Number(r.total || 0), 0)
-          + (fol || []).reduce((s, r: any) => s + Number(r.custo_total_empresa || r.salario_final || 0), 0);
+      // ---- Agregados por obra (1 query cada, agrupados em JS — sem N+1) ----
+      const obraIds = obrasAtivasArr.map(o => o.id);
+      const empty = { data: [] as any[] };
+      const [medRes, comRes, folRes, itensRes, medBrRes] = obraIds.length
+        ? await Promise.all([
+            supabase.from("medicoes").select("valor_liquido, obra_id").in("obra_id", obraIds),
+            supabase.from("compras").select("total, obra_id").in("obra_id", obraIds),
+            supabase.from("folhas_pagamento").select("custo_total_empresa, salario_final, obra_id").in("obra_id", obraIds),
+            supabase.from("medicao_contrato_itens").select("valor_total, obra_id").in("obra_id", obraIds),
+            supabase.from("medicoes").select("valor_bruto, obra_id").in("obra_id", obraIds),
+          ])
+        : [empty, empty, empty, empty, empty] as any;
+
+      const sumBy = (rows: any[], key: string) => {
+        const map = new Map<string, number>();
+        (rows || []).forEach(r => map.set(r.obra_id, (map.get(r.obra_id) || 0) + Number(r[key] || 0)));
+        return map;
+      };
+      const recMap = sumBy(medRes.data as any[], "valor_liquido");
+      const cusMap = sumBy(comRes.data as any[], "total");
+      const folMap = new Map<string, number>();
+      ((folRes.data as any[]) || []).forEach((r: any) =>
+        folMap.set(r.obra_id, (folMap.get(r.obra_id) || 0) + Number(r.custo_total_empresa || r.salario_final || 0))
+      );
+      const itensMap = sumBy(itensRes.data as any[], "valor_total");
+      const brutoMap = sumBy(medBrRes.data as any[], "valor_bruto");
+
+      const margemArr: MargemObra[] = obrasAtivasArr.map(o => {
+        const receita = recMap.get(o.id) || 0;
+        const custos = (cusMap.get(o.id) || 0) + (folMap.get(o.id) || 0);
         const m = receita > 0 ? Math.round(((receita - custos) / receita) * 100) : 0;
-        margemArr.push({ name: `${o.codigo} — ${o.nome}`, value: m, obraId: o.id });
-      }
+        return { name: `${o.codigo} — ${o.nome}`, value: m, obraId: o.id };
+      });
       const topMargem = [...margemArr].sort((a, b) => b.value - a.value).slice(0, 4);
 
-      // ---- Tabela "Obras em Andamento" ----
-      const andamento: ObraAndamento[] = [];
-      for (const o of obrasAtivasArr.slice(0, 8)) {
-        const [{ data: itens }, { data: medicoes }] = await Promise.all([
-          supabase.from("medicao_contrato_itens").select("valor_total").eq("obra_id", o.id),
-          supabase.from("medicoes").select("valor_bruto").eq("obra_id", o.id),
-        ]);
-        const valorContrato = (itens || []).reduce((s, r: any) => s + Number(r.valor_total || 0), 0);
-        const totalMedido = (medicoes || []).reduce((s, r: any) => s + Number(r.valor_bruto || 0), 0);
+      const andamento: ObraAndamento[] = obrasAtivasArr.slice(0, 8).map(o => {
+        const valorContrato = itensMap.get(o.id) || 0;
+        const totalMedido = brutoMap.get(o.id) || 0;
         const progresso = valorContrato > 0 ? Math.min(100, Math.round((totalMedido / valorContrato) * 100)) : 0;
-        andamento.push({
-          id: o.id, nome: o.nome, codigo: o.codigo, status: o.status,
-          progresso, valorContrato,
-        });
-      }
+        return { id: o.id, nome: o.nome, codigo: o.codigo, status: o.status, progresso, valorContrato };
+      });
 
       if (cancel) return;
       setKpis({
