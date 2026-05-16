@@ -8,9 +8,12 @@ const PRIMARY: [number, number, number] = [60, 80, 45];
 const TEXT: [number, number, number] = [40, 40, 40];
 const MUTED: [number, number, number] = [110, 110, 110];
 
+import { normalizeStorageUrl } from "./storageUrl";
+
 async function loadAsset(url: string): Promise<string | null> {
   try {
-    const r = await fetch(url);
+    const finalUrl = normalizeStorageUrl(url) || url;
+    const r = await fetch(finalUrl);
     const b = await r.blob();
     return await new Promise(resolve => {
       const fr = new FileReader();
