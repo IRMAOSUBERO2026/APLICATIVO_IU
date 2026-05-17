@@ -752,6 +752,25 @@ export default function RH() {
                   </tbody>
                 </table>
               </ScrollableTable>
+              {sorted.length > visibleCount && (
+                <div className="flex items-center justify-center gap-3 border-t bg-muted/20 px-4 py-3">
+                  <span className="text-xs text-muted-foreground">
+                    Mostrando {visibleCount} de {sorted.length}
+                  </span>
+                  <button
+                    onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
+                    className="rounded-lg border bg-card px-4 py-1.5 text-xs font-medium hover:bg-accent transition-colors"
+                  >
+                    Carregar mais {Math.min(PAGE_SIZE, sorted.length - visibleCount)}
+                  </button>
+                  <button
+                    onClick={() => setVisibleCount(sorted.length)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Mostrar todos
+                  </button>
+                </div>
+              )}
             </div>
           </>
         )}
