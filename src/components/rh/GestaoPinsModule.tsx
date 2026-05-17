@@ -119,6 +119,9 @@ export function GestaoPinsModule() {
     return statusOk && searchOk;
   });
 
+  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [search, mostrarDesligados]);
+  const visible = filtered.slice(0, visibleCount);
+
   return (
     <div className="space-y-4">
       <Card>
