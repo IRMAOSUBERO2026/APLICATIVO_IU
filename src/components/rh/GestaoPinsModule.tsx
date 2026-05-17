@@ -130,13 +130,21 @@ export function GestaoPinsModule() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-4">
+          <div className="mb-4 flex flex-wrap items-center gap-3">
             <Input 
               placeholder="Buscar por nome ou CPF..." 
               value={search} 
               onChange={e => setSearch(e.target.value)}
               className="max-w-md"
             />
+            <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+              <input
+                type="checkbox"
+                checked={mostrarDesligados}
+                onChange={e => setMostrarDesligados(e.target.checked)}
+              />
+              Mostrar desligados
+            </label>
           </div>
 
           <ScrollableTable>
