@@ -69,7 +69,7 @@ export default function RH() {
   const [sortBy, setSortBy] = useState<"nome" | "admissao" | "obra" | "status" | "registro">("nome");
   const [editingExamFunc, setEditingExamFunc] = useState<any>(null);
   const [filterObra, setFilterObra] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
+  const [filterStatus, setFilterStatus] = useState("ativo");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const xlsxInputRef = useRef<HTMLInputElement>(null);
   const [funcionarios] = useState(funcionariosData);
