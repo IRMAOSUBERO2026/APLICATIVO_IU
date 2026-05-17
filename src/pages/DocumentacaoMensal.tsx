@@ -89,6 +89,7 @@ export default function DocumentacaoMensal() {
       .from("funcionarios")
       .select("id, nome, cargo, status, data_admissao, data_rescisao")
       .eq("obra_id", obraId)
+      .eq("status", "ativo")
       .order("nome");
     setFuncionarios(data || []);
   };
