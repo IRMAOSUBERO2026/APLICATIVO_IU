@@ -22,6 +22,8 @@ export function GestaoPinsModule() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [mostrarDesligados, setMostrarDesligados] = useState(false);
+  const PAGE_SIZE = 50;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [selectedFunc, setSelectedFunc] = useState<FuncionarioComPin | null>(null);
   const [pin, setPin] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
