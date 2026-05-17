@@ -565,8 +565,9 @@ export default function RH() {
                 {obras.map(o => <option key={o.id} value={o.id}>{o.codigo} — {o.nome}</option>)}
               </select>
               <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="rounded-lg border bg-card px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+                <option value="ativo">Apenas Ativos</option>
                 <option value="">Todos os Status</option>
-                {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                {STATUS_OPTIONS.filter(s => s.value !== "ativo").map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
               <select value={sortBy} onChange={e => setSortBy(e.target.value as any)} className="rounded-lg border bg-card px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
                 <option value="nome">Ordenar por Nome</option>
