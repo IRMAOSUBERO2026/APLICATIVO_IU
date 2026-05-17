@@ -31,7 +31,7 @@ export function MonitorAtividadesRH() {
     try {
       // 1. Estatísticas de Acesso
       const { data: creds } = await supabase.from("portal_credentials").select("pin_configurado, ultimo_acesso");
-      const { count: totalFuncs } = await supabase.from("funcionarios").select("id", { count: "exact" });
+      const { count: totalFuncs } = await supabase.from("funcionarios").select("id", { count: "exact", head: true }).eq("status", "ativo");
       
       const cadastrados = creds?.filter(c => c.pin_configurado).length || 0;
       
