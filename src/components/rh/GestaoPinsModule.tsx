@@ -201,6 +201,19 @@ export function GestaoPinsModule() {
               </tbody>
             </table>
           </ScrollableTable>
+          {filtered.length > visibleCount && (
+            <div className="flex items-center justify-center gap-3 border-t bg-muted/20 px-4 py-3 mt-3 rounded-lg">
+              <span className="text-xs text-muted-foreground">
+                Mostrando {visibleCount} de {filtered.length}
+              </span>
+              <Button variant="outline" size="sm" onClick={() => setVisibleCount(c => c + PAGE_SIZE)}>
+                Carregar mais {Math.min(PAGE_SIZE, filtered.length - visibleCount)}
+              </Button>
+              <button onClick={() => setVisibleCount(filtered.length)} className="text-xs text-primary hover:underline">
+                Mostrar todos
+              </button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
