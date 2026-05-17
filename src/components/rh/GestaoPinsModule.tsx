@@ -109,11 +109,13 @@ export function GestaoPinsModule() {
     }
   };
 
-  const filtered = funcionarios.filter(f => 
-    !search || 
-    f.nome.toLowerCase().includes(search.toLowerCase()) || 
-    (f.cpf && f.cpf.includes(search))
-  );
+  const filtered = funcionarios.filter(f => {
+    const statusOk = mostrarDesligados || (f.status || "").toLowerCase() !== "desligado";
+    const searchOk = !search ||
+      f.nome.toLowerCase().includes(search.toLowerCase()) ||
+      (f.cpf && f.cpf.includes(search));
+    return statusOk && searchOk;
+  });
 
   return (
     <div className="space-y-4">
