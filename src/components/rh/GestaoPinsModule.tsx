@@ -169,7 +169,7 @@ export function GestaoPinsModule() {
                 ) : filtered.length === 0 ? (
                   <tr><td colSpan={5} className="text-center py-8">Nenhum funcionário encontrado</td></tr>
                 ) : (
-                  filtered.map(f => (
+                  visible.map(f => (
                     <tr key={f.id} className="border-b last:border-0 hover:bg-muted/30">
                       <td className="px-4 py-3 font-medium">{f.nome}</td>
                       <td className="px-4 py-3 text-muted-foreground">{f.cpf || "Sem CPF"}</td>
