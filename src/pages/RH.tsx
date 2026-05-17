@@ -630,7 +630,7 @@ export default function RH() {
                     </tr>
                   </thead>
                   <tbody>
-                    {sorted.map((f) => {
+                    {visible.map((f) => {
                       const expInfo = calcExperiencia(f.data_admissao);
                       const empInfo = getEmpresaInfo(f.empresa_id);
                       return (
