@@ -80,6 +80,8 @@ export default function RH() {
   const [selectedFuncTransfer, setSelectedFuncTransfer] = useState<{ id: string; nome: string; obraId: string | null } | null>(null);
   const [editFuncOpen, setEditFuncOpen] = useState(false);
   const [editFuncId, setEditFuncId] = useState<string>("");
+  const PAGE_SIZE = 50;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const [dbFuncionarios, setDbFuncionarios] = useState<any[]>([]);
   const [editingRegistro, setEditingRegistro] = useState<Record<string, string>>({});
@@ -169,6 +171,12 @@ export default function RH() {
     }
   });
 
+  // Reset paginação ao mudar filtros/busca/ordem
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [search, filterObra, filterStatus, sortBy]);
+
+  const visible = sorted.slice(0, visibleCount);
   const saveExames = async (funcId: string, data: { data_aso?: string | null; data_nr6?: string | null; data_nr12?: string | null; data_nr18?: string | null; data_nr35?: string | null }) => {
     const { error } = await supabase.from("funcionarios").update(data).eq("id", funcId);
     if (error) {
@@ -622,7 +630,7 @@ export default function RH() {
                     </tr>
                   </thead>
                   <tbody>
-                    {sorted.map((f) => {
+                    {visible.map((f) => {
                       const expInfo = calcExperiencia(f.data_admissao);
                       const empInfo = getEmpresaInfo(f.empresa_id);
                       return (
@@ -744,6 +752,25 @@ export default function RH() {
                   </tbody>
                 </table>
               </ScrollableTable>
+              {sorted.length > visibleCount && (
+                <div className="flex items-center justify-center gap-3 border-t bg-muted/20 px-4 py-3">
+                  <span className="text-xs text-muted-foreground">
+                    Mostrando {visibleCount} de {sorted.length}
+                  </span>
+                  <button
+                    onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
+                    className="rounded-lg border bg-card px-4 py-1.5 text-xs font-medium hover:bg-accent transition-colors"
+                  >
+                    Carregar mais {Math.min(PAGE_SIZE, sorted.length - visibleCount)}
+                  </button>
+                  <button
+                    onClick={() => setVisibleCount(sorted.length)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Mostrar todos
+                  </button>
+                </div>
+              )}
             </div>
           </>
         )}

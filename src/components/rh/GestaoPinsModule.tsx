@@ -22,6 +22,8 @@ export function GestaoPinsModule() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [mostrarDesligados, setMostrarDesligados] = useState(false);
+  const PAGE_SIZE = 50;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [selectedFunc, setSelectedFunc] = useState<FuncionarioComPin | null>(null);
   const [pin, setPin] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -117,6 +119,9 @@ export function GestaoPinsModule() {
     return statusOk && searchOk;
   });
 
+  useEffect(() => { setVisibleCount(PAGE_SIZE); }, [search, mostrarDesligados]);
+  const visible = filtered.slice(0, visibleCount);
+
   return (
     <div className="space-y-4">
       <Card>
@@ -164,7 +169,7 @@ export function GestaoPinsModule() {
                 ) : filtered.length === 0 ? (
                   <tr><td colSpan={5} className="text-center py-8">Nenhum funcionário encontrado</td></tr>
                 ) : (
-                  filtered.map(f => (
+                  visible.map(f => (
                     <tr key={f.id} className="border-b last:border-0 hover:bg-muted/30">
                       <td className="px-4 py-3 font-medium">{f.nome}</td>
                       <td className="px-4 py-3 text-muted-foreground">{f.cpf || "Sem CPF"}</td>
@@ -196,6 +201,19 @@ export function GestaoPinsModule() {
               </tbody>
             </table>
           </ScrollableTable>
+          {filtered.length > visibleCount && (
+            <div className="flex items-center justify-center gap-3 border-t bg-muted/20 px-4 py-3 mt-3 rounded-lg">
+              <span className="text-xs text-muted-foreground">
+                Mostrando {visibleCount} de {filtered.length}
+              </span>
+              <Button variant="outline" size="sm" onClick={() => setVisibleCount(c => c + PAGE_SIZE)}>
+                Carregar mais {Math.min(PAGE_SIZE, filtered.length - visibleCount)}
+              </Button>
+              <button onClick={() => setVisibleCount(filtered.length)} className="text-xs text-primary hover:underline">
+                Mostrar todos
+              </button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
