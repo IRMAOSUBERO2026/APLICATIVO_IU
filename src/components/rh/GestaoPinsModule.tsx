@@ -21,6 +21,7 @@ export function GestaoPinsModule() {
   const [funcionarios, setFuncionarios] = useState<FuncionarioComPin[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [mostrarDesligados, setMostrarDesligados] = useState(false);
   const [selectedFunc, setSelectedFunc] = useState<FuncionarioComPin | null>(null);
   const [pin, setPin] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -108,11 +109,13 @@ export function GestaoPinsModule() {
     }
   };
 
-  const filtered = funcionarios.filter(f => 
-    !search || 
-    f.nome.toLowerCase().includes(search.toLowerCase()) || 
-    (f.cpf && f.cpf.includes(search))
-  );
+  const filtered = funcionarios.filter(f => {
+    const statusOk = mostrarDesligados || (f.status || "").toLowerCase() !== "desligado";
+    const searchOk = !search ||
+      f.nome.toLowerCase().includes(search.toLowerCase()) ||
+      (f.cpf && f.cpf.includes(search));
+    return statusOk && searchOk;
+  });
 
   return (
     <div className="space-y-4">
@@ -127,13 +130,21 @@ export function GestaoPinsModule() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-4">
+          <div className="mb-4 flex flex-wrap items-center gap-3">
             <Input 
               placeholder="Buscar por nome ou CPF..." 
               value={search} 
               onChange={e => setSearch(e.target.value)}
               className="max-w-md"
             />
+            <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+              <input
+                type="checkbox"
+                checked={mostrarDesligados}
+                onChange={e => setMostrarDesligados(e.target.checked)}
+              />
+              Mostrar desligados
+            </label>
           </div>
 
           <ScrollableTable>
