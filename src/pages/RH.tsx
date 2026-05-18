@@ -739,7 +739,6 @@ export default function RH() {
                   {sorted.length} funcionário(s) — rolagem virtualizada
                 </div>
               </div>
-            </div>
           </>
         )}
       </div>
