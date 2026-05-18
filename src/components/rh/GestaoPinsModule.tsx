@@ -155,68 +155,61 @@ export function GestaoPinsModule() {
             </label>
           </div>
 
-          <ScrollableTable>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b bg-muted/50 text-left">
-                  <th className="px-4 py-3 font-medium text-muted-foreground">Nome</th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground">CPF</th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground">Cargo</th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground text-center">Status do Acesso</th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground text-right">Ação</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr><td colSpan={5} className="text-center py-8">Carregando...</td></tr>
-                ) : filtered.length === 0 ? (
-                  <tr><td colSpan={5} className="text-center py-8">Nenhum funcionário encontrado</td></tr>
-                ) : (
-                  visible.map(f => (
-                    <tr key={f.id} className="border-b last:border-0 hover:bg-muted/30">
-                      <td className="px-4 py-3 font-medium">{f.nome}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{f.cpf || "Sem CPF"}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{f.cargo}</td>
-                      <td className="px-4 py-3 text-center">
-                        {f.pin_configurado ? (
-                          <span className="inline-flex items-center gap-1 text-success bg-success/10 px-2 py-1 rounded-full text-xs font-medium">
-                            <CheckCircle2 className="h-3 w-3" /> Liberado
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-warning bg-warning/10 px-2 py-1 rounded-full text-xs font-medium">
-                            <ShieldAlert className="h-3 w-3" /> Bloqueado
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <Button 
-                          variant={f.pin_configurado ? "outline" : "default"} 
-                          size="sm"
-                          onClick={() => handleOpenModal(f)}
-                          disabled={!f.cpf}
-                        >
-                          {f.pin_configurado ? "Redefinir PIN" : "Gerar PIN"}
-                        </Button>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </ScrollableTable>
-          {filtered.length > visibleCount && (
-            <div className="flex items-center justify-center gap-3 border-t bg-muted/20 px-4 py-3 mt-3 rounded-lg">
-              <span className="text-xs text-muted-foreground">
-                Mostrando {visibleCount} de {filtered.length}
-              </span>
-              <Button variant="outline" size="sm" onClick={() => setVisibleCount(c => c + PAGE_SIZE)}>
-                Carregar mais {Math.min(PAGE_SIZE, filtered.length - visibleCount)}
-              </Button>
-              <button onClick={() => setVisibleCount(filtered.length)} className="text-xs text-primary hover:underline">
-                Mostrar todos
-              </button>
+          <div className="rounded-lg border overflow-hidden">
+            <div
+              className="bg-muted/50 border-b text-xs font-medium text-muted-foreground"
+              style={{ display: "grid", gridTemplateColumns: PINS_GRID, minWidth: PINS_MIN_WIDTH }}
+            >
+              <div className="px-4 py-3">Nome</div>
+              <div className="px-4 py-3">CPF</div>
+              <div className="px-4 py-3">Cargo</div>
+              <div className="px-4 py-3 text-center">Status do Acesso</div>
+              <div className="px-4 py-3 text-right">Ação</div>
             </div>
-          )}
+            {loading ? (
+              <div className="py-8 text-center text-sm text-muted-foreground">Carregando...</div>
+            ) : (
+              <VirtualGridList
+                items={filtered}
+                rowHeight={56}
+                height={560}
+                gridTemplate={PINS_GRID}
+                minWidth={PINS_MIN_WIDTH}
+                emptyMessage="Nenhum funcionário encontrado"
+                renderRow={(f) => (
+                  <>
+                    <div className="px-4 py-3 font-medium text-sm truncate">{f.nome}</div>
+                    <div className="px-4 py-3 text-sm text-muted-foreground">{f.cpf || "Sem CPF"}</div>
+                    <div className="px-4 py-3 text-sm text-muted-foreground truncate">{f.cargo}</div>
+                    <div className="px-4 py-3 text-center">
+                      {f.pin_configurado ? (
+                        <span className="inline-flex items-center gap-1 text-success bg-success/10 px-2 py-1 rounded-full text-xs font-medium">
+                          <CheckCircle2 className="h-3 w-3" /> Liberado
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-warning bg-warning/10 px-2 py-1 rounded-full text-xs font-medium">
+                          <ShieldAlert className="h-3 w-3" /> Bloqueado
+                        </span>
+                      )}
+                    </div>
+                    <div className="px-4 py-3 text-right">
+                      <Button
+                        variant={f.pin_configurado ? "outline" : "default"}
+                        size="sm"
+                        onClick={() => handleOpenModal(f)}
+                        disabled={!f.cpf}
+                      >
+                        {f.pin_configurado ? "Redefinir PIN" : "Gerar PIN"}
+                      </Button>
+                    </div>
+                  </>
+                )}
+              />
+            )}
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground text-center">
+            {filtered.length} funcionário(s) — rolagem virtualizada
+          </p>
         </CardContent>
       </Card>
 
