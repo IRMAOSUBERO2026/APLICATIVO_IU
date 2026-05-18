@@ -6,7 +6,10 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { KeyRound, ShieldAlert, CheckCircle2 } from "lucide-react";
-import { ScrollableTable } from "@/components/shared/ScrollableTable";
+import { VirtualGridList } from "@/components/shared/VirtualGridList";
+
+const PINS_GRID = "minmax(220px,1.6fr) 160px minmax(140px,1fr) 160px 160px";
+const PINS_MIN_WIDTH = 880;
 
 type FuncionarioComPin = {
   id: string;
