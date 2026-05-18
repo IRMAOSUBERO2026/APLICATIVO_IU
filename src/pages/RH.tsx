@@ -173,12 +173,6 @@ export default function RH() {
     }
   });
 
-  // Reset paginação ao mudar filtros/busca/ordem
-  useEffect(() => {
-    setVisibleCount(PAGE_SIZE);
-  }, [search, filterObra, filterStatus, sortBy]);
-
-  const visible = sorted.slice(0, visibleCount);
   const saveExames = async (funcId: string, data: { data_aso?: string | null; data_nr6?: string | null; data_nr12?: string | null; data_nr18?: string | null; data_nr35?: string | null }) => {
     const { error } = await supabase.from("funcionarios").update(data).eq("id", funcId);
     if (error) {
