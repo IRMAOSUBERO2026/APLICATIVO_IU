@@ -20,6 +20,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollableTable } from "@/components/shared/ScrollableTable";
+import { VirtualGridList } from "@/components/shared/VirtualGridList";
+
+const RH_GRID = "70px minmax(180px,1.6fr) 110px 140px 130px 130px 100px 130px 140px 110px 110px 170px";
+const RH_MIN_WIDTH = 1560;
 
 type TabKey = "lista" | "exames_tab" | "exames_modulo" | "gestao_pins" | "monitor";
 
