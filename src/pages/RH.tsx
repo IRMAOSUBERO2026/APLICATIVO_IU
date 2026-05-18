@@ -610,171 +610,135 @@ export default function RH() {
               </div>
             </div>
 
-            {/* Table */}
-            <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-              <div className="px-4 py-3 border-b bg-muted/30">
-                <h3 className="text-sm font-semibold">Funcionários ({sorted.length})</h3>
-              </div>
-              <ScrollableTable>
-                <table className="w-full min-w-[1180px] text-sm">
-                  <thead>
-                    <tr className="border-b bg-muted/50">
-                      <th className="px-3 py-3 text-left font-medium text-muted-foreground">Nº Reg.</th>
-                      <th className="px-3 py-3 text-left font-medium text-muted-foreground">Nome</th>
-                      <th className="px-3 py-3 text-left font-medium text-muted-foreground">CPF</th>
-                      <th className="px-3 py-3 text-left font-medium text-muted-foreground">Empresa</th>
-                      <th className="px-3 py-3 text-left font-medium text-muted-foreground">Cargo</th>
-                      <th className="px-3 py-3 text-left font-medium text-muted-foreground">Obra</th>
-                      <th className="px-3 py-3 text-left font-medium text-muted-foreground">Admissão</th>
-                      <th className="px-3 py-3 text-left font-medium text-muted-foreground">Status</th>
-                      <th className="px-3 py-3 text-left font-medium text-muted-foreground">Experiência</th>
-                      <th className="px-3 py-3 text-right font-medium text-muted-foreground">Salário</th>
-                      <th className="px-3 py-3 text-center font-medium text-muted-foreground">Bonificações</th>
-                      <th className="px-3 py-3 text-center font-medium text-muted-foreground">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visible.map((f) => {
-                      const expInfo = calcExperiencia(f.data_admissao);
-                      const empInfo = getEmpresaInfo(f.empresa_id);
-                      return (
-                        <tr key={f.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                          {/* Nº Registro - limpo, edita ao clicar no lápis */}
-                          <td className="px-3 py-2.5">
-                            {editingRegistro[f.id] !== undefined ? (
-                              <div className="flex items-center gap-1">
-                                <input
-                                  type="text"
-                                  autoFocus
-                                  value={editingRegistro[f.id]}
-                                  onChange={e => setEditingRegistro(prev => ({ ...prev, [f.id]: e.target.value }))}
-                                  onKeyDown={e => { if (e.key === "Enter") saveRegistro(f.id); if (e.key === "Escape") setEditingRegistro(prev => { const n = { ...prev }; delete n[f.id]; return n; }); }}
-                                  placeholder="Nº"
-                                  className="w-16 rounded border bg-background px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
-                                />
-                                <button onClick={() => saveRegistro(f.id)} className="p-0.5 text-primary hover:text-primary/80" title="Salvar"><Save className="h-3 w-3" /></button>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => setEditingRegistro(prev => ({ ...prev, [f.id]: f.numero_registro ?? "" }))}
-                                className="group inline-flex items-center gap-1.5 text-xs font-mono text-foreground hover:text-primary transition-colors"
-                                title="Clique para editar"
-                              >
-                                <span className="min-w-[2.5rem] text-left">{f.numero_registro || <span className="text-muted-foreground">—</span>}</span>
-                                <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-60 transition-opacity" />
+              <div className="rounded-lg border overflow-hidden">
+                <div
+                  className="bg-muted/50 border-b text-xs font-medium text-muted-foreground"
+                  style={{ display: "grid", gridTemplateColumns: RH_GRID, minWidth: RH_MIN_WIDTH }}
+                >
+                  <div className="px-3 py-3">Nº Reg.</div>
+                  <div className="px-3 py-3">Nome</div>
+                  <div className="px-3 py-3">CPF</div>
+                  <div className="px-3 py-3">Empresa</div>
+                  <div className="px-3 py-3">Cargo</div>
+                  <div className="px-3 py-3">Obra</div>
+                  <div className="px-3 py-3">Admissão</div>
+                  <div className="px-3 py-3">Status</div>
+                  <div className="px-3 py-3">Experiência</div>
+                  <div className="px-3 py-3 text-right">Salário</div>
+                  <div className="px-3 py-3 text-center">Bonif.</div>
+                  <div className="px-3 py-3 text-center">Ações</div>
+                </div>
+                <VirtualGridList
+                  items={sorted}
+                  rowHeight={64}
+                  height={640}
+                  gridTemplate={RH_GRID}
+                  minWidth={RH_MIN_WIDTH}
+                  emptyMessage="Nenhum funcionário encontrado"
+                  renderRow={(f) => {
+                    const expInfo = calcExperiencia(f.data_admissao);
+                    const empInfo = getEmpresaInfo(f.empresa_id);
+                    const bons = f.bonificacoes_padrao as any[];
+                    const bonsTotal = Array.isArray(bons) ? bons.reduce((acc: number, b: any) => acc + (Number(b.valor) || 0), 0) : 0;
+                    return (
+                      <>
+                        <div className="px-3 py-2.5">
+                          {editingRegistro[f.id] !== undefined ? (
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="text"
+                                autoFocus
+                                value={editingRegistro[f.id]}
+                                onChange={e => setEditingRegistro(prev => ({ ...prev, [f.id]: e.target.value }))}
+                                onKeyDown={e => { if (e.key === "Enter") saveRegistro(f.id); if (e.key === "Escape") setEditingRegistro(prev => { const n = { ...prev }; delete n[f.id]; return n; }); }}
+                                placeholder="Nº"
+                                className="w-14 rounded border bg-background px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                              />
+                              <button onClick={() => saveRegistro(f.id)} className="p-0.5 text-primary hover:text-primary/80" title="Salvar"><Save className="h-3 w-3" /></button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setEditingRegistro(prev => ({ ...prev, [f.id]: f.numero_registro ?? "" }))}
+                              className="group inline-flex items-center gap-1.5 text-xs font-mono text-foreground hover:text-primary transition-colors"
+                              title="Clique para editar"
+                            >
+                              <span className="min-w-[2rem] text-left">{f.numero_registro || <span className="text-muted-foreground">—</span>}</span>
+                              <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-60 transition-opacity" />
+                            </button>
+                          )}
+                        </div>
+                        <div className="px-3 py-2.5 font-medium text-sm truncate">{f.nome}</div>
+                        <div className="px-3 py-2.5 text-xs text-muted-foreground">{f.cpf}</div>
+                        <div className="px-3 py-2.5">
+                          <p className="text-xs font-medium truncate">{empInfo.nome}</p>
+                          <p className="text-[10px] text-muted-foreground">{empInfo.cnpj}</p>
+                        </div>
+                        <div className="px-3 py-2.5 text-sm text-muted-foreground truncate">{f.cargo}</div>
+                        <div className="px-3 py-2.5 text-xs text-muted-foreground truncate">{f.obraNome}</div>
+                        <div className="px-3 py-2.5 text-xs text-muted-foreground">
+                          {f.data_admissao ? format(parseISO(f.data_admissao), "dd/MM/yyyy") : "—"}
+                        </div>
+                        <div className="px-3 py-2.5">
+                          <select
+                            value={normalizeStatusForDb(f.status)}
+                            onChange={e => saveStatus(f.id, e.target.value)}
+                            className={`rounded-full px-2 py-1 text-xs font-medium border cursor-pointer outline-none focus:ring-2 focus:ring-ring ${getStatusColor(f.status)}`}
+                          >
+                            {f.status && !STATUS_OPTIONS.some(s => s.value === normalizeStatusForDb(f.status)) && (
+                              <option value={normalizeStatusForDb(f.status)}>{f.status}</option>
+                            )}
+                            {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                          </select>
+                        </div>
+                        <div className="px-3 py-2.5">
+                          {expInfo ? (
+                            <span className="text-[10px] rounded-full bg-accent/10 text-accent px-2 py-0.5">{expInfo}</span>
+                          ) : <span className="text-xs text-muted-foreground">—</span>}
+                        </div>
+                        <div className="px-3 py-2.5 text-right font-medium text-xs">
+                          R$ {(f.salario_combinado || f.salario_base || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                        </div>
+                        <div className="px-3 py-2.5 text-center">
+                          {bonsTotal > 0 ? (
+                            <div className="flex flex-col items-center">
+                              <span className="text-[10px] font-bold text-success">R$ {bonsTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                              <span className="text-[9px] text-muted-foreground italic">{bons.length} bonif.</span>
+                            </div>
+                          ) : <span className="text-[10px] text-muted-foreground">—</span>}
+                        </div>
+                        <div className="px-3 py-2.5">
+                          <div className="flex items-center justify-center gap-1">
+                            <button onClick={() => { setEditFuncId(f.id); setEditFuncOpen(true); }} className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors" title="Editar Funcionário">
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <button onClick={() => openDocManager(f.id, f.nome)} className="p-1.5 rounded-lg text-muted-foreground hover:text-warning hover:bg-warning/10 transition-colors" title="Pasta de Documentos">
+                              <FolderOpen className="h-4 w-4" />
+                            </button>
+                            <button onClick={() => openTransfer(f.id, f.nome, f.obra_id)} className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors" title="Transferir">
+                              <ArrowRightLeft className="h-4 w-4" />
+                            </button>
+                            {f.status !== "desligado" && (
+                              <button onClick={() => openDesligamento(f)} className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" title="Desligar Funcionário">
+                                <LogOut className="h-4 w-4" />
                               </button>
                             )}
-                          </td>
-                          {/* Nome */}
-                          <td className="px-3 py-2.5 font-medium">{f.nome}</td>
-                          {/* CPF */}
-                          <td className="px-3 py-2.5 text-xs text-muted-foreground">{f.cpf}</td>
-                          {/* Empresa */}
-                          <td className="px-3 py-2.5">
-                            <div>
-                              <p className="text-xs font-medium truncate max-w-[120px]">{empInfo.nome}</p>
-                              <p className="text-[10px] text-muted-foreground">{empInfo.cnpj}</p>
-                            </div>
-                          </td>
-                          {/* Cargo */}
-                          <td className="px-3 py-2.5 text-muted-foreground">{f.cargo}</td>
-                          {/* Obra */}
-                          <td className="px-3 py-2.5 text-xs text-muted-foreground">{f.obraNome}</td>
-                          {/* Admissão */}
-                          <td className="px-3 py-2.5 text-xs text-muted-foreground">
-                            {f.data_admissao ? format(parseISO(f.data_admissao), "dd/MM/yyyy") : "—"}
-                          </td>
-                          {/* Status - select que aceita o valor atual mesmo que diferente */}
-                          <td className="px-3 py-2.5">
-                            <select
-                              value={normalizeStatusForDb(f.status)}
-                              onChange={e => saveStatus(f.id, e.target.value)}
-                              className={`rounded-full px-2 py-1 text-xs font-medium border cursor-pointer outline-none focus:ring-2 focus:ring-ring ${getStatusColor(f.status)}`}
+                            <button
+                              onClick={() => sendPortalInvite(f)}
+                              className="p-1.5 rounded-lg text-muted-foreground hover:text-success hover:bg-success/10 transition-colors"
+                              title="Enviar Convite Portal (WhatsApp)"
                             >
-                              {/* opção fallback se o status atual não estiver no enum */}
-                              {f.status && !STATUS_OPTIONS.some(s => s.value === normalizeStatusForDb(f.status)) && (
-                                <option value={normalizeStatusForDb(f.status)}>{f.status}</option>
-                              )}
-                              {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                            </select>
-                          </td>
-                          {/* Experiência */}
-                          <td className="px-3 py-2.5">
-                            {expInfo ? (
-                              <span className="text-[10px] rounded-full bg-accent/10 text-accent px-2 py-0.5">{expInfo}</span>
-                            ) : "—"}
-                          </td>
-                          {/* Salário */}
-                          <td className="px-3 py-2.5 text-right font-medium text-xs">
-                            R$ {(f.salario_combinado || f.salario_base || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                          </td>
-                          <td className="px-3 py-2.5 text-center">
-                            {(() => {
-                              const bons = f.bonificacoes_padrao as any[];
-                              if (!Array.isArray(bons) || bons.length === 0) return <span className="text-[10px] text-muted-foreground">—</span>;
-                              const total = bons.reduce((acc: number, b: any) => acc + (Number(b.valor) || 0), 0);
-                              return (
-                                <div className="flex flex-col items-center">
-                                  <span className="text-[10px] font-bold text-success">R$ {total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-                                  <span className="text-[9px] text-muted-foreground italic">{bons.length} bonif.</span>
-                                </div>
-                              );
-                            })()}
-                          </td>
-                          {/* Ações */}
-                          <td className="px-3 py-2.5">
-                            <div className="flex items-center justify-center gap-1">
-                              <button onClick={() => { setEditFuncId(f.id); setEditFuncOpen(true); }} className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors" title="Editar Funcionário">
-                                <Pencil className="h-4 w-4" />
-                              </button>
-                              <button onClick={() => openDocManager(f.id, f.nome)} className="p-1.5 rounded-lg text-muted-foreground hover:text-warning hover:bg-warning/10 transition-colors" title="Pasta de Documentos">
-                                <FolderOpen className="h-4 w-4" />
-                              </button>
-                              <button onClick={() => openTransfer(f.id, f.nome, f.obra_id)} className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors" title="Transferir">
-                                <ArrowRightLeft className="h-4 w-4" />
-                              </button>
-                              {f.status !== "desligado" && (
-                                <button onClick={() => openDesligamento(f)} className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" title="Desligar Funcionário">
-                                  <LogOut className="h-4 w-4" />
-                                </button>
-                              )}
-                              <button 
-                                onClick={() => sendPortalInvite(f)} 
-                                className="p-1.5 rounded-lg text-muted-foreground hover:text-success hover:bg-success/10 transition-colors" 
-                                title="Enviar Convite Portal (WhatsApp)"
-                              >
-                                <ExternalLink className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                    {sorted.length === 0 && (
-                      <tr><td colSpan={12} className="px-4 py-8 text-center text-muted-foreground">Nenhum funcionário encontrado</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </ScrollableTable>
-              {sorted.length > visibleCount && (
-                <div className="flex items-center justify-center gap-3 border-t bg-muted/20 px-4 py-3">
-                  <span className="text-xs text-muted-foreground">
-                    Mostrando {visibleCount} de {sorted.length}
-                  </span>
-                  <button
-                    onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
-                    className="rounded-lg border bg-card px-4 py-1.5 text-xs font-medium hover:bg-accent transition-colors"
-                  >
-                    Carregar mais {Math.min(PAGE_SIZE, sorted.length - visibleCount)}
-                  </button>
-                  <button
-                    onClick={() => setVisibleCount(sorted.length)}
-                    className="text-xs text-primary hover:underline"
-                  >
-                    Mostrar todos
-                  </button>
+                              <ExternalLink className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  }}
+                />
+                <div className="border-t bg-muted/20 px-4 py-2 text-center text-xs text-muted-foreground">
+                  {sorted.length} funcionário(s) — rolagem virtualizada
                 </div>
-              )}
+              </div>
             </div>
           </>
         )}
