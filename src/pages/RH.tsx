@@ -84,8 +84,6 @@ export default function RH() {
   const [selectedFuncTransfer, setSelectedFuncTransfer] = useState<{ id: string; nome: string; obraId: string | null } | null>(null);
   const [editFuncOpen, setEditFuncOpen] = useState(false);
   const [editFuncId, setEditFuncId] = useState<string>("");
-  const PAGE_SIZE = 50;
-  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   const [dbFuncionarios, setDbFuncionarios] = useState<any[]>([]);
   const [editingRegistro, setEditingRegistro] = useState<Record<string, string>>({});
