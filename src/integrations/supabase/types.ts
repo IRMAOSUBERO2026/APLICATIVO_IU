@@ -2443,6 +2443,162 @@ export type Database = {
         }
         Relationships: []
       }
+      seguranca_contratos_assessoria: {
+        Row: {
+          created_at: string
+          data_fim: string | null
+          data_inicio: string
+          descricao: string
+          dia_vencimento: number
+          empresa_id: string
+          fornecedor_id: string | null
+          id: string
+          obra_id: string | null
+          observacoes: string | null
+          status: string
+          updated_at: string
+          valor_mensal: number
+        }
+        Insert: {
+          created_at?: string
+          data_fim?: string | null
+          data_inicio: string
+          descricao: string
+          dia_vencimento?: number
+          empresa_id: string
+          fornecedor_id?: string | null
+          id?: string
+          obra_id?: string | null
+          observacoes?: string | null
+          status?: string
+          updated_at?: string
+          valor_mensal?: number
+        }
+        Update: {
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string
+          descricao?: string
+          dia_vencimento?: number
+          empresa_id?: string
+          fornecedor_id?: string | null
+          id?: string
+          obra_id?: string | null
+          observacoes?: string | null
+          status?: string
+          updated_at?: string
+          valor_mensal?: number
+        }
+        Relationships: []
+      }
+      seguranca_custos: {
+        Row: {
+          conta_pagar_id: string | null
+          created_at: string
+          data_emissao: string
+          data_vencimento: string
+          descricao: string
+          documento_id: string | null
+          empresa_id: string
+          forma_pagamento: string | null
+          fornecedor_id: string | null
+          id: string
+          obra_id: string | null
+          observacoes: string | null
+          status: string
+          tipo_documento: string | null
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          conta_pagar_id?: string | null
+          created_at?: string
+          data_emissao?: string
+          data_vencimento: string
+          descricao: string
+          documento_id?: string | null
+          empresa_id: string
+          forma_pagamento?: string | null
+          fornecedor_id?: string | null
+          id?: string
+          obra_id?: string | null
+          observacoes?: string | null
+          status?: string
+          tipo_documento?: string | null
+          updated_at?: string
+          valor?: number
+        }
+        Update: {
+          conta_pagar_id?: string | null
+          created_at?: string
+          data_emissao?: string
+          data_vencimento?: string
+          descricao?: string
+          documento_id?: string | null
+          empresa_id?: string
+          forma_pagamento?: string | null
+          fornecedor_id?: string | null
+          id?: string
+          obra_id?: string | null
+          observacoes?: string | null
+          status?: string
+          tipo_documento?: string | null
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: []
+      }
+      seguranca_documentos: {
+        Row: {
+          arquivo_url: string | null
+          created_at: string
+          data_emissao: string | null
+          data_validade: string | null
+          empresa_id: string
+          fornecedor_id: string | null
+          id: string
+          numero: string | null
+          obra_id: string | null
+          observacoes: string | null
+          status: string
+          tipo: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          arquivo_url?: string | null
+          created_at?: string
+          data_emissao?: string | null
+          data_validade?: string | null
+          empresa_id: string
+          fornecedor_id?: string | null
+          id?: string
+          numero?: string | null
+          obra_id?: string | null
+          observacoes?: string | null
+          status?: string
+          tipo?: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          arquivo_url?: string | null
+          created_at?: string
+          data_emissao?: string | null
+          data_validade?: string | null
+          empresa_id?: string
+          fornecedor_id?: string | null
+          id?: string
+          numero?: string | null
+          obra_id?: string | null
+          observacoes?: string | null
+          status?: string
+          tipo?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       servicos_extras: {
         Row: {
           created_at: string
