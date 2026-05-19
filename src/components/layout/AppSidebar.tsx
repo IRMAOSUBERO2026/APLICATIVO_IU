@@ -27,6 +27,7 @@ import {
   BarChart3,
   UserCheck,
   Bell,
+  ShieldAlert,
 } from "lucide-react";
 import logoBranco from "@/assets/logo-branco.png";
 
