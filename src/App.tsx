@@ -37,6 +37,7 @@ import AssinaturaPublica from "./pages/AssinaturaPublica";
 import CustosObra from "./pages/CustosObra";
 import Clientes from "./pages/Clientes";
 import Solicitacoes from "./pages/Solicitacoes";
+import SegurancaTrabalho from "./pages/SegurancaTrabalho";
 import NotFound from "./pages/NotFound";
 import LoginPortal from "./pages/LoginPortal";
 import PortalColaborador from "./pages/PortalColaborador";
