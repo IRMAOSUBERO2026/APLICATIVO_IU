@@ -1,13 +1,13 @@
 /**
  * FICHA DE CONTROLE DE EPI — NR-6
  * Layout corporativo Irmãos Ubero Engenharia.
- * 1 página A4, identidade visual verde (#2D6A1A) + preto (#1A1A1A).
+ * Paginação automática, carimbo digital, layout verde e preto.
  */
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
-import logoBranco from "@/assets/logo-iu-fundo-branco.png";
+import logoBranco from "@/assets/logo-oficial.png";
 
 // ---------- Paleta ----------
 const C_GREEN: [number, number, number] = [45, 106, 26];      // #2D6A1A
@@ -59,7 +59,6 @@ async function getLogoBranco(): Promise<string | null> {
   return _logoCache;
 }
 
-// Trunca texto para caber em uma largura máxima (sem quebrar linha)
 function fit(doc: jsPDF, text: string, maxW: number): string {
   if (!text) return "—";
   let s = String(text);
@@ -70,25 +69,21 @@ function fit(doc: jsPDF, text: string, maxW: number): string {
 
 // ---------- Cabeçalho ----------
 function drawHeader(doc: jsPDF, logo: string | null) {
-  // Faixa verde
   doc.setFillColor(C_GREEN[0], C_GREEN[1], C_GREEN[2]);
   doc.rect(0, 0, PAGE_W, HEADER_H, "F");
 
-  // Logo à esquerda (já tem fundo branco)
   if (logo) {
     try {
       const h = 14;
       const w = h; // imagem quadrada
       const x = MX + 2;
       const y = (HEADER_H - h) / 2;
-      // Cartão branco para contraste extra
       doc.setFillColor(255, 255, 255);
       doc.roundedRect(x - 1, y - 1, w + 2, h + 2, 1, 1, "F");
       doc.addImage(logo, "PNG", x, y, w, h, undefined, "FAST");
     } catch { /* ignore */ }
   }
 
-  // Texto à direita
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13.5);
@@ -96,16 +91,13 @@ function drawHeader(doc: jsPDF, logo: string | null) {
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
-  doc.setTextColor(255, 255, 255);
-  // 80% branco aproximado em verde: usar tom claro
   doc.text("NR-6 — Equipamento de Proteção Individual — MTE", PAGE_W - MX - 2, 14, { align: "right" });
 
   doc.setFontSize(7);
   doc.text(`Emitido em: ${format(new Date(), "dd/MM/yyyy")}`, PAGE_W - MX - 2, 18.5, { align: "right" });
 
-  // Faixa decorativa gradiente simulado (3 segmentos)
   const stripY = HEADER_H;
-  const stripH = 1; // ≈3px
+  const stripH = 1;
   const seg = PAGE_W / 3;
   doc.setFillColor(C_GREEN_DARK[0], C_GREEN_DARK[1], C_GREEN_DARK[2]);
   doc.rect(0, stripY, seg, stripH, "F");
@@ -140,7 +132,7 @@ function sectionTitle(doc: jsPDF, y: number, label: string): number {
 }
 
 // ---------- Footer ----------
-function drawFooter(doc: jsPDF) {
+function drawFooter(doc: jsPDF, pageNum: number, totalPagesStr: string) {
   const y = PAGE_H - FOOTER_H;
   doc.setFillColor(C_BLACK[0], C_BLACK[1], C_BLACK[2]);
   doc.rect(0, y, PAGE_W, FOOTER_H, "F");
@@ -148,9 +140,8 @@ function drawFooter(doc: jsPDF) {
   doc.setTextColor(220, 220, 220);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(6);
-  doc.text("IRMAOS UBERO ENGENHARIA LTDA — CNPJ: 15.595.310/0001-73", MX + 2, y + 5.5);
+  doc.text("IRMAOS UBERO ENGENHARIA LTDA — CNPJ: 31.370.964/0001-55", MX + 2, y + 5.5);
 
-  // Badge centralizada
   const badgeText = "NR-6 / MTE";
   doc.setFont("helvetica", "bold");
   doc.setFontSize(6.5);
@@ -166,10 +157,10 @@ function drawFooter(doc: jsPDF) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(6);
   doc.setTextColor(220, 220, 220);
-  doc.text(`Impresso em ${format(new Date(), "dd/MM/yyyy")} — Pág. 01/01`, PAGE_W - MX - 2, y + 5.5, { align: "right" });
+  doc.text(`Impresso em ${format(new Date(), "dd/MM/yyyy")} — Pág. ${String(pageNum).padStart(2, '0')}/${totalPagesStr}`, PAGE_W - MX - 2, y + 5.5, { align: "right" });
 }
 
-// ---------- Identificação (grid 3x2) ----------
+// ---------- Identificação ----------
 function drawIdentificacao(doc: jsPDF, y: number, func: any): number {
   const items: Array<[string, string]> = [
     ["NOME", func.nome || "—"],
@@ -186,7 +177,6 @@ function drawIdentificacao(doc: jsPDF, y: number, func: any): number {
   const rowH = 8;
   const totalH = rowH * rows;
 
-  // Fundo + borda externa
   doc.setDrawColor(C_BORDER_DK[0], C_BORDER_DK[1], C_BORDER_DK[2]);
   doc.setLineWidth(0.2);
   doc.roundedRect(MX, y, totalW, totalH, 0.8, 0.8, "S");
@@ -196,24 +186,20 @@ function drawIdentificacao(doc: jsPDF, y: number, func: any): number {
     const c = i % cols;
     const cx = MX + c * colW;
     const cy = y + r * rowH;
-    // alternância: linhas ímpares (índice 0) cinza claro
     if (r % 2 === 0) {
       doc.setFillColor(C_ALT_BG[0], C_ALT_BG[1], C_ALT_BG[2]);
       doc.rect(cx + 0.2, cy + 0.2, colW - 0.4, rowH - 0.4, "F");
     }
-    // Bordas internas
     doc.setDrawColor(C_BORDER[0], C_BORDER[1], C_BORDER[2]);
     doc.setLineWidth(0.15);
     if (c < cols - 1) doc.line(cx + colW, cy + 0.5, cx + colW, cy + rowH - 0.5);
     if (r < rows - 1) doc.line(cx + 1, cy + rowH, cx + colW - 1, cy + rowH);
 
-    // Label
     doc.setFont("helvetica", "bold");
     doc.setFontSize(6);
     doc.setTextColor(C_LABEL[0], C_LABEL[1], C_LABEL[2]);
     doc.text(items[i][0], cx + 2.5, cy + 3);
 
-    // Valor
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8.5);
     doc.setTextColor(C_TEXT[0], C_TEXT[1], C_TEXT[2]);
@@ -242,7 +228,6 @@ function drawTermo(doc: jsPDF, y: number): number {
   const lh = 2.6;
   const textH = (l1.length + l2.length) * lh + 1.5;
 
-  // Bloco principal
   const boxH = textH + padY * 2;
   doc.setFillColor(C_TERMO_BG[0], C_TERMO_BG[1], C_TERMO_BG[2]);
   doc.setDrawColor(224, 224, 224);
@@ -257,12 +242,10 @@ function drawTermo(doc: jsPDF, y: number): number {
 
   let yy = y + boxH + 1.5;
 
-  // Bloco destaque amarelo (descontos)
   const dl = doc.splitTextToSize(TERMO_DESCONTOS, innerW - 2);
   const dH = dl.length * lh + padY * 2;
   doc.setFillColor(C_AMBER_BG[0], C_AMBER_BG[1], C_AMBER_BG[2]);
   doc.rect(MX, yy, w, dH, "F");
-  // border-left amber
   doc.setFillColor(C_AMBER[0], C_AMBER[1], C_AMBER[2]);
   doc.rect(MX, yy, 1, dH, "F");
 
@@ -275,36 +258,73 @@ function drawTermo(doc: jsPDF, y: number): number {
 }
 
 // ---------- Assinaturas ----------
-function drawAssinaturas(doc: jsPDF, y: number, func: any, empresa: any): number {
+function drawAssinaturas(doc: jsPDF, y: number, func: any, empresa: any, logo: string | null, docHash: string): number {
   const gap = 8;
   const colW = (PAGE_W - MX * 2 - gap) / 2;
-  const baseY = y + 12; // espaço para assinar acima da linha
-
-  const cols = [
-    { x: MX, nome: (func.nome || "").toUpperCase(), papel: "Colaborador", doc: func.cpf ? `CPF: ${func.cpf}` : "" },
-    { x: MX + colW + gap, nome: (empresa.nome_responsavel || empresa.nome_fantasia || empresa.razao_social || "").toUpperCase(), papel: empresa.cargo_responsavel || "Empregador / Responsável", doc: empresa.cnpj ? `CNPJ: ${empresa.cnpj}` : "" },
-  ];
-
-  for (const c of cols) {
-    // linha
-    doc.setDrawColor(42, 42, 42);
-    doc.setLineWidth(0.3);
-    doc.line(c.x, baseY, c.x + colW, baseY);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(8);
-    doc.setTextColor(C_TEXT[0], C_TEXT[1], C_TEXT[2]);
-    doc.text(fit(doc, c.nome, colW), c.x + colW / 2, baseY + 3.5, { align: "center" });
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(6.5);
-    doc.setTextColor(102, 102, 102);
-    doc.text(c.papel, c.x + colW / 2, baseY + 6.5, { align: "center" });
-    if (c.doc) {
-      doc.setFontSize(6);
-      doc.setTextColor(153, 153, 153);
-      doc.text(c.doc, c.x + colW / 2, baseY + 9, { align: "center" });
-    }
+  
+  // Colaborador (Esquerda)
+  const xColab = MX;
+  const yColab = y + 12;
+  doc.setDrawColor(42, 42, 42);
+  doc.setLineWidth(0.3);
+  doc.line(xColab, yColab, xColab + colW, yColab);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(C_TEXT[0], C_TEXT[1], C_TEXT[2]);
+  doc.text(fit(doc, (func.nome || "").toUpperCase(), colW), xColab + colW / 2, yColab + 3.5, { align: "center" });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6.5);
+  doc.setTextColor(102, 102, 102);
+  doc.text("Colaborador", xColab + colW / 2, yColab + 6.5, { align: "center" });
+  if (func.cpf) {
+    doc.setFontSize(6);
+    doc.setTextColor(153, 153, 153);
+    doc.text(`CPF: ${func.cpf}`, xColab + colW / 2, yColab + 9, { align: "center" });
   }
-  return baseY + 11;
+
+  // Carimbo Digital (Direita)
+  const xEmp = MX + colW + gap;
+  const yEmp = y;
+  const hEmp = 32;
+  
+  doc.setDrawColor(C_BORDER[0], C_BORDER[1], C_BORDER[2]);
+  doc.setLineWidth(0.2);
+  doc.roundedRect(xEmp, yEmp, colW, hEmp, 1, 1, "S");
+  
+  let ty = yEmp + 4;
+  if (logo) {
+    try {
+      doc.addImage(logo, "PNG", xEmp + 2, ty - 2, 8, 8, undefined, "FAST");
+    } catch {}
+  }
+  
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  doc.setTextColor(C_TEXT[0], C_TEXT[1], C_TEXT[2]);
+  doc.text(fit(doc, (empresa.razao_social || "IRMÃOS UBERO ENGENHARIA LTDA").toUpperCase(), colW - 12), xEmp + 12, ty);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6);
+  doc.text(`CNPJ: ${empresa.cnpj || "31.370.964/0001-55"}`, xEmp + 12, ty + 3);
+  
+  ty += 8;
+  doc.setFont("helvetica", "bold");
+  doc.text(fit(doc, empresa.responsavel_tecnico_1 || "Luis Fernando Gomez Ubero", colW - 4), xEmp + 2, ty);
+  doc.setFont("helvetica", "normal");
+  doc.text(`CREA ${empresa.crea_1 || "PR-95695/D"}`, xEmp + 2, ty + 3);
+  
+  ty += 7;
+  doc.setFont("helvetica", "bold");
+  doc.text(fit(doc, empresa.responsavel_tecnico_2 || "Marcos Paulo Gomez Ubero", colW - 4), xEmp + 2, ty);
+  doc.setFont("helvetica", "normal");
+  doc.text(`CREA ${empresa.crea_2 || "SC-120717-4"}`, xEmp + 2, ty + 3);
+  
+  ty += 7;
+  doc.setFont("helvetica", "italic");
+  doc.setTextColor(C_LABEL[0], C_LABEL[1], C_LABEL[2]);
+  doc.text(`Emitido em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")}`, xEmp + 2, ty);
+  doc.text(`Doc: ${docHash}`, xEmp + 2, ty + 3);
+
+  return Math.max(yColab + 11, yEmp + hEmp + 2);
 }
 
 // ---------- Main ----------
@@ -312,6 +332,9 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
   const { data: func } = await supabase.from("funcionarios").select("*").eq("id", funcionarioId).single();
   const { data: empresa } = await supabase.from("empresas").select("*").eq("id", empresaId).single();
   if (!func || !empresa) throw new Error("Dados base não localizados.");
+
+  // O hash do documento usa os primeiros 8 caracteres de alguma entrega_id ou do funcionario_id
+  const docHash = func.id.substring(0, 8).toUpperCase();
 
   const { data: entregas } = await supabase
     .from("entregas_epi")
@@ -323,31 +346,28 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
   const logo = await getLogoBranco();
 
-  // Camadas: marca d'água primeiro (fica embaixo)
-  drawWatermark(doc, logo);
-  drawHeader(doc, logo);
-
-  let y = HEADER_H + 3;
-
-  // Seção 1
-  y = sectionTitle(doc, y, "Identificação do Colaborador");
-  y = drawIdentificacao(doc, y, func);
+  // Seção 1 (apenas na 1ª página)
+  let startY = HEADER_H + 3;
+  startY = sectionTitle(doc, startY, "Identificação do Colaborador");
+  startY = drawIdentificacao(doc, startY, func);
 
   // Seção 2 — Equipamentos
-  y = sectionTitle(doc, y, "Equipamentos Entregues");
+  startY = sectionTitle(doc, startY, "Equipamentos Entregues");
 
   const linhas = (entregas || []).map((e: any, i: number) => [
     String(i + 1).padStart(2, "0"),
     safeDate(e.data_entrega),
     e.produto?.descricao || "Equipamento / EPI",
-    e.ca_numero || e.produto?.ca_numero || "—",
+    e.produto?.ca_numero || "—", // puxado direto do produto
     String(e.quantidade ?? 1),
     e.motivo || e.observacoes || "—",
     "",
   ]);
 
+  const totalPagesExp = "{total_pages_count_string}";
+
   autoTable(doc, {
-    startY: y,
+    startY: startY,
     head: [["#", "Data", "EPI / Equipamento", "Nº CA", "Qtd", "Motivo", "Rubrica"]],
     body: linhas.length ? linhas : [["—", "—", "Nenhuma entrega registrada", "—", "—", "—", ""]],
     theme: "grid",
@@ -389,31 +409,44 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
         data.cell.text = ["assinatura"];
       }
     },
+    didDrawPage: (data) => {
+      drawWatermark(doc, logo);
+      drawHeader(doc, logo);
+      drawFooter(doc, data.pageNumber, totalPagesExp);
+    }
   });
 
-  y = (doc as any).lastAutoTable.finalY + 2;
+  let finalY = (doc as any).lastAutoTable.finalY + 2;
+
+  // Verifica se há espaço na página atual para o Termo + Assinaturas
+  // Altura aproximada do Termo (25) + Assinaturas (35) = 60mm
+  if (finalY + 60 > PAGE_H - FOOTER_H) {
+    doc.addPage();
+    finalY = HEADER_H + 3;
+  }
 
   // Seção 3 — Termo
-  y = sectionTitle(doc, y, "Termo de Responsabilidade");
-  y = drawTermo(doc, y);
+  finalY = sectionTitle(doc, finalY, "Termo de Responsabilidade");
+  finalY = drawTermo(doc, finalY);
 
   // Local + data (linha curta)
   doc.setFont("helvetica", "italic");
   doc.setFontSize(7);
   doc.setTextColor(C_BODY[0], C_BODY[1], C_BODY[2]);
-  doc.text(`${empresa.cidade || "—"}, ${format(new Date(), "dd 'de' MMMM 'de' yyyy")}`, PAGE_W - MX, y + 1, { align: "right" });
-  y += 4;
+  doc.text(`${empresa.cidade || "—"}, ${format(new Date(), "dd 'de' MMMM 'de' yyyy")}`, PAGE_W - MX, finalY + 1, { align: "right" });
+  finalY += 4;
 
-  // Assinaturas
-  y = drawAssinaturas(doc, y, func, empresa);
+  // Assinaturas e Carimbo Digital
+  finalY = drawAssinaturas(doc, finalY, func, empresa, logo, docHash);
 
-  // Footer (sempre por último, fixo no rodapé)
-  drawFooter(doc);
-
-  // Garante 1 única página: se autoTable estourou, removemos páginas extras
-  const total = doc.getNumberOfPages();
-  if (total > 1) {
-    for (let p = total; p > 1; p--) doc.deletePage(p);
+  // Atualiza placeholders de paginação
+  const pages = doc.getNumberOfPages();
+  for (let i = 1; i <= pages; i++) {
+    doc.setPage(i);
+    // Replace expression (jspdf can use putTotalPages)
+  }
+  if (typeof doc.putTotalPages === 'function') {
+    doc.putTotalPages(totalPagesExp);
   }
 
   return doc.output("blob");

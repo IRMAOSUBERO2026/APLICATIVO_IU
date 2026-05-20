@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { gerarFichaEPIEEnviarAssinatura } from "@/lib/gerarFichaEPI";
 import { gerarFichaEPIPdf } from "@/lib/gerarFichaEPIPdf";
-import { FileSignature, FileDown, Search, Loader2, Copy, ExternalLink, Users, RefreshCw } from "lucide-react";
+import { FileSignature, FileDown, Search, Loader2, Copy, ExternalLink, Users, RefreshCw, CheckCircle2, Clock, AlertTriangle, AlertCircle, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 
@@ -11,11 +11,15 @@ interface FuncRow {
   id: string;
   nome: string;
   cargo: string;
+  status: string;
   empresa_id: string;
   obra_id: string | null;
   total_entregas: number;
   ultima_entrega: string | null;
   ultima_assinatura: { status: string; created_at: string; token: string } | null;
+  tem_token_expirado: boolean;
+  has_epi_ativo: boolean;
+  has_pendente_confirmacao: boolean;
 }
 
 interface Obra { id: string; nome: string; codigo: string; }
@@ -36,35 +40,82 @@ export default function FichasEPIPanel() {
   const [filterObra, setFilterObra] = useState<string>("todas");
   const [busy, setBusy] = useState<string | null>(null);
   const [linkAtivo, setLinkAtivo] = useState<{ funcId: string; url: string } | null>(null);
+  const [kpiFilter, setKpiFilter] = useState<"all" | "ativos" | "pendentes" | "desligados" | "expirados">("all");
+  const [kpis, setKpis] = useState({
+    epiAtivosCount: 0,
+    pendentesCount: 0,
+    desligadosEpiAtivoCount: 0,
+    tokensExpiradosCount: 0,
+  });
 
   async function load() {
     setLoading(true);
+    
+    // Fetch resources
     const [funcRes, entRes, assRes, obrasRes] = await Promise.all([
-      supabase.from("funcionarios").select("id, nome, cargo, empresa_id, obra_id").eq("status", "ativo").order("nome"),
-      supabase.from("entregas_epi").select("id, funcionario_id").order("data_entrega", { ascending: false }),
+      supabase.from("funcionarios").select("id, nome, cargo, status, empresa_id, obra_id").order("nome"),
+      supabase.from("entregas_epi").select("id, funcionario_id, status, confirmacao_tipo, data_entrega").order("data_entrega", { ascending: false }),
       supabase.from("assinaturas_digitais").select("funcionario_id, status, created_at, token_acesso").eq("documento_tipo", "ficha_epi").order("created_at", { ascending: false }),
       supabase.from("obras").select("id, nome, codigo").order("codigo"),
     ]);
+
+    // Handle token query safely
+    let tokensData: any[] = [];
+    try {
+      const { data: tks } = await supabase.from("epi_tokens_assinatura").select("id, status, expira_em, funcionario_id");
+      if (tks) tokensData = tks;
+    } catch (e) {
+      console.warn("Table epi_tokens_assinatura not created yet or accessible:", e);
+    }
 
     const ents = entRes.data || [];
     const assinaturas = assRes.data || [];
 
     const list: FuncRow[] = (funcRes.data || []).map((f: any) => {
       const minhasEnt = ents.filter((e: any) => e.funcionario_id === f.id);
+      const minhasEntAtivas = minhasEnt.filter((e: any) => (e.status || "ativo") === "ativo");
       const minhasAss = assinaturas.filter((a: any) => a.funcionario_id === f.id);
+      
       const ultimaEnt = minhasEnt.length
         ? minhasEnt.map((e: any) => e.data_entrega).sort().slice(-1)[0]
         : null;
       const ultAss = minhasAss[0];
+
+      const meusTokens = tokensData.filter((t: any) => t.funcionario_id === f.id);
+      const temTokenExpirado = meusTokens.some((t: any) => 
+        t.status === "expirado" || 
+        (t.status === "pendente" && new Date(t.expira_em) < new Date())
+      );
+
       return {
         ...f,
-        total_entregas: minhasEnt.length,
+        total_entregas: minhasEntAtivas.length,
         ultima_entrega: ultimaEnt,
         ultima_assinatura: ultAss
           ? { status: ultAss.status, created_at: ultAss.created_at, token: ultAss.token_acesso }
           : null,
+        tem_token_expirado: temTokenExpirado,
+        has_epi_ativo: minhasEntAtivas.length > 0,
+        has_pendente_confirmacao: minhasEntAtivas.some((e: any) => (e.confirmacao_tipo || "pendente") === "pendente"),
       };
     });
+
+    // Calculate KPIs
+    const epiAtivosCount = ents.filter((e: any) => (e.status || "ativo") === "ativo").length;
+    const pendentesCount = ents.filter((e: any) => (e.status || "ativo") === "ativo" && (e.confirmacao_tipo || "pendente") === "pendente").length;
+    const desligadosEpiAtivoCount = list.filter((r: any) => r.status !== "ativo" && r.has_epi_ativo).length;
+    const tokensExpiradosCount = tokensData.filter((t: any) => 
+      t.status === "expirado" || 
+      (t.status === "pendente" && new Date(t.expira_em) < new Date())
+    ).length;
+
+    setKpis({
+      epiAtivosCount,
+      pendentesCount,
+      desligadosEpiAtivoCount,
+      tokensExpiradosCount,
+    });
+
     setRows(list);
     if (obrasRes.data) setObras(obrasRes.data);
     setLoading(false);
@@ -74,12 +125,35 @@ export default function FichasEPIPanel() {
 
   const filtered = useMemo(() => {
     return rows.filter(r => {
+      // 1. Obra filter
       if (filterObra !== "todas" && r.obra_id !== filterObra) return false;
-      if (!search) return true;
-      const s = search.toLowerCase();
-      return r.nome.toLowerCase().includes(s) || (r.cargo || "").toLowerCase().includes(s);
+      
+      // 2. Search filter
+      if (search) {
+        const s = search.toLowerCase();
+        const matchSearch = r.nome.toLowerCase().includes(s) || (r.cargo || "").toLowerCase().includes(s);
+        if (!matchSearch) return false;
+      }
+      
+      // 3. KPI Filter
+      if (kpiFilter === "ativos") {
+        if (!r.has_epi_ativo) return false;
+      } else if (kpiFilter === "pendentes") {
+        if (!r.has_pendente_confirmacao) return false;
+      } else if (kpiFilter === "desligados") {
+        if (!(r.status !== "ativo" && r.has_epi_ativo)) return false;
+      } else if (kpiFilter === "expirados") {
+        if (!r.tem_token_expirado) return false;
+      }
+
+      // Default behavior: hide deactivated employees in default lists unless filtering specifically for them
+      if (kpiFilter !== "desligados" && r.status !== "ativo") {
+        return false;
+      }
+      
+      return true;
     });
-  }, [rows, search, filterObra]);
+  }, [rows, search, filterObra, kpiFilter]);
 
   async function handleAssinaturaDigital(r: FuncRow) {
     if (r.total_entregas === 0) {
@@ -138,6 +212,69 @@ export default function FichasEPIPanel() {
       <p className="text-[11px] text-slate-500 bg-slate-50 p-4 rounded-xl border border-dashed border-slate-200">
         A ficha consolida automaticamente todo o histórico de entregas. <b>Nota:</b> Se os botões estiverem desativados, o funcionário ainda não possui entregas registradas.
       </p>
+
+      {/* Dashboard EPI KPIs */}
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mt-2">
+        <div 
+          onClick={() => setKpiFilter(kpiFilter === "ativos" ? "all" : "ativos")}
+          className={`cursor-pointer p-4 rounded-2xl border transition-all flex items-center gap-4 ${
+            kpiFilter === "ativos" 
+              ? "bg-[#2D6A1A]/10 border-[#2D6A1A] shadow-md shadow-[#2D6A1A]/5 scale-[0.98]" 
+              : "bg-white border-slate-100 hover:border-[#2D6A1A]/30 shadow-sm"
+          }`}
+        >
+          <div className="p-3 bg-emerald-50 text-[#2D6A1A] rounded-xl"><CheckCircle2 className="h-6 w-6" /></div>
+          <div>
+            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">EPIs Ativos</p>
+            <p className="text-2xl font-black text-slate-800">{kpis.epiAtivosCount}</p>
+          </div>
+        </div>
+
+        <div 
+          onClick={() => setKpiFilter(kpiFilter === "pendentes" ? "all" : "pendentes")}
+          className={`cursor-pointer p-4 rounded-2xl border transition-all flex items-center gap-4 ${
+            kpiFilter === "pendentes" 
+              ? "bg-amber-500/10 border-amber-500 shadow-md shadow-amber-500/5 scale-[0.98]" 
+              : "bg-white border-slate-100 hover:border-amber-200 shadow-sm"
+          }`}
+        >
+          <div className="p-3 bg-amber-50 text-amber-600 rounded-xl"><Clock className="h-6 w-6" /></div>
+          <div>
+            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">Pendente Assinatura</p>
+            <p className="text-2xl font-black text-slate-800">{kpis.pendentesCount}</p>
+          </div>
+        </div>
+
+        <div 
+          onClick={() => setKpiFilter(kpiFilter === "desligados" ? "all" : "desligados")}
+          className={`cursor-pointer p-4 rounded-2xl border transition-all flex items-center gap-4 ${
+            kpiFilter === "desligados" 
+              ? "bg-rose-500/10 border-rose-500 shadow-md shadow-rose-500/5 scale-[0.98]" 
+              : "bg-white border-slate-100 hover:border-rose-200 shadow-sm"
+          }`}
+        >
+          <div className="p-3 bg-rose-50 text-rose-600 rounded-xl"><AlertCircle className="h-6 w-6" /></div>
+          <div>
+            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">Desligados c/ EPI</p>
+            <p className="text-2xl font-black text-slate-800">{kpis.desligadosEpiAtivoCount}</p>
+          </div>
+        </div>
+
+        <div 
+          onClick={() => setKpiFilter(kpiFilter === "expirados" ? "all" : "expirados")}
+          className={`cursor-pointer p-4 rounded-2xl border transition-all flex items-center gap-4 ${
+            kpiFilter === "expirados" 
+              ? "bg-blue-500/10 border-blue-500 shadow-md shadow-blue-500/5 scale-[0.98]" 
+              : "bg-white border-slate-100 hover:border-blue-200 shadow-sm"
+          }`}
+        >
+          <div className="p-3 bg-blue-50 text-blue-600 rounded-xl"><XCircle className="h-6 w-6" /></div>
+          <div>
+            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-none mb-1">Tokens Expirados</p>
+            <p className="text-2xl font-black text-slate-800">{kpis.tokensExpiradosCount}</p>
+          </div>
+        </div>
+      </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1 max-w-md">

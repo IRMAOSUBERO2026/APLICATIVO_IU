@@ -4,8 +4,9 @@ import { toast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Stethoscope, Plus, DollarSign, Send, Search, Settings, ArrowLeft,
-  MessageCircle, Mail, Trash2, Edit2, Save, X
+  MessageCircle, Mail, Trash2, Edit2, Save, X, Upload
 } from "lucide-react";
+import { calcularVencimento } from "@/utils/seguranca";
 
 // ---- Types ----
 interface PrecoExame {
@@ -28,6 +29,7 @@ interface SolicitacaoExame {
   fornecedor_id: string | null;
   data_solicitacao: string;
   data_realizado: string | null;
+  data_agendada?: string | null;
   valor: number;
   status: string;
   observacoes: string | null;
@@ -41,6 +43,7 @@ interface Funcionario {
   cpf: string;
   cargo: string;
   empresa_id: string;
+  obra_id?: string;
   data_aso: string | null;
   data_nr6: string | null;
   data_nr12: string | null;
@@ -329,21 +332,34 @@ function SolicitacoesView() {
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
   const [form, setForm] = useState({
-    funcionario_id: "", tipo_exame: "", exame_preco_id: "", fornecedor_id: "", valor: "", observacoes: ""
+    funcionario_id: "", tipo_exame: "", exame_preco_id: "", fornecedor_id: "", valor: "", observacoes: "", data_agendada: ""
+  });
+  
+  const [modalGED, setModalGED] = useState<{ open: boolean; sol: SolicitacaoExame | null }>({ open: false, sol: null });
+  const [clinicas, setClinicas] = useState<{id: string; nome: string}[]>([]);
+  const [gedForm, setGedForm] = useState({
+    tipo: "ASO",
+    subtipo: "periodico",
+    data_realizacao: new Date().toISOString().split("T")[0],
+    clinica_id: "",
+    arquivo: null as File | null,
+    observacoes: ""
   });
 
   useEffect(() => { loadData(); }, []);
 
   const loadData = async () => {
-    const [{ data: sol }, { data: func }, { data: forn }, { data: prec }] = await Promise.all([
+    const [{ data: sol }, { data: func }, { data: forn }, { data: prec }, { data: clin }] = await Promise.all([
       supabase.from("solicitacoes_exame").select("*").order("data_solicitacao", { ascending: false }),
-      supabase.from("funcionarios").select("id, nome, cpf, cargo, empresa_id, data_aso, data_nr6, data_nr12, data_nr18, data_nr35").eq("status", "ativo"),
+      supabase.from("funcionarios").select("id, nome, cpf, cargo, empresa_id, obra_id, data_aso, data_nr6, data_nr12, data_nr18, data_nr35").eq("status", "ativo"),
       supabase.from("fornecedores").select("id, razao_social, nome_fantasia, telefone, email").eq("ativo", true),
       supabase.from("tabela_precos_exames").select("*").eq("ativo", true),
+      supabase.from("seguranca_clinicas").select("id, nome").eq("ativo", true),
     ]);
     if (func) setFuncionarios(func);
     if (forn) setFornecedores(forn);
     if (prec) setPrecos(prec as PrecoExame[]);
+    if (clin) setClinicas(clin);
     if (sol) {
       setSolicitacoes(sol.map(s => ({
         ...s,
@@ -380,13 +396,14 @@ function SolicitacoesView() {
       fornecedor_id: form.fornecedor_id || null,
       valor: parseFloat(form.valor) || 0,
       observacoes: form.observacoes || null,
+      data_agendada: form.data_agendada || null,
     });
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Solicitação criada" });
       setShowForm(false);
-      setForm({ funcionario_id: "", tipo_exame: "", exame_preco_id: "", fornecedor_id: "", valor: "", observacoes: "" });
+      setForm({ funcionario_id: "", tipo_exame: "", exame_preco_id: "", fornecedor_id: "", valor: "", observacoes: "", data_agendada: "" });
       loadData();
     }
   };
@@ -418,6 +435,87 @@ function SolicitacoesView() {
 
     toast({ title: `Status: ${newStatus}` });
     loadData();
+  };
+
+  const handleChangeStatusClick = (sol: SolicitacaoExame, newStatus: string) => {
+    if (newStatus === "realizado") {
+      let mappedType = "ASO";
+      const tLower = sol.tipo_exame.toLowerCase();
+      if (tLower.includes("nr6") || tLower.includes("nr-6")) mappedType = "NR6";
+      else if (tLower.includes("nr12") || tLower.includes("nr-12")) mappedType = "NR12";
+      else if (tLower.includes("nr18") || tLower.includes("nr-18")) mappedType = "NR18";
+      else if (tLower.includes("nr35") || tLower.includes("nr-35")) mappedType = "NR35";
+      
+      setGedForm(prev => ({
+        ...prev,
+        tipo: mappedType,
+        subtipo: tLower.includes("admissional") ? "admissional" : tLower.includes("demissional") ? "demissional" : tLower.includes("retorno") ? "retorno" : "periodico",
+        arquivo: null
+      }));
+      setModalGED({ open: true, sol });
+    } else {
+      handleStatusChange(sol.id, newStatus);
+    }
+  };
+
+  const handleDeleteSolicitacao = async (sol: SolicitacaoExame) => {
+    const confirmado = window.confirm(
+      `Excluir a solicitação de "${sol.tipo_exame}" de ${sol.funcionario_nome}?\n\nEsta ação não pode ser desfeita.`
+    );
+    if (!confirmado) return;
+    const { error } = await supabase.from("solicitacoes_exame").delete().eq("id", sol.id);
+    if (error) {
+      toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Solicitação excluída" });
+      loadData();
+    }
+  };
+
+  const handleSaveGED = async () => {
+    if (!modalGED.sol) return;
+    const s = modalGED.sol;
+    if (!gedForm.data_realizacao || !gedForm.tipo || !gedForm.arquivo) {
+       toast({ title: "Preencha a data, tipo e anexe o PDF do exame.", variant: "destructive" });
+       return;
+    }
+
+    const func = funcionarios.find(f => f.id === s.funcionario_id);
+    const dataRealizacao = new Date(gedForm.data_realizacao + "T12:00:00");
+    const dataVencimento = calcularVencimento(gedForm.tipo, dataRealizacao);
+    
+    try {
+      toast({ title: "Enviando arquivo e salvando..." });
+      // 1. Upload
+      const fileExt = gedForm.arquivo.name.split('.').pop() || "pdf";
+      const fileName = `${s.funcionario_id}/${gedForm.tipo}/${Date.now()}_documento.${fileExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from("documentos-seguranca")
+        .upload(fileName, gedForm.arquivo);
+      if (uploadError) throw uploadError;
+
+      // 2. Insert into seguranca_documentos
+      const { error: dbError } = await supabase.from("seguranca_documentos").insert({
+        funcionario_id: s.funcionario_id,
+        obra_id: func?.obra_id || null,
+        clinica_id: gedForm.clinica_id || null,
+        tipo: gedForm.tipo,
+        subtipo: gedForm.tipo === "ASO" ? gedForm.subtipo : null,
+        data_realizacao: gedForm.data_realizacao,
+        data_vencimento: dataVencimento.toISOString().split("T")[0],
+        arquivo_url: fileName,
+        observacoes: gedForm.observacoes || null
+      });
+      if (dbError) throw dbError;
+
+      // 3. Update status in existing flow
+      await handleStatusChange(s.id, "realizado");
+      
+      setModalGED({ open: false, sol: null });
+      toast({ title: "Exame salvo no Histórico de Segurança!" });
+    } catch (e: any) {
+      toast({ title: "Erro", description: e.message, variant: "destructive" });
+    }
   };
 
   const handleWhatsApp = (sol: SolicitacaoExame) => {
@@ -498,6 +596,10 @@ function SolicitacoesView() {
               <input type="number" step="0.01" value={form.valor} onChange={e => setForm(p => ({ ...p, valor: e.target.value }))} className="w-full rounded-lg border bg-card py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
             </div>
             <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Data Agendada</label>
+              <input type="date" value={form.data_agendada} onChange={e => setForm(p => ({ ...p, data_agendada: e.target.value }))} className="w-full rounded-lg border bg-card py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+            </div>
+            <div className="space-y-1">
               <label className="text-xs font-medium text-muted-foreground">Observações</label>
               <input value={form.observacoes} onChange={e => setForm(p => ({ ...p, observacoes: e.target.value }))} className="w-full rounded-lg border bg-card py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
             </div>
@@ -519,7 +621,8 @@ function SolicitacoesView() {
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Funcionário</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Exame/Treinamento</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Fornecedor</th>
-                <th className="px-4 py-3 text-center font-medium text-muted-foreground">Data</th>
+                <th className="px-4 py-3 text-center font-medium text-muted-foreground">Solicitação</th>
+                <th className="px-4 py-3 text-center font-medium text-muted-foreground">Agendado</th>
                 <th className="px-4 py-3 text-right font-medium text-muted-foreground">Valor</th>
                 <th className="px-4 py-3 text-center font-medium text-muted-foreground">Status</th>
                 <th className="px-4 py-3 text-center font-medium text-muted-foreground">Ações</th>
@@ -534,11 +637,14 @@ function SolicitacoesView() {
                   <td className="px-4 py-3 text-muted-foreground">{s.tipo_exame}</td>
                   <td className="px-4 py-3 text-muted-foreground">{s.fornecedor_nome}</td>
                   <td className="px-4 py-3 text-center text-muted-foreground">{new Date(s.data_solicitacao).toLocaleDateString("pt-BR")}</td>
+                  <td className="px-4 py-3 text-center font-medium text-primary">
+                    {s.data_agendada ? new Date(s.data_agendada + "T12:00:00").toLocaleDateString("pt-BR") : "—"}
+                  </td>
                   <td className="px-4 py-3 text-right font-medium">R$ {s.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
                   <td className="px-4 py-3 text-center">
                     <select
                       value={s.status}
-                      onChange={e => handleStatusChange(s.id, e.target.value)}
+                      onChange={e => handleChangeStatusClick(s, e.target.value)}
                       className={`rounded-full px-2 py-0.5 text-xs font-medium border-0 focus:ring-0 cursor-pointer ${
                         s.status === "pendente" ? "bg-warning/10 text-warning" :
                         s.status === "realizado" ? "bg-success/10 text-success" :
@@ -556,6 +662,7 @@ function SolicitacoesView() {
                     <div className="flex justify-center gap-1">
                       <button onClick={() => handleWhatsApp(s)} title="WhatsApp" className="p-1 text-muted-foreground hover:text-success transition-colors"><MessageCircle className="h-3.5 w-3.5" /></button>
                       <button onClick={() => handleEmail(s)} title="E-mail" className="p-1 text-muted-foreground hover:text-primary transition-colors"><Mail className="h-3.5 w-3.5" /></button>
+                      <button onClick={() => handleDeleteSolicitacao(s)} title="Excluir solicitação" className="p-1 text-muted-foreground hover:text-destructive transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
                     </div>
                   </td>
                 </tr>
@@ -564,6 +671,113 @@ function SolicitacoesView() {
           </table>
         </div>
       </div>
+
+      {/* Modal GED para marcar como Realizado */}
+      <Dialog open={modalGED.open} onOpenChange={o => { if(!o) setModalGED({open: false, sol: null}); }}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Anexar Documento de Segurança</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="p-3 bg-muted/50 rounded-lg text-sm mb-2">
+              <p><strong>Funcionário:</strong> {modalGED.sol?.funcionario_nome}</p>
+              <p><strong>Exame Original:</strong> {modalGED.sol?.tipo_exame}</p>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Tipo de Documento *</label>
+                <select value={gedForm.tipo} onChange={e => setGedForm(p => ({ ...p, tipo: e.target.value }))} className="w-full rounded-lg border bg-card py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+                  <option value="ASO">ASO</option>
+                  <option value="NR6">NR6</option>
+                  <option value="NR12">NR12</option>
+                  <option value="NR18">NR18</option>
+                  <option value="NR35">NR35</option>
+                </select>
+              </div>
+
+              {gedForm.tipo === "ASO" && (
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground">Subtipo *</label>
+                  <select value={gedForm.subtipo} onChange={e => setGedForm(p => ({ ...p, subtipo: e.target.value }))} className="w-full rounded-lg border bg-card py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+                    <option value="admissional">Admissional</option>
+                    <option value="periodico">Periódico</option>
+                    <option value="retorno">Retorno ao Trabalho</option>
+                    <option value="demissional">Demissional</option>
+                  </select>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Data de Realização *</label>
+                <input type="date" value={gedForm.data_realizacao} onChange={e => setGedForm(p => ({ ...p, data_realizacao: e.target.value }))} className="w-full rounded-lg border bg-card py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Vencimento Calculado</label>
+                <input 
+                  type="text" 
+                  readOnly 
+                  className="w-full rounded-lg border bg-muted py-2 px-3 text-sm text-muted-foreground cursor-not-allowed font-medium"
+                  value={
+                    gedForm.data_realizacao && gedForm.tipo ? 
+                      calcularVencimento(gedForm.tipo, new Date(gedForm.data_realizacao + "T12:00:00")).toLocaleDateString("pt-BR") 
+                      : ""
+                  } 
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Clínica / Fornecedor</label>
+              <select value={gedForm.clinica_id} onChange={e => setGedForm(p => ({ ...p, clinica_id: e.target.value }))} className="w-full rounded-lg border bg-card py-2 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+                <option value="">Selecione a clínica...</option>
+                {clinicas.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-muted-foreground">Upload do Arquivo (PDF) *</label>
+              <div className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-muted/50 transition-colors relative">
+                <input 
+                  type="file" 
+                  accept=".pdf" 
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  onChange={e => {
+                    const f = e.target.files?.[0];
+                    if (f) setGedForm(p => ({ ...p, arquivo: f }));
+                  }} 
+                />
+                <div className="flex flex-col items-center justify-center gap-2">
+                  {gedForm.arquivo ? (
+                    <>
+                      <div className="h-10 w-10 bg-primary/10 text-primary rounded-full flex items-center justify-center"><Upload className="h-5 w-5" /></div>
+                      <p className="text-sm font-medium text-primary">{gedForm.arquivo.name}</p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="h-10 w-10 bg-muted text-muted-foreground rounded-full flex items-center justify-center"><Upload className="h-5 w-5" /></div>
+                      <p className="text-sm text-muted-foreground">Clique para procurar o arquivo PDF</p>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+
+          </div>
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setModalGED({ open: false, sol: null })} className="rounded-lg border bg-card px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors">
+              Cancelar
+            </button>
+            <button onClick={handleSaveGED} className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+              <Save className="h-4 w-4" />
+              Salvar Histórico
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

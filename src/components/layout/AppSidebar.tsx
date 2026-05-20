@@ -1,4 +1,5 @@
 import { useLocation, Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -27,7 +28,9 @@ import {
   BarChart3,
   UserCheck,
   Bell,
+  Upload,
 } from "lucide-react";
+import { verificarAlertas } from "@/utils/seguranca";
 import logoBranco from "@/assets/logo-branco.png";
 
 const menuSections = [
@@ -59,6 +62,11 @@ const menuSections = [
     label: "RH & Pessoal",
     items: [
       { icon: Users, label: "RH / DP", path: "/rh" },
+      { icon: Shield, label: "Segurança e NRs", path: "/rh/seguranca/painel" },
+      { icon: Calculator, label: "Equipamentos de Ponto", path: "/ponto/equipamentos" },
+      { icon: Upload, label: "Importar AFD", path: "/ponto/importar" },
+      { icon: Bell, label: "Inconsistências", path: "/ponto/inconsistencias" },
+      { icon: BarChart3, label: "Apuração Mensal", path: "/ponto/apuracao" },
       { icon: Palmtree, label: "Férias", path: "/ferias" },
       { icon: FileText, label: "Doc. Mensal", path: "/documentacao-mensal" },
     ],
@@ -95,6 +103,14 @@ interface AppSidebarProps {
 
 export function AppSidebar({ onClose }: AppSidebarProps) {
   const location = useLocation();
+  const [alertasSeguranca, setAlertasSeguranca] = useState(0);
+
+  useEffect(() => {
+    // Carrega o badge de alertas de segurança
+    verificarAlertas().then(res => {
+      setAlertasSeguranca(res.vencidos + res.a_vencer_7);
+    });
+  }, [location.pathname]);
 
   return (
     <div className="flex h-full flex-col overflow-y-auto scrollbar-saas bg-[#0D0D0D] w-[240px]">
@@ -137,7 +153,12 @@ export function AppSidebar({ onClose }: AppSidebarProps) {
                         className="h-4 w-4 flex-shrink-0 text-[#C9A84C]"
                         style={{ width: '16px', height: '16px' }}
                       />
-                      {item.label}
+                      <span className="flex-1">{item.label}</span>
+                      {item.label === "Segurança e NRs" && alertasSeguranca > 0 && (
+                        <span className="flex h-5 items-center justify-center rounded-full bg-destructive px-2 text-[10px] font-bold text-destructive-foreground">
+                          {alertasSeguranca}
+                        </span>
+                      )}
                     </Link>
                   </li>
                 );

@@ -2,17 +2,44 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { HardHat, AlertTriangle } from "lucide-react";
 
 export default function PortalColaborador() {
   const { session, role, signOut, isLoading } = useAuth();
   const navigate = useNavigate();
+  const [tokenEpiPendente, setTokenEpiPendente] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoading && !session) {
       navigate("/login-portal");
     }
   }, [session, isLoading, navigate]);
+
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    checkEpiToken();
+  }, [session]);
+
+  async function checkEpiToken() {
+    try {
+      const { data: func } = await supabase
+        .from("funcionarios")
+        .select("id")
+        .eq("user_id", session!.user.id)
+        .single();
+      if (!func) return;
+      const { data: tokens } = await supabase
+        .from("epi_tokens_assinatura")
+        .select("token")
+        .eq("funcionario_id", func.id)
+        .eq("status", "pendente")
+        .gt("expira_em", new Date().toISOString())
+        .limit(1);
+      if (tokens && tokens.length > 0) setTokenEpiPendente(tokens[0].token);
+    } catch {}
+  }
 
   const handleLogout = async () => {
     await signOut();
@@ -40,6 +67,20 @@ export default function PortalColaborador() {
           </p>
         </CardContent>
       </Card>
+
+      {/* Banner EPI pendente */}
+      {tokenEpiPendente && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex items-center gap-3">
+          <AlertTriangle size={20} className="text-red-500 shrink-0" />
+          <p className="font-bold text-red-800 text-sm flex-1">⚠️ Você tem EPIs aguardando assinatura digital!</p>
+          <button
+            onClick={() => navigate(`/portal/epi/assinar/${tokenEpiPendente}`)}
+            className="bg-red-500 hover:bg-red-600 text-white text-xs font-black px-4 py-2 rounded-xl transition-colors whitespace-nowrap"
+          >
+            Assinar agora
+          </button>
+        </div>
+      )}
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/portal/ponto")}>
@@ -63,6 +104,25 @@ export default function PortalColaborador() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-gray-500">Acesse seus comprovantes de pagamento e informes de rendimento.</p>
+          </CardContent>
+        </Card>
+
+        {/* Card Meus EPIs */}
+        <Card
+          className={`hover:shadow-lg transition-shadow cursor-pointer ${tokenEpiPendente ? "border-red-200 bg-red-50/30" : ""}`}
+          onClick={() => navigate("/portal/epis")}
+        >
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <HardHat size={24} className="text-[#2D6A1A]" />
+              Meus EPIs
+              {tokenEpiPendente && (
+                <span className="ml-auto text-[10px] bg-red-500 text-white font-black px-2 py-0.5 rounded-full animate-pulse">ASSINAR</span>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-500">Visualize seus equipamentos de proteção individual e confirme o recebimento.</p>
           </CardContent>
         </Card>
         
@@ -117,3 +177,4 @@ export default function PortalColaborador() {
     </div>
   );
 }
+

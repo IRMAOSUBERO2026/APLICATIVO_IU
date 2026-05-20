@@ -13,6 +13,8 @@ interface FuncionarioItem {
   salario_base: number;
   hasSaved: boolean;
   hasCalculated: boolean;
+  importadoPonto?: boolean;
+  editadoManualmente?: boolean;
 }
 
 interface Props {
@@ -77,7 +79,19 @@ export function FuncionariosList({ funcionarios, onSelect, selectedId, onOpenDoc
               }`}
             >
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium truncate">{f.nome}</p>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <p className="text-sm font-medium truncate">{f.nome}</p>
+                  {f.importadoPonto && (
+                    <Badge variant="secondary" className="bg-blue-100 text-blue-700 hover:bg-blue-200 text-[9px] px-1.5 py-0">
+                      Importado do Ponto
+                    </Badge>
+                  )}
+                  {f.editadoManualmente && (
+                    <Badge variant="outline" className="border-yellow-500 text-yellow-600 bg-yellow-50/50 hover:bg-yellow-100 text-[9px] px-1.5 py-0">
+                      Editado manualmente
+                    </Badge>
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground">{f.cargo} • {fmt(f.salario_base)}</p>
               </div>
               <div className="flex-shrink-0 ml-2 flex items-center gap-2">

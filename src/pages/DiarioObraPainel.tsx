@@ -33,10 +33,10 @@ export default function DiarioObraPainel() {
           .single();
         if (obraData) setObra(obraData);
 
-        // Diários list (traz observacoes para o PDF)
+        // Diários list (traz observacoes e fotos para o PDF)
         const { data: diariosData, error } = await supabase
           .from("diarios_obra")
-          .select("id, data, responsavel, clima, mao_de_obra_presente, atividades_executadas, observacoes, ocorrencias, created_at")
+          .select("id, data, responsavel, clima, mao_de_obra_presente, atividades_executadas, observacoes, ocorrencias, fotos, created_at")
           .eq("obra_id", obraId)
           .order("data", { ascending: false });
         

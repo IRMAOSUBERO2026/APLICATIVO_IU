@@ -5,7 +5,7 @@
  * seções, destaques, blocos de assinatura e rodapé institucional.
  */
 import jsPDF from "jspdf";
-import logoPreto from "@/assets/logo-preto.png";
+import logoOficialImg from "@/assets/logo-oficial.png";
 import { getLinhaImpressao, NOME_EMPRESA_OFICIAL } from "./usuarioImpressao";
 
 export const BRAND = {
@@ -63,7 +63,7 @@ async function fetchAsDataUrl(url: string): Promise<string | null> {
 let _logoFallback: string | null = null;
 async function getLogoOficial(): Promise<string | null> {
   if (_logoFallback) return _logoFallback;
-  _logoFallback = await fetchAsDataUrl(logoPreto);
+  _logoFallback = await fetchAsDataUrl(logoOficialImg);
   return _logoFallback;
 }
 
@@ -102,11 +102,10 @@ export async function initBrandedDoc(opts: InitBrandedOptions): Promise<BrandCon
   const primary = hexToRgb(empresa.cor_primaria, BRAND.green);
   const secondary = hexToRgb(empresa.cor_secundaria, BRAND.black);
 
-  // Carrega logos em paralelo
+  // Usa apenas a logo oficial (hardcoded via assets) para todos
   const oficial = await getLogoOficial();
-  const empresaLogo = empresa.logo_url ? await fetchAsDataUrl(empresa.logo_url) : null;
-  const logoData = empresaLogo || oficial;
-  const watermarkData = oficial || empresaLogo;
+  const logoData = oficial;
+  const watermarkData = oficial;
 
   const ctx: BrandContext = {
     doc, pageW, pageH,

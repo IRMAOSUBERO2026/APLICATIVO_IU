@@ -331,15 +331,24 @@ export default function Dashboard() {
     <AppLayout>
       <div className="max-w-[1600px] mx-auto space-y-8 pb-10">
         {/* Cabeçalho da Página */}
-        <div className="flex flex-col gap-1">
-          <h1 className="text-[24px] font-semibold text-[#1A1A1A] tracking-tight">Dashboard Executivo</h1>
-          <div className="flex items-center gap-2 text-[#6B6B6B] text-[13px]">
-            <Building2 size={14} className="text-[#3A5C35]" />
-            <span>{escopo}</span>
-            <span className="mx-1 opacity-30">•</span>
-            <Calendar size={14} className="text-[#3A5C35]" />
-            <span>{periodo}</span>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-1">
+            <h1 className="text-[24px] font-semibold text-[#1A1A1A] tracking-tight">Dashboard Executivo</h1>
+            <div className="flex items-center gap-2 text-[#6B6B6B] text-[13px]">
+              <Building2 size={14} className="text-[#3A5C35]" />
+              <span>{escopo}</span>
+              <span className="mx-1 opacity-30">•</span>
+              <Calendar size={14} className="text-[#3A5C35]" />
+              <span>{periodo}</span>
+            </div>
           </div>
+          
+          <Link 
+            to="/login-portal" 
+            className="inline-flex items-center gap-2 rounded-lg bg-[#3A5C35] px-4 py-2.5 text-sm font-bold text-white shadow-md hover:bg-[#2D4A28] transition-all animate-pulse"
+          >
+            <Users className="h-4 w-4" /> PORTAL DO COLABORADOR
+          </Link>
         </div>
 
         {/* Grade de KPIs */}

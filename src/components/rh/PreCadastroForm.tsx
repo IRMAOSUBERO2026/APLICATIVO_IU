@@ -110,6 +110,10 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
       toast({ title: "Campos obrigatórios", description: "Nome, CPF e Cargo são obrigatórios.", variant: "destructive" });
       return;
     }
+    if (form.pis && !/^\d{11}$/.test(form.pis.replace(/\D/g, ""))) {
+      toast({ title: "PIS Inválido", description: "O PIS deve conter exatamente 11 dígitos numéricos.", variant: "destructive" });
+      return;
+    }
     if (!form.empresa_id) {
       toast({ title: "Campos obrigatórios", description: "Selecione a empresa (CNPJ).", variant: "destructive" });
       setStep("trabalho");

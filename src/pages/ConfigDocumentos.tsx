@@ -26,6 +26,10 @@ interface Empresa {
   cor_secundaria: string | null;
   nome_responsavel: string | null;
   cargo_responsavel: string | null;
+  responsavel_tecnico_1?: string | null;
+  crea_1?: string | null;
+  responsavel_tecnico_2?: string | null;
+  crea_2?: string | null;
 }
 
 export default function ConfigDocumentos() {
@@ -37,6 +41,10 @@ export default function ConfigDocumentos() {
     nome_responsavel: "",
     cargo_responsavel: "",
     logo_url: "",
+    responsavel_tecnico_1: "Luis Fernando Gomez Ubero",
+    crea_1: "PR-95695/D",
+    responsavel_tecnico_2: "Marcos Paulo Gomez Ubero",
+    crea_2: "SC-120717-4",
   });
   const [uploading, setUploading] = useState(false);
 
@@ -56,28 +64,15 @@ export default function ConfigDocumentos() {
         cor_secundaria: emp.cor_secundaria || "#1a1a1a",
         nome_responsavel: emp.nome_responsavel || "",
         cargo_responsavel: emp.cargo_responsavel || "",
-        logo_url: emp.logo_url || "",
+        responsavel_tecnico_1: emp.responsavel_tecnico_1 || "Luis Fernando Gomez Ubero",
+        crea_1: emp.crea_1 || "PR-95695/D",
+        responsavel_tecnico_2: emp.responsavel_tecnico_2 || "Marcos Paulo Gomez Ubero",
+        crea_2: emp.crea_2 || "SC-120717-4",
       });
     }
   }, [selectedId, empresas]);
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !selectedId) return;
-    setUploading(true);
-    const ext = file.name.split(".").pop();
-    const path = `empresas/${selectedId}/logo.${ext}`;
-    const { error } = await supabase.storage.from("documentos").upload(path, file, { upsert: true });
-    if (error) {
-      toast({ title: "Erro ao enviar logo", description: error.message, variant: "destructive" });
-      setUploading(false);
-      return;
-    }
-    const { data: urlData } = supabase.storage.from("documentos").getPublicUrl(path);
-    setForm(f => ({ ...f, logo_url: urlData.publicUrl }));
-    setUploading(false);
-    toast({ title: "Logo enviada com sucesso" });
-  };
+  // Upload de logo removido a pedido. A logo oficial do sistema é única.
 
   const handleSave = async () => {
     if (!selectedId) return;
@@ -86,7 +81,10 @@ export default function ConfigDocumentos() {
       cor_secundaria: form.cor_secundaria,
       nome_responsavel: form.nome_responsavel || null,
       cargo_responsavel: form.cargo_responsavel || null,
-      logo_url: form.logo_url || null,
+      responsavel_tecnico_1: form.responsavel_tecnico_1 || null,
+      crea_1: form.crea_1 || null,
+      responsavel_tecnico_2: form.responsavel_tecnico_2 || null,
+      crea_2: form.crea_2 || null,
     }).eq("id", selectedId);
     if (error) {
       toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
@@ -156,26 +154,7 @@ export default function ConfigDocumentos() {
 
         {selectedId && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Logo */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2"><Upload className="h-4 w-4" /> Logo da Empresa</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {form.logo_url && (
-                  <div className="border rounded-lg p-4 bg-muted/30 flex items-center justify-center">
-                    <img src={form.logo_url} alt="Logo" className="max-h-20 max-w-[200px] object-contain" />
-                  </div>
-                )}
-                <div>
-                  <Label>Upload da Logo</Label>
-                  <Input type="file" accept="image/*" onChange={handleLogoUpload} disabled={uploading} className="mt-1" />
-                  <p className="text-xs text-muted-foreground mt-1">Formatos: PNG, JPG. Recomendado: fundo transparente.</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Colors */}
+            {/* Identidade Visual */}
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2"><Palette className="h-4 w-4" /> Identidade Visual</CardTitle>
@@ -220,6 +199,30 @@ export default function ConfigDocumentos() {
                   <Label>Cargo</Label>
                   <Input value={form.cargo_responsavel} onChange={e => setForm(f => ({ ...f, cargo_responsavel: e.target.value }))} placeholder="Engenheiro Civil — CREA 123456" />
                 </div>
+
+                <div className="border-t pt-3 mt-3 space-y-3">
+                  <h4 className="text-sm font-semibold text-slate-700">Responsáveis Ficha EPI (Carimbo Digital)</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label>Responsável Técnico 1</Label>
+                      <Input value={form.responsavel_tecnico_1} onChange={e => setForm(f => ({ ...f, responsavel_tecnico_1: e.target.value }))} placeholder="Luis Fernando Gomez Ubero" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>CREA 1</Label>
+                      <Input value={form.crea_1} onChange={e => setForm(f => ({ ...f, crea_1: e.target.value }))} placeholder="PR-95695/D" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label>Responsável Técnico 2</Label>
+                      <Input value={form.responsavel_tecnico_2} onChange={e => setForm(f => ({ ...f, responsavel_tecnico_2: e.target.value }))} placeholder="Marcos Paulo Gomez Ubero" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>CREA 2</Label>
+                      <Input value={form.crea_2} onChange={e => setForm(f => ({ ...f, crea_2: e.target.value }))} placeholder="SC-120717-4" />
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
 
@@ -233,11 +236,49 @@ export default function ConfigDocumentos() {
                   <div className="h-1 rounded" style={{ backgroundColor: form.cor_primaria }} />
                   <div className="flex items-center justify-between">
                     <div>
-                      {form.logo_url ? (
-                        <img src={form.logo_url} alt="Logo" className="h-8 object-contain" />
-                      ) : (
-                        <div className="h-8 w-20 bg-muted rounded flex items-center justify-center text-[10px] text-muted-foreground">Logo</div>
-                      )}
+                      <div className="h-10 w-24 bg-muted rounded flex items-center justify-center text-[10px] text-muted-foreground font-bold">LOGO UBERO</div>
+                    </div>
+                    <div className="text-right text-muted-foreground">
+                      <div className="font-bold" style={{ color: form.cor_primaria }}>{selected?.nome_fantasia || selected?.razao_social}</div>
+                      <div>CNPJ: {selected?.cnpj}</div>
+                    </div>
+                  </div>
+                  <hr />
+                  <div className="font-bold text-sm" style={{ color: form.cor_secundaria }}>Título do Documento</div>
+                  <div className="text-muted-foreground">Subtítulo</div>
+                  <div className="h-12 rounded" style={{ backgroundColor: form.cor_primaria, opacity: 0.1 }} />
+                  <div className="flex justify-between pt-2 border-t">
+                    <span>{form.nome_responsavel || "Responsável"}</span>
+                    <span>Contratante</span>
+                  </div>
+                  <div className="h-4 rounded text-center text-white text-[9px] leading-4" style={{ backgroundColor: form.cor_primaria }}>
+                    {selected?.nome_fantasia || selected?.razao_social} — CNPJ: {selected?.cnpj}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={previewPDF} variant="outline" className="gap-2 flex-1"><Eye className="h-4 w-4" /> Gerar PDF Preview</Button>
+                  <Button onClick={handleSave} className="gap-2 flex-1"><Save className="h-4 w-4" /> Salvar</Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
+    </AppLayout>
+  );
+}
+
+            {/* Preview card */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base flex items-center gap-2"><Eye className="h-4 w-4" /> Preview</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="border rounded-lg p-4 bg-white text-xs space-y-2">
+                  <div className="h-1 rounded" style={{ backgroundColor: form.cor_primaria }} />
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="h-10 w-24 bg-muted rounded flex items-center justify-center text-[10px] text-muted-foreground font-bold">LOGO UBERO</div>
                     </div>
                     <div className="text-right text-muted-foreground">
                       <div className="font-bold" style={{ color: form.cor_primaria }}>{selected?.nome_fantasia || selected?.razao_social}</div>

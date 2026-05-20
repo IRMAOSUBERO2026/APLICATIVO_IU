@@ -117,17 +117,23 @@ export function calcularFolha(input: FolhaInput): FolhaOutput {
   // Horas negativas — só para mensal
   const desconto_horas_negativas = isProducao ? 0 : r2(base_hora * horas_negativas);
 
-  // Atestados (pago pelo salário de registro) — só para mensal
-  const valor_atestados = isProducao ? 0 : r2((salario_registro / dias_do_mes) * atestados);
+  // Atestados (pago pelo salário de registro, deduzido do combinado) — só para mensal
+  // Dias atestado são pagos pela carteira. Dias restantes são pagos pelo combinado.
+  // Assumimos mês comercial de 30 dias para a dedução do atestado
+  const valor_atestados = isProducao ? 0 : r2((salario_registro / 30) * atestados);
+  const deducao_atestado_combinado = isProducao ? 0 : r2((salarioEfetivo / 30) * atestados);
 
   // Faltas e DSR — só para mensal
   let desconto_faltas = 0;
   let dsr_perdido = 0;
 
+  // Calculo automático de semanas com falta (DSR) se não for preenchido manualmente
+  const semanasFaltaAuto = semanas_com_falta > 0 ? semanas_com_falta : (faltas > 0 ? Math.ceil(faltas / 5) : 0);
+
   if (!isProducao) {
     desconto_faltas = r2(base_dia * faltas);
     const valor_dsr_dia = r2(salarioEfetivo / dias_do_mes);
-    dsr_perdido = r2(valor_dsr_dia * semanas_com_falta);
+    dsr_perdido = r2(valor_dsr_dia * semanasFaltaAuto);
   }
 
   // Marmita: pode ser valor direto ou qtd × unitário (aplica em ambos)
@@ -148,7 +154,8 @@ export function calcularFolha(input: FolhaInput): FolhaOutput {
     outros_descontos +
     desconto_horas_negativas +
     desconto_faltas +
-    dsr_perdido
+    dsr_perdido +
+    deducao_atestado_combinado // <- Removemos do salário combinado os dias de atestado
   );
 
   // Salário final
@@ -157,7 +164,7 @@ export function calcularFolha(input: FolhaInput): FolhaOutput {
   const salario_final = r2(
     salarioEfetivo +
     total_HE +
-    valor_atestados +
+    valor_atestados + // <- Somamos o valor do atestado pago pela carteira
     total_bonificacoes -
     total_descontos
   );

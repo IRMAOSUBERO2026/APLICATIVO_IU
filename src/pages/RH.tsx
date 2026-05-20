@@ -1,5 +1,5 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { Search, Upload, UserPlus, FolderOpen, Stethoscope, ArrowRightLeft, Save, Filter, Calendar, LogOut, Pencil, FileSpreadsheet, FileDown, Trash2, LayoutDashboard, ExternalLink } from "lucide-react";
+import { Search, Upload, UserPlus, FolderOpen, Stethoscope, ArrowRightLeft, Save, Filter, Calendar, LogOut, Pencil, FileSpreadsheet, FileDown, Trash2, LayoutDashboard } from "lucide-react";
 import { baixarModeloFuncionarios, importarPlanilhaFuncionarios } from "@/lib/funcionariosPlanilha";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { toast } from "@/hooks/use-toast";
@@ -263,21 +263,6 @@ export default function RH() {
     }
   };
 
-  const sendPortalInvite = (funcionario: any) => {
-    if (!funcionario.telefone) {
-      toast({ title: "Erro", description: "Funcionário sem telefone cadastrado.", variant: "destructive" });
-      return;
-    }
-    
-    const cleanPhone = funcionario.telefone.replace(/\D/g, "");
-    const cleanCpf = (funcionario.cpf || "").replace(/\D/g, "");
-    const url = "https://iuengenharia.lovable.app/login-portal";
-    
-    const message = `Olá *${funcionario.nome}*,\n\nEste é o seu link de acesso ao *Portal do Colaborador Irmãos Ubero*: ${url}\n\n*Seu Login:* ${cleanCpf}\n*Sua Senha (PIN):* Solicite ao RH seu código de 4 dígitos para o primeiro acesso.\n\n_Dica: Ao abrir o link no celular, clique em "Adicionar à tela de início" para instalar como aplicativo._`;
-    
-    window.open(`https://wa.me/55${cleanPhone}?text=${encodeURIComponent(message)}`, "_blank");
-    toast({ title: "Convite preparado", description: "Redirecionando para o WhatsApp..." });
-  };
 
   return (
     <AppLayout>
@@ -725,13 +710,6 @@ export default function RH() {
                                   <LogOut className="h-4 w-4" />
                                 </button>
                               )}
-                              <button 
-                                onClick={() => sendPortalInvite(f)} 
-                                className="p-1.5 rounded-lg text-muted-foreground hover:text-success hover:bg-success/10 transition-colors" 
-                                title="Enviar Convite Portal (WhatsApp)"
-                              >
-                                <ExternalLink className="h-4 w-4" />
-                              </button>
                             </div>
                           </td>
                         </tr>

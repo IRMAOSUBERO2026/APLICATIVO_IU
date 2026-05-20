@@ -3,7 +3,6 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { FolhaDashboard } from "@/components/folha/FolhaDashboard";
 import { FolhaResumoObra } from "@/components/folha/FolhaResumoObra";
 import { FolhaCalculoIndividual } from "@/components/folha/FolhaCalculoIndividual";
-import { ImportarPontoPDF } from "@/components/folha/ImportarPontoPDF";
 import { HorarioPadraoEditor } from "@/components/folha/HorarioPadraoEditor";
 import { FuncionariosList } from "@/components/folha/FuncionariosList";
 import { DocumentManager } from "@/components/rh/DocumentManager";
@@ -34,6 +33,9 @@ interface FuncionarioFolha {
   input: FolhaInput;
   result: FolhaOutput | null;
   saved: boolean;
+  status_folha?: "fechado" | "em_calculo";
+  importadoPonto?: boolean;
+  editadoManualmente?: boolean;
 }
 
 interface ObraOption {
@@ -231,6 +233,7 @@ export default function Folha() {
             salario_base: f.salario_base, salario_combinado: f.salario_combinado,
             tipo_remuneracao: f.tipo_remuneracao || "mensal",
             escala: f.escala || "5x2",
+            status_folha: existing.status_folha,
             input, result: calcularFolha(input), saved: true,
           };
         }
@@ -263,7 +266,7 @@ export default function Folha() {
 
   const handleInputChange = useCallback((data: FolhaInput) => {
     setFuncionarios((prev) =>
-      prev.map((f) => f.id === selectedFuncId ? { ...f, input: data, result: null, saved: false } : f)
+      prev.map((f) => f.id === selectedFuncId ? { ...f, input: data, result: null, saved: false, editadoManualmente: f.importadoPonto ? true : f.editadoManualmente } : f)
     );
   }, [selectedFuncId]);
 
@@ -374,20 +377,116 @@ export default function Folha() {
     setSaving(false);
   };
 
-  const handleImportPonto = useCallback((data: Map<string, { faltas: number; heSemanais: number }>) => {
-    const normalizeCpf = (cpf: string) => cpf.replace(/\D/g, "");
-    setFuncionarios((prev) =>
-      prev.map((f) => {
-        const ponto = data.get(normalizeCpf(f.cpf));
-        if (!ponto) return f;
-        return {
-          ...f,
-          input: { ...f.input, faltas: ponto.faltas, horas_extras_semanais: Math.round(ponto.heSemanais * 10) / 10 },
-          result: null, saved: false,
+  const handleImportacaoPonto = async () => {
+    if (!selectedObraId) return;
+    setLoading(true);
+    try {
+      // 1. Buscar apurações mensais no Supabase
+      const { data: apuracoes, error } = await supabase
+        .from("ponto_apuracao_mensal")
+        .select("*")
+        .eq("obra_id", selectedObraId)
+        .eq("mes", mes + 1)
+        .eq("ano", ano);
+
+      if (error) throw error;
+
+      if (!apuracoes || apuracoes.length === 0) {
+        toast({
+          title: "Sem dados de ponto",
+          description: `Nenhuma apuração de ponto encontrada para esta obra em ${MESES[mes]}/${ano}. Gere a apuração primeiro.`,
+          variant: "destructive"
+        });
+        setLoading(false);
+        return;
+      }
+
+      const apMap = new Map(apuracoes.map((a: any) => [a.funcionario_id, a]));
+      let importCount = 0;
+      let skippedCount = 0;
+      let closedBlocked = 0;
+
+      const listEmpresaId = await getEmpresaId();
+
+      const newFuncsList = await Promise.all(funcionarios.map(async (func) => {
+        const ap: any = apMap.get(func.id);
+        if (!ap) {
+          skippedCount++;
+          return func;
+        }
+
+        // Regra 1: Folha com status fechada -> bloquear importação com aviso
+        if (func.status_folha === "fechado") {
+          closedBlocked++;
+          return func;
+        }
+
+        // Regra 2: Folha com status rascunho -> perguntar "Sobrescrever?"
+        if (func.saved && func.status_folha === "em_calculo") {
+          const confirmOverwrite = window.confirm(`A folha de ${func.nome} já possui um rascunho. Sobrescrever com os dados do ponto?`);
+          if (!confirmOverwrite) {
+            skippedCount++;
+            return func;
+          }
+        }
+
+        // Mapear campos
+        const he50 = Number(ap.horas_extras_50 || 0);
+        const heWeekly = Math.round(he50 * 0.7 * 10) / 10;
+        const heSaturday = Math.round(he50 * 0.3 * 10) / 10;
+        const faltas = Number(ap.faltas_dias || 0);
+        const semanasFaltaAuto = faltas > 0 ? Math.ceil(faltas / 5) : 0;
+
+        const newInput: FolhaInput = {
+          ...func.input,
+          horas_extras_semanais: heWeekly,
+          horas_extras_sabado: heSaturday,
+          horas_extras_100: Number(ap.horas_extras_100 || 0),
+          faltas: faltas,
+          atestados: Number(ap.atestados_dias || 0),
+          semanas_com_falta: semanasFaltaAuto
         };
-      })
-    );
-  }, []);
+
+        const result = calcularFolha(newInput);
+        importCount++;
+
+        // Regra 3: Se inexistente ou sobrescrita -> criar rascunho e rodar motorFolha automaticamente no banco
+        if (listEmpresaId) {
+          const row = {
+            ...buildRow({ ...func, input: newInput }, result, listEmpresaId),
+            status_folha: "em_calculo"
+          };
+          await supabase.from("folhas_pagamento").upsert([row], { onConflict: "funcionario_id,mes,ano" });
+        }
+
+        return {
+          ...func,
+          input: newInput,
+          result,
+          saved: true,
+          status_folha: "em_calculo" as const,
+          importadoPonto: true,
+          editadoManualmente: false
+        };
+      }));
+
+      setFuncionarios(newFuncsList);
+
+      let msg = `${importCount} importados.`;
+      if (skippedCount > 0) msg += ` | ${skippedCount} sem apuração ou ignorados.`;
+      if (closedBlocked > 0) msg += ` | ${closedBlocked} folhas fechadas bloqueadas.`;
+
+      toast({
+        title: "Importação concluída!",
+        description: msg
+      });
+
+    } catch (e: any) {
+      toast({ title: "Erro na importação", description: e.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSelectObra = (obraId: string) => { setSelectedObraId(obraId); setSelectedFuncId(null); setView("obra"); };
   const handleSelectFunc = (funcId: string) => { setSelectedFuncId(funcId); setIsSimulacao(false); setView("funcionario"); };
@@ -531,10 +630,9 @@ export default function Folha() {
             {!loading && funcionarios.length > 0 && (
               <>
                 <div className="flex gap-2">
-                  <ImportarPontoPDF
-                    funcionariosCpfs={funcionarios.map((f, i) => ({ cpf: f.cpf, idx: i }))}
-                    onImport={handleImportPonto}
-                  />
+                  <Button variant="default" size="sm" onClick={handleImportacaoPonto} disabled={loading} className="gap-2 bg-blue-600 hover:bg-blue-700">
+                    <Clock className="h-4 w-4" /> Importar do Ponto
+                  </Button>
                   <Button variant="outline" size="sm" onClick={() => setShowHorarioEditor(!showHorarioEditor)} className="gap-2">
                     <Clock className="h-4 w-4" /> {showHorarioEditor ? "Ocultar Horário" : "Horário Padrão"}
                   </Button>
@@ -560,6 +658,8 @@ export default function Folha() {
                     id: f.id, nome: f.nome, cpf: f.cpf, cargo: f.cargo,
                     salario_base: f.salario_base,
                     hasSaved: f.saved, hasCalculated: f.result !== null,
+                    importadoPonto: f.importadoPonto,
+                    editadoManualmente: f.editadoManualmente
                   }))}
                   onSelect={handleSelectFunc}
                   selectedId={selectedFuncId}

@@ -87,6 +87,11 @@ export function EditFuncionarioForm({ open, onOpenChange, funcionarioId, onSaved
 
   const handleSave = async () => {
     setSaving(true);
+    if (form.pis && !/^\d{11}$/.test(form.pis.replace(/\D/g, ""))) {
+      toast({ title: "PIS Inválido", description: "O PIS deve conter exatamente 11 dígitos numéricos.", variant: "destructive" });
+      setSaving(false);
+      return;
+    }
     const updateData: Record<string, any> = {};
     FIELDS.forEach(f => {
       const val = form[f.key];

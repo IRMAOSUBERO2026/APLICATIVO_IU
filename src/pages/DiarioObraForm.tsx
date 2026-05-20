@@ -51,6 +51,42 @@ interface EquipamentoPresenca {
   observacao?: string;
 }
 
+const compressAndToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const MAX_WIDTH = 800;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > MAX_WIDTH) {
+          height = Math.round((height * MAX_WIDTH) / width);
+          width = MAX_WIDTH;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedBase64 = canvas.toDataURL("image/jpeg", 0.7);
+          resolve(compressedBase64);
+        } else {
+          resolve(event.target?.result as string);
+        }
+      };
+      img.onerror = (err) => reject(err);
+    };
+    reader.onerror = (err) => reject(err);
+  });
+};
+
+
 export default function DiarioObraForm() {
   const { obraId, diarioId } = useParams();
   const isEdit = Boolean(diarioId);
@@ -270,19 +306,18 @@ export default function DiarioObraForm() {
     try {
       const atividadesTexto = atividades.filter(a => a.descricao).map(a => `[${a.status}] ${a.descricao} (Local: ${a.local})`).join("\n");
 
-      // Upload de novas fotos primeiro
+      // Processamento e compressão de novas fotos para Base64 (ignora RLS e restrições de Storage)
       const novasFotosUrls: Array<{ url: string; descricao: string }> = [];
       if (fotos.length > 0) {
-        toast({ title: "Enviando fotos..." });
+        toast({ title: "Processando fotos..." });
         for (let i = 0; i < fotos.length; i++) {
           const foto = fotos[i];
-          const fileExt = foto.file.name.split('.').pop();
-          const fileName = `${obraId}/rdo_${Date.now()}_${i}.${fileExt}`;
-          const filePath = `diarios/${fileName}`;
-          const { error: uploadError } = await supabase.storage.from("documentos").upload(filePath, foto.file);
-          if (!uploadError) {
-            const { data: pubData } = supabase.storage.from("documentos").getPublicUrl(filePath);
-            novasFotosUrls.push({ url: pubData.publicUrl, descricao: foto.descricao });
+          try {
+            const base64Data = await compressAndToBase64(foto.file);
+            novasFotosUrls.push({ url: base64Data, descricao: foto.descricao });
+          } catch (e: any) {
+            console.error("Erro no processamento da foto:", e);
+            throw new Error(`Erro ao processar a foto "${foto.file.name}": ${e.message || e}`);
           }
         }
       }

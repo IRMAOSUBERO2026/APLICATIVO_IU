@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import logoOficialImg from "@/assets/logo-oficial.png";
 import { getLinhaImpressao, NOME_EMPRESA_OFICIAL } from "./usuarioImpressao";
 
 export interface EmpresaBranding {
@@ -69,14 +70,12 @@ export async function createBrandedPDF(config: PDFDocConfig): Promise<{ doc: jsP
 
   // Logo empresa (left)
   let logoLoaded = false;
-  if (config.empresa.logo_url) {
-    const logoBase64 = await loadImageAsBase64(config.empresa.logo_url);
-    if (logoBase64) {
-      try {
-        doc.addImage(logoBase64, "PNG", 14, 8, 30, 15);
-        logoLoaded = true;
-      } catch { /* ignore */ }
-    }
+  const logoBase64 = await loadImageAsBase64(logoOficialImg);
+  if (logoBase64) {
+    try {
+      doc.addImage(logoBase64, "PNG", 14, 8, 30, 15, undefined, "FAST");
+      logoLoaded = true;
+    } catch { /* ignore */ }
   }
 
   // Logo cliente (right)

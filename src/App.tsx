@@ -38,6 +38,9 @@ import CustosObra from "./pages/CustosObra";
 import Clientes from "./pages/Clientes";
 import Solicitacoes from "./pages/Solicitacoes";
 import NotFound from "./pages/NotFound";
+import SegurancaDashboard from "./pages/rh/SegurancaDashboard";
+import ImportacaoHistoricoASO from "./pages/rh/ImportacaoHistoricoASO";
+import FichaSegurancaFuncionario from "./pages/rh/FichaSegurancaFuncionario";
 import LoginPortal from "./pages/LoginPortal";
 import PortalColaborador from "./pages/PortalColaborador";
 import MeuPonto from "./pages/portal/MeuPonto";
@@ -46,6 +49,12 @@ import Mural from "./pages/portal/Mural";
 import AtendimentoRH from "./pages/portal/AtendimentoRH";
 import Sugestoes from "./pages/portal/Sugestoes";
 import MeusDados from "./pages/portal/MeusDados";
+import MeusEPIs from "./pages/portal/MeusEPIs";
+import AssinaturaEPI from "./pages/AssinaturaEPI";
+import EquipamentosPonto from "./pages/ponto/EquipamentosPonto";
+import ImportacaoAFDNew from "./pages/ponto/ImportacaoAFDNew";
+import InconsistenciasPonto from "./pages/ponto/InconsistenciasPonto";
+import ApuracaoPonto from "./pages/ponto/ApuracaoPonto";
 import { EmpresaObraProvider } from "./contexts/EmpresaObraContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -59,6 +68,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <AuthProvider>
       <EmpresaObraProvider>
       <BrowserRouter>
         <ScrollToTop />
@@ -67,16 +77,24 @@ const App = () => (
           
           {/* Rotas do Portal do Colaborador - Prioridade Máxima */}
           <Route path="/login-portal" element={<LoginPortal />} />
-          <Route path="/portal" element={<PortalColaborador />} />
-          <Route path="/portal/ponto" element={<MeuPonto />} />
-          <Route path="/portal/justificativas" element={<Justificativas />} />
-          <Route path="/portal/mural" element={<Mural />} />
-          <Route path="/portal/atendimento" element={<AtendimentoRH />} />
-          <Route path="/portal/sugestoes" element={<Sugestoes />} />
-          <Route path="/portal/meus-dados" element={<MeusDados />} />
+          <Route element={<ProtectedRoute allowedRoles={["colaborador", "rh", "admin"]} />}>
+            <Route element={<PortalLayout />}>
+              <Route path="/portal" element={<PortalColaborador />} />
+              <Route path="/portal/ponto" element={<MeuPonto />} />
+              <Route path="/portal/justificativas" element={<Justificativas />} />
+              <Route path="/portal/recados" element={<Mural />} />
+              <Route path="/portal/atendimento" element={<AtendimentoRH />} />
+              <Route path="/portal/sugestoes" element={<Sugestoes />} />
+              <Route path="/portal/dados" element={<MeusDados />} />
+              <Route path="/portal/epis" element={<MeusEPIs />} />
+            </Route>
+          </Route>
 
           <Route path="/obras" element={<Obras />} />
           <Route path="/rh" element={<RH />} />
+          <Route path="/rh/seguranca/painel" element={<SegurancaDashboard />} />
+          <Route path="/rh/seguranca/importar" element={<ImportacaoHistoricoASO />} />
+          <Route path="/rh/seguranca/funcionario/:funcionarioId" element={<FichaSegurancaFuncionario />} />
           <Route path="/folha" element={<Folha />} />
           <Route path="/estoque" element={<Estoque />} />
           <Route path="/equipamentos-proprios" element={<EquipamentosProprios />} />
@@ -104,17 +122,24 @@ const App = () => (
           <Route path="/config-documentos" element={<ConfigDocumentos />} />
           <Route path="/assinaturas" element={<Assinaturas />} />
           <Route path="/assinar" element={<AssinaturaPublica />} />
+          {/* Rota pública: portal de assinatura digital EPI — sem autenticação */}
+          <Route path="/portal/epi/assinar/:token" element={<AssinaturaEPI />} />
           <Route path="/custos-obra" element={<CustosObra />} />
           <Route path="/clientes" element={<Clientes />} />
           <Route path="/solicitacoes" element={<Solicitacoes />} />
 
           <Route path="/ponto-afd" element={<ImportacaoAFD />} />
           <Route path="/ponto-consolidado" element={<PontoConsolidado />} />
+          <Route path="/ponto/equipamentos" element={<EquipamentosPonto />} />
+          <Route path="/ponto/importar" element={<ImportacaoAFDNew />} />
+          <Route path="/ponto/inconsistencias" element={<InconsistenciasPonto />} />
+          <Route path="/ponto/apuracao" element={<ApuracaoPonto />} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
-      </EmpresaObraProvider>
+        </EmpresaObraProvider>
+      </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
