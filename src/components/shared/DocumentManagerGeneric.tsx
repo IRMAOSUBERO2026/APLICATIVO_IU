@@ -82,17 +82,33 @@ export function DocumentManagerGeneric({ open, onOpenChange, entityId, entityNom
     const filePath = `${fullPath}/${selectedPasta}/${fileName}`;
     try {
       const { data, error } = await supabase.storage.from("documentos").download(filePath);
-      if (error || !data) throw error || new Error("Arquivo não encontrado");
-      const url = URL.createObjectURL(data);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      if (!error && data) {
+        const url = URL.createObjectURL(data);
+        const a = document.createElement("a");
+        a.href = url; a.download = fileName;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        return;
+      }
+      const { data: pub } = supabase.storage.from("documentos").getPublicUrl(filePath);
+      const resp = await fetch(pub.publicUrl);
+      if (resp.ok) {
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = fileName;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        return;
+      }
+      window.open(pub.publicUrl, "_blank", "noopener,noreferrer");
     } catch (err: any) {
-      toast({ title: "Erro ao baixar", description: err?.message || "Falha no download", variant: "destructive" });
+      try {
+        const { data: pub } = supabase.storage.from("documentos").getPublicUrl(filePath);
+        window.open(pub.publicUrl, "_blank", "noopener,noreferrer");
+      } catch {
+        toast({ title: "Erro ao baixar", description: err?.message || "Falha no download", variant: "destructive" });
+      }
     }
   };
 
