@@ -61,16 +61,29 @@ export function DocumentManager({ open, onOpenChange, funcionarioId, funcionario
     setLoading(false);
   };
 
+  const sanitizeName = (name: string) => {
+    const dot = name.lastIndexOf(".");
+    const base = dot > 0 ? name.slice(0, dot) : name;
+    const ext = dot > 0 ? name.slice(dot) : "";
+    const safe = base
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9._-]+/g, "_")
+      .replace(/_+/g, "_")
+      .replace(/^_|_$/g, "");
+    return (safe || "arquivo") + ext.toLowerCase();
+  };
+
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !selectedPasta) return;
     setUploading(true);
-    const filePath = `${basePath}/${selectedPasta}/${file.name}`;
-    const { error } = await supabase.storage.from("documentos").upload(filePath, file, { upsert: true });
+    const safeName = sanitizeName(file.name);
+    const filePath = `${basePath}/${selectedPasta}/${safeName}`;
+    const { error } = await supabase.storage.from("documentos").upload(filePath, file, { upsert: true, contentType: file.type || undefined });
     if (error) {
       toast({ title: "Erro no upload", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Arquivo enviado", description: file.name });
+      toast({ title: "Arquivo enviado", description: safeName });
       loadFiles();
     }
     setUploading(false);
