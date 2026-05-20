@@ -10,6 +10,7 @@ import { useEmpresasObras } from "@/hooks/useEmpresasObras";
 import { EmpresaSelect, ObraSelect } from "@/components/shared/EmpresaObraSelects";
 import { BonificacoesPadraoEditor, type BonificacaoPadrao } from "@/components/rh/BonificacoesPadraoEditor";
 import { getBonificacoesFromFuncionario, salvarFuncionarioComBonificacoes, stripBonificacoesFromObservacoes } from "@/lib/bonificacoesPadrao";
+import { FuncionarioAvatar } from "@/components/rh/FuncionarioAvatar";
 
 interface Props {
   open: boolean;
