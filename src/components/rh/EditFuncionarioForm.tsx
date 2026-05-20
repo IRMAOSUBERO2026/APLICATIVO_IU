@@ -130,19 +130,31 @@ export function EditFuncionarioForm({ open, onOpenChange, funcionarioId, onSaved
           <p className="text-sm text-muted-foreground text-center py-8">Carregando...</p>
         ) : (
           <>
-            {/* Empresa e Obra - sempre no topo */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pb-4 border-b mb-4">
-              <EmpresaSelect
-                value={form.empresa_id || ""}
-                onChange={v => setForm(prev => ({ ...prev, empresa_id: v, obra_id: "" }))}
-                empresas={empresas}
-                required
-              />
-              <ObraSelect
-                value={form.obra_id || ""}
-                onChange={v => setForm(prev => ({ ...prev, obra_id: v }))}
-                obras={obrasDisponiveis}
-              />
+            {/* Foto + Empresa e Obra - sempre no topo */}
+            <div className="flex flex-col sm:flex-row items-start gap-4 pb-4 border-b mb-4">
+              <div className="flex flex-col items-center gap-2">
+                <FuncionarioAvatar
+                  nome={form.nome || "?"}
+                  foto={form.foto_url || ""}
+                  size="lg"
+                  editable
+                  onPhotoChange={(dataUrl) => setForm(prev => ({ ...prev, foto_url: dataUrl }))}
+                />
+                <span className="text-xs text-muted-foreground">Clique para alterar foto</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1 w-full">
+                <EmpresaSelect
+                  value={form.empresa_id || ""}
+                  onChange={v => setForm(prev => ({ ...prev, empresa_id: v, obra_id: "" }))}
+                  empresas={empresas}
+                  required
+                />
+                <ObraSelect
+                  value={form.obra_id || ""}
+                  onChange={v => setForm(prev => ({ ...prev, obra_id: v }))}
+                  obras={obrasDisponiveis}
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
