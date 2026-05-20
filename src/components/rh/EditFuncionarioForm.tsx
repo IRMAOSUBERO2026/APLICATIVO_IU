@@ -103,6 +103,7 @@ export function EditFuncionarioForm({ open, onOpenChange, funcionarioId, onSaved
     updateData.obra_id = form.obra_id && form.obra_id !== "__none__" ? form.obra_id : null;
     updateData.observacoes = stripBonificacoesFromObservacoes(form.observacoes);
     updateData.bonificacoes_padrao = Array.isArray(form.bonificacoes_padrao) ? form.bonificacoes_padrao : [];
+    updateData.foto_url = form.foto_url || null;
 
     const { error } = await salvarFuncionarioComBonificacoes(funcionarioId, updateData);
     if (error) {
