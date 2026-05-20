@@ -45,7 +45,7 @@ export default function MeuPonto() {
         .order('data_hora', { ascending: true });
 
       if (!error && data) {
-        setRegistros(data);
+        setRegistros(data as any);
       }
       setLoading(false);
     }

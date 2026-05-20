@@ -8,65 +8,21 @@ const PRIMARY: [number, number, number] = [60, 80, 45];
 const TEXT: [number, number, number] = [40, 40, 40];
 const MUTED: [number, number, number] = [110, 110, 110];
 
-import { supabase } from "@/integrations/supabase/client";
+import { normalizeStorageUrl } from "./storageUrl";
 
 async function loadAsset(url: string): Promise<string | null> {
-  if (!url) return null;
-  if (url.startsWith("data:")) return url;
-
   try {
-    let blob: Blob;
-
-    // Se for URL do Supabase Storage, faz download via SDK para contornar CORS e autenticação
-    if (url.includes(".supabase.co/storage/v1/object/")) {
-      const match = url.match(/\/storage\/v1\/object\/(?:public|sign|authenticated)\/([^\/]+)\/(.+)$/);
-      if (match) {
-        const bucket = match[1];
-        let path = match[2];
-        
-        // Remove parâmetros de busca (ex: tokens ou cache-busters)
-        if (path.includes("?")) {
-          path = path.split("?")[0];
-        }
-        
-        // Decodifica a URL (substitui %20 por espaço, etc)
-        path = decodeURIComponent(path);
-
-        const { data, error } = await supabase.storage.from(bucket).download(path);
-        if (error) {
-          console.error(`Erro no download do Supabase Storage: bucket=${bucket}, path=${path}`, error);
-          throw error;
-        }
-        blob = data;
-      } else {
-        const r = await fetch(url);
-        blob = await r.blob();
-      }
-    } else {
-      const r = await fetch(url);
-      blob = await r.blob();
-    }
-
+    const finalUrl = normalizeStorageUrl(url) || url;
+    const r = await fetch(finalUrl);
+    const b = await r.blob();
     return await new Promise(resolve => {
       const fr = new FileReader();
       fr.onloadend = () => resolve(fr.result as string);
       fr.onerror = () => resolve(null);
-      fr.readAsDataURL(blob);
+      fr.readAsDataURL(b);
     });
-  } catch (err) {
-    console.error("loadAsset falhou no download principal. Tentando fallback tradicional:", url, err);
-    try {
-      const r = await fetch(url);
-      const b = await r.blob();
-      return await new Promise(resolve => {
-        const fr = new FileReader();
-        fr.onloadend = () => resolve(fr.result as string);
-        fr.onerror = () => resolve(null);
-        fr.readAsDataURL(b);
-      });
-    } catch {
-      return null;
-    }
+  } catch {
+    return null;
   }
 }
 

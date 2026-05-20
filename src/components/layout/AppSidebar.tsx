@@ -29,6 +29,7 @@ import {
   UserCheck,
   Bell,
   Upload,
+  ShieldAlert,
 } from "lucide-react";
 import { verificarAlertas } from "@/utils/seguranca";
 import logoBranco from "@/assets/logo-branco.png";
@@ -88,6 +89,7 @@ const menuSections = [
       { icon: Handshake, label: "Fornecedores", path: "/fornecedores" },
       { icon: Home, label: "Contratos Locação", path: "/contratos-locacao" },
       { icon: Bell, label: "Solicitações", path: "/solicitacoes" },
+      { icon: ShieldAlert, label: "Segurança do Trabalho", path: "/seguranca-trabalho" },
       { icon: MessageCircle, label: "Comunicações", path: "/comunicacoes" },
       { icon: FileSpreadsheet, label: "Relatórios", path: "/relatorios" },
       { icon: PenLine, label: "Assinaturas Digitais", path: "/assinaturas" },

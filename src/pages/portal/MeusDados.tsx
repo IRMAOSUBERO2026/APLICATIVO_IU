@@ -48,7 +48,7 @@ export default function MeusDados() {
             cidade: func.cidade || "",
             uf: func.uf || "",
             cep: func.cep || "",
-            codigoPix: func.codigoPix || ""
+            codigoPix: (func as any).codigo_pix || ""
           });
         }
 
