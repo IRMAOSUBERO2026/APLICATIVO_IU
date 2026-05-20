@@ -92,8 +92,20 @@ export function DocumentManager({ open, onOpenChange, funcionarioId, funcionario
   const handleDownload = async (fileName: string) => {
     if (!selectedPasta) return;
     const filePath = `${basePath}/${selectedPasta}/${fileName}`;
-    const { data } = supabase.storage.from("documentos").getPublicUrl(filePath);
-    window.open(data.publicUrl, "_blank");
+    try {
+      const { data, error } = await supabase.storage.from("documentos").download(filePath);
+      if (error || !data) throw error || new Error("Arquivo não encontrado");
+      const url = URL.createObjectURL(data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err: any) {
+      toast({ title: "Erro ao baixar", description: err?.message || "Falha no download", variant: "destructive" });
+    }
   };
 
   return (
