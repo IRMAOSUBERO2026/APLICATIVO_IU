@@ -210,8 +210,8 @@ function drawIdentificacao(doc: jsPDF, y: number, func: any): number {
 }
 
 // ---------- Termo ----------
-const TERMO_PRINCIPAL = `Declaro ter recebido os equipamentos de proteção individual (EPI) descritos nesta ficha, destinados ao meu uso pessoal durante o serviço, bem como treinamento e orientação sobre o uso, guarda e conservação dos mesmos. Comprometo-me a utilizá-los corretamente, a zelar pela sua conservação e a devolvê-los à empresa na rescisão do contrato de trabalho ou quando não mais necessários ao fim a que se destinam.`;
-const TERMO_NEGLIGENCIA = `Conforme item 6.7.1 da NR-6 e art. 461 da CLT, prejuízos decorrentes de extravio ou dano causado por negligência poderão ser descontados em folha. Danos ou lesões resultantes da não observância do uso correto serão de minha inteira responsabilidade.`;
+const TERMO_PRINCIPAL = `Declaro ter recebido os equipamentos de proteção individual (EPI) descritos nesta ficha, destinados ao meu uso pessoal durante o serviço, bem como treinamento e orientação para utilização, guarda e limpeza. Certifico-me de que tomei conhecimento das normas pertinentes e assumo a responsabilidade pela sua devida utilização.`;
+const TERMO_NEGLIGENCIA = `Conforme item 6.7.1 da NR-6 e art. 461 da CLT, prejuízos decorrentes de extravio ou dano causado por negligência poderão ser descontados em folha. Danos ou lesões resultantes da não utilização ou utilização inadequada de EPI são de responsabilidade do colaborador.`;
 const TERMO_DESCONTOS = `Em caso de não devolução na rescisão, poderão ser descontados: Camisa R$ 15,00 — Calça R$ 40,00 — Sapatão R$ 25,00 — Cinto R$ 350,00.`;
 
 function drawTermo(doc: jsPDF, y: number): number {
