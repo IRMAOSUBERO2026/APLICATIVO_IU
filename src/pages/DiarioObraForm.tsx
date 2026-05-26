@@ -262,11 +262,16 @@ export default function DiarioObraForm() {
     };
 
     try {
-      const resp = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/resumo-diario`, {
+      // IMPORTANTE: usar o host do projeto Supabase oficial (wtrefsziscauokudnxgz)
+      // Não usar import.meta.env.VITE_SUPABASE_URL — aponta para outro projeto.
+      const SUPABASE_URL = "https://wtrefsziscauokudnxgz.supabase.co";
+      const SUPABASE_KEY = "sb_publishable_DLAlIkksoQ-2qO40Y0hfzA_0pazWsNk";
+      const resp = await fetch(`${SUPABASE_URL}/functions/v1/resumo-diario`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${SUPABASE_KEY}`,
+          apikey: SUPABASE_KEY,
         },
         body: JSON.stringify({ diarios: [payload] }),
       });
