@@ -64,6 +64,7 @@ export default function ConfigDocumentos() {
         cor_secundaria: emp.cor_secundaria || "#1a1a1a",
         nome_responsavel: emp.nome_responsavel || "",
         cargo_responsavel: emp.cargo_responsavel || "",
+        logo_url: emp.logo_url || "",
         responsavel_tecnico_1: emp.responsavel_tecnico_1 || "Luis Fernando Gomez Ubero",
         crea_1: emp.crea_1 || "PR-95695/D",
         responsavel_tecnico_2: emp.responsavel_tecnico_2 || "Marcos Paulo Gomez Ubero",
@@ -268,44 +269,3 @@ export default function ConfigDocumentos() {
   );
 }
 
-            {/* Preview card */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2"><Eye className="h-4 w-4" /> Preview</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="border rounded-lg p-4 bg-white text-xs space-y-2">
-                  <div className="h-1 rounded" style={{ backgroundColor: form.cor_primaria }} />
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="h-10 w-24 bg-muted rounded flex items-center justify-center text-[10px] text-muted-foreground font-bold">LOGO UBERO</div>
-                    </div>
-                    <div className="text-right text-muted-foreground">
-                      <div className="font-bold" style={{ color: form.cor_primaria }}>{selected?.nome_fantasia || selected?.razao_social}</div>
-                      <div>CNPJ: {selected?.cnpj}</div>
-                    </div>
-                  </div>
-                  <hr />
-                  <div className="font-bold text-sm" style={{ color: form.cor_secundaria }}>Título do Documento</div>
-                  <div className="text-muted-foreground">Subtítulo</div>
-                  <div className="h-12 rounded" style={{ backgroundColor: form.cor_primaria, opacity: 0.1 }} />
-                  <div className="flex justify-between pt-2 border-t">
-                    <span>{form.nome_responsavel || "Responsável"}</span>
-                    <span>Contratante</span>
-                  </div>
-                  <div className="h-4 rounded text-center text-white text-[9px] leading-4" style={{ backgroundColor: form.cor_primaria }}>
-                    {selected?.nome_fantasia || selected?.razao_social} — CNPJ: {selected?.cnpj}
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button onClick={previewPDF} variant="outline" className="gap-2 flex-1"><Eye className="h-4 w-4" /> Gerar PDF Preview</Button>
-                  <Button onClick={handleSave} className="gap-2 flex-1"><Save className="h-4 w-4" /> Salvar</Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-      </div>
-    </AppLayout>
-  );
-}
