@@ -64,6 +64,7 @@ export default function ConfigDocumentos() {
         cor_secundaria: emp.cor_secundaria || "#1a1a1a",
         nome_responsavel: emp.nome_responsavel || "",
         cargo_responsavel: emp.cargo_responsavel || "",
+        logo_url: emp.logo_url || "",
         responsavel_tecnico_1: emp.responsavel_tecnico_1 || "Luis Fernando Gomez Ubero",
         crea_1: emp.crea_1 || "PR-95695/D",
         responsavel_tecnico_2: emp.responsavel_tecnico_2 || "Marcos Paulo Gomez Ubero",
