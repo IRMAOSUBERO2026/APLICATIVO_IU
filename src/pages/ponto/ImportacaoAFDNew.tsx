@@ -45,6 +45,9 @@ export default function ImportacaoAFDNew() {
         toast({ title: "Sucesso!", description: "Arquivo processado e batidas importadas." });
       }
 
+      // Buscar obra do equipamento antes de usar
+      const { data: eq } = await supabase.from("ponto_equipamentos").select("obra_id").eq("id", selectedEq).single();
+
       // Rodar motor de inconsistências para as datas processadas
       if (eq?.obra_id) {
         for (const dataStr of r.datasProcessadas) {
@@ -53,7 +56,6 @@ export default function ImportacaoAFDNew() {
       }
 
       // Registrar log de importação
-      const { data: eq } = await supabase.from("ponto_equipamentos").select("obra_id").eq("id", selectedEq).single();
       
       await supabase.from("ponto_importacoes_log").insert({
         equipamento_id: selectedEq,
