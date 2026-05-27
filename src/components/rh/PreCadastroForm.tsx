@@ -7,6 +7,7 @@ import { EmpresaSelect, ObraSelect } from "@/components/shared/EmpresaObraSelect
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BonificacoesPadraoEditor, type BonificacaoPadrao } from "@/components/rh/BonificacoesPadraoEditor";
 import { inserirFuncionarioComBonificacoes } from "@/lib/bonificacoesPadrao";
+import { CARGOS_PADRAO } from "@/lib/cargosPadrao";
 
 interface PreCadastroFormProps {
   open: boolean;
@@ -299,7 +300,19 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
                 obras={obrasDisponiveis}
                 label="Obra (vinculada à empresa)"
               />
-              <FieldInput label="Cargo" value={form.cargo} onChange={v => update("cargo", v)} required />
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Cargo <span className="text-destructive">*</span></label>
+                <input
+                  list="cargos-padrao-list"
+                  value={form.cargo}
+                  onChange={e => update("cargo", e.target.value)}
+                  placeholder="Selecione ou digite..."
+                  className="w-full rounded-lg border bg-card py-2 px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+                <datalist id="cargos-padrao-list">
+                  {CARGOS_PADRAO.map(c => <option key={c} value={c} />)}
+                </datalist>
+              </div>
               <FieldInput label="Data de Admissão" value={form.admissao} onChange={v => update("admissao", v)} type="date" />
               <div className="space-y-1">
                 <label className="text-xs font-medium text-muted-foreground">Tipo de Remuneração</label>
