@@ -139,7 +139,10 @@ async function loadEmpresa(empresaId?: string | null): Promise<BrandEmpresa> {
 export async function gerarFichaPreCadastroPdf(
   data: FichaPreCadastroData,
   empresaId?: string | null,
-): Promise<void> {
+  options?: { download?: boolean; returnBlob?: boolean },
+): Promise<Blob | void> {
+  const download = options?.download ?? true;
+  const returnBlob = options?.returnBlob ?? false;
   const empresa = await loadEmpresa(empresaId);
 
   const ctx = await initBrandedDoc({
