@@ -77,10 +77,17 @@ export function EditFuncionarioForm({ open, onOpenChange, funcionarioId, onSaved
     supabase.from("funcionarios").select("*").eq("id", funcionarioId).single()
       .then(({ data }) => {
         if (data) {
+          let depsList: any[] = [];
+          try {
+            const raw = (data as any).dependentes_json;
+            if (Array.isArray(raw)) depsList = raw;
+            else if (typeof raw === "string" && raw.trim()) depsList = JSON.parse(raw);
+          } catch { depsList = []; }
           setForm({
             ...data,
             observacoes: stripBonificacoesFromObservacoes((data as any).observacoes),
             bonificacoes_padrao: getBonificacoesFromFuncionario(data as any),
+            dependentes_lista: depsList,
           });
         }
         setLoading(false);
