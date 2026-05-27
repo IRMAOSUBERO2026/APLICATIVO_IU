@@ -123,6 +123,90 @@ export function EditFuncionarioForm({ open, onOpenChange, funcionarioId, onSaved
     setSaving(false);
   };
 
+  const buildFichaData = (): FichaPreCadastroData => {
+    let dependentesLista: any[] = [];
+    try {
+      const raw = (form as any).dependentes_json;
+      if (Array.isArray(raw)) dependentesLista = raw;
+      else if (typeof raw === "string" && raw.trim()) dependentesLista = JSON.parse(raw);
+    } catch { dependentesLista = []; }
+    const obraSel = obrasDisponiveis.find((o: any) => o.id === form.obra_id);
+    return {
+      nome: form.nome || "",
+      foto: form.foto_url || null,
+      data_nascimento: form.data_nascimento,
+      estado_civil: form.estado_civil,
+      nacionalidade: form.nacionalidade,
+      nome_mae: form.nome_mae,
+      nome_pai: form.nome_pai,
+      escolaridade: form.escolaridade,
+      telefone: form.telefone,
+      dependentes: Number(form.dependentes) || dependentesLista.length || 0,
+      rne: form.rne,
+      data_entrada_pais: form.data_entrada_pais,
+      cpf: form.cpf,
+      rg: form.rg,
+      pis: form.pis,
+      ctps: form.ctps,
+      serie_ctps: form.serie_ctps,
+      titulo_eleitor: form.titulo_eleitor,
+      zona_eleitoral: form.zona_eleitoral,
+      secao_eleitoral: form.secao_eleitoral,
+      cnh: form.cnh,
+      categoria_cnh: form.categoria_cnh,
+      validade_cnh: form.validade_cnh,
+      endereco: form.endereco,
+      bairro: form.bairro,
+      cidade: form.cidade,
+      uf: form.uf,
+      cep: form.cep,
+      cargo: form.cargo,
+      data_admissao: form.data_admissao,
+      salario_base: Number(form.salario_base) || 0,
+      salario_combinado: Number(form.salario_combinado) || 0,
+      tipo_remuneracao: form.tipo_remuneracao,
+      escala: form.escala,
+      obra_nome: obraSel?.nome || "",
+      banco: form.banco,
+      agencia: form.agencia,
+      conta: form.conta,
+      tipo_conta: form.tipo_conta,
+      codigo_pix: form.codigo_pix,
+      dependentes_lista: dependentesLista,
+    };
+  };
+
+  const handleGerarPdf = async () => {
+    if (!form.nome) {
+      toast({ title: "Nome obrigatório", description: "Preencha o nome do funcionário.", variant: "destructive" });
+      return;
+    }
+    setGerandoPdf(true);
+    try {
+      const fichaData = buildFichaData();
+      const blob = (await gerarFichaPreCadastroPdf(fichaData, form.empresa_id || null, {
+        download: true,
+        returnBlob: true,
+      })) as Blob;
+
+      const dateTag = new Date().toISOString().slice(0, 10);
+      const safeName = (form.nome || "funcionario").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]+/g, "_").toLowerCase();
+      const filePath = `funcionarios/${funcionarioId}/Doc Admissionais/Ficha_Pre_Cadastro_${safeName}_${dateTag}.pdf`;
+      const { error: upErr } = await supabase.storage
+        .from("documentos")
+        .upload(filePath, blob, { upsert: true, contentType: "application/pdf" });
+      if (upErr) {
+        toast({ title: "PDF gerado, mas falhou ao salvar na pasta", description: upErr.message, variant: "destructive" });
+      } else {
+        toast({ title: "Ficha gerada", description: "Salva em Documentos → Doc Admissionais." });
+      }
+    } catch (e: any) {
+      toast({ title: "Erro ao gerar PDF", description: e?.message || String(e), variant: "destructive" });
+    } finally {
+      setGerandoPdf(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
