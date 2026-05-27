@@ -135,12 +135,15 @@ export function EditFuncionarioForm({ open, onOpenChange, funcionarioId, onSaved
   };
 
   const buildFichaData = (): FichaPreCadastroData => {
-    let dependentesLista: any[] = [];
-    try {
-      const raw = (form as any).dependentes_json;
-      if (Array.isArray(raw)) dependentesLista = raw;
-      else if (typeof raw === "string" && raw.trim()) dependentesLista = JSON.parse(raw);
-    } catch { dependentesLista = []; }
+    const editedDeps = Array.isArray(form.dependentes_lista) ? form.dependentes_lista : [];
+    let dependentesLista: any[] = editedDeps;
+    if (dependentesLista.length === 0) {
+      try {
+        const raw = (form as any).dependentes_json;
+        if (Array.isArray(raw)) dependentesLista = raw;
+        else if (typeof raw === "string" && raw.trim()) dependentesLista = JSON.parse(raw);
+      } catch { dependentesLista = []; }
+    }
     const obraSel = obrasDisponiveis.find((o: any) => o.id === form.obra_id);
     return {
       nome: form.nome || "",
