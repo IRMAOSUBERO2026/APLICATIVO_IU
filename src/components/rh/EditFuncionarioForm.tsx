@@ -278,8 +278,11 @@ export function EditFuncionarioForm({ open, onOpenChange, funcionarioId, onSaved
                 onChange={(next) => setForm(prev => ({ ...prev, bonificacoes_padrao: next }))}
               />
             </div>
-            <div className="flex justify-end gap-2 pt-4 border-t mt-4">
+            <div className="flex flex-wrap justify-end gap-2 pt-4 border-t mt-4">
               <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+              <Button variant="secondary" onClick={handleGerarPdf} disabled={gerandoPdf} className="gap-2">
+                <FileDown className="h-4 w-4" /> {gerandoPdf ? "Gerando..." : "Gerar Ficha (PDF)"}
+              </Button>
               <Button onClick={handleSave} disabled={saving} className="gap-2">
                 <Save className="h-4 w-4" /> {saving ? "Salvando..." : "Salvar Alterações"}
               </Button>
