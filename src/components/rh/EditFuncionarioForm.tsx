@@ -3,8 +3,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Pencil, Save, FileDown } from "lucide-react";
+import { Pencil, Save, FileDown, Plus, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { CARGOS_PADRAO } from "@/lib/cargosPadrao";
 import { toast } from "@/hooks/use-toast";
 import { useEmpresasObras } from "@/hooks/useEmpresasObras";
 import { EmpresaSelect, ObraSelect } from "@/components/shared/EmpresaObraSelects";
@@ -76,10 +77,17 @@ export function EditFuncionarioForm({ open, onOpenChange, funcionarioId, onSaved
     supabase.from("funcionarios").select("*").eq("id", funcionarioId).single()
       .then(({ data }) => {
         if (data) {
+          let depsList: any[] = [];
+          try {
+            const raw = (data as any).dependentes_json;
+            if (Array.isArray(raw)) depsList = raw;
+            else if (typeof raw === "string" && raw.trim()) depsList = JSON.parse(raw);
+          } catch { depsList = []; }
           setForm({
             ...data,
             observacoes: stripBonificacoesFromObservacoes((data as any).observacoes),
             bonificacoes_padrao: getBonificacoesFromFuncionario(data as any),
+            dependentes_lista: depsList,
           });
         }
         setLoading(false);
@@ -111,6 +119,9 @@ export function EditFuncionarioForm({ open, onOpenChange, funcionarioId, onSaved
     updateData.observacoes = stripBonificacoesFromObservacoes(form.observacoes);
     updateData.bonificacoes_padrao = Array.isArray(form.bonificacoes_padrao) ? form.bonificacoes_padrao : [];
     updateData.foto_url = form.foto_url || null;
+    const depsList = Array.isArray(form.dependentes_lista) ? form.dependentes_lista.filter((d: any) => d && (d.nome || d.cpf)) : [];
+    updateData.dependentes_json = depsList;
+    updateData.dependentes = depsList.length || Number(form.dependentes) || 0;
 
     const { error } = await salvarFuncionarioComBonificacoes(funcionarioId, updateData);
     if (error) {
@@ -124,12 +135,15 @@ export function EditFuncionarioForm({ open, onOpenChange, funcionarioId, onSaved
   };
 
   const buildFichaData = (): FichaPreCadastroData => {
-    let dependentesLista: any[] = [];
-    try {
-      const raw = (form as any).dependentes_json;
-      if (Array.isArray(raw)) dependentesLista = raw;
-      else if (typeof raw === "string" && raw.trim()) dependentesLista = JSON.parse(raw);
-    } catch { dependentesLista = []; }
+    const editedDeps = Array.isArray(form.dependentes_lista) ? form.dependentes_lista : [];
+    let dependentesLista: any[] = editedDeps;
+    if (dependentesLista.length === 0) {
+      try {
+        const raw = (form as any).dependentes_json;
+        if (Array.isArray(raw)) dependentesLista = raw;
+        else if (typeof raw === "string" && raw.trim()) dependentesLista = JSON.parse(raw);
+      } catch { dependentesLista = []; }
+    }
     const obraSel = obrasDisponiveis.find((o: any) => o.id === form.obra_id);
     return {
       nome: form.nome || "",
@@ -252,7 +266,19 @@ export function EditFuncionarioForm({ open, onOpenChange, funcionarioId, onSaved
               {FIELDS.map(f => (
                 <div key={f.key} className="space-y-1">
                   <Label className="text-xs">{f.label}</Label>
-                  {f.options ? (
+                  {f.key === "cargo" ? (
+                    <>
+                      <Input
+                        list="edit-cargos-padrao"
+                        value={form[f.key] ?? ""}
+                        onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
+                        placeholder="Selecione ou digite..."
+                      />
+                      <datalist id="edit-cargos-padrao">
+                        {CARGOS_PADRAO.map(c => <option key={c} value={c} />)}
+                      </datalist>
+                    </>
+                  ) : f.options ? (
                     <select
                       value={form[f.key] ?? ""}
                       onChange={e => setForm(prev => ({ ...prev, [f.key]: e.target.value }))}
@@ -270,6 +296,82 @@ export function EditFuncionarioForm({ open, onOpenChange, funcionarioId, onSaved
                   )}
                 </div>
               ))}
+            </div>
+
+            {/* Dependentes */}
+            <div className="mt-6 rounded-lg border bg-muted/20 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-semibold">
+                  Dependentes ({Array.isArray(form.dependentes_lista) ? form.dependentes_lista.length : 0})
+                </h4>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setForm(prev => ({
+                    ...prev,
+                    dependentes_lista: [...(Array.isArray(prev.dependentes_lista) ? prev.dependentes_lista : []), { nome: "", cpf: "", dataNascimento: "" }],
+                  }))}
+                  className="gap-1"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Adicionar
+                </Button>
+              </div>
+              {(Array.isArray(form.dependentes_lista) ? form.dependentes_lista : []).map((dep: any, idx: number) => (
+                <div key={idx} className="rounded-lg border bg-card p-3 mb-2 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-muted-foreground">Dependente {idx + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => setForm(prev => ({
+                        ...prev,
+                        dependentes_lista: (prev.dependentes_lista || []).filter((_: any, i: number) => i !== idx),
+                      }))}
+                      className="p-1 text-destructive hover:text-destructive/80"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Nome Completo</Label>
+                      <Input
+                        value={dep.nome || ""}
+                        onChange={e => setForm(prev => ({
+                          ...prev,
+                          dependentes_lista: (prev.dependentes_lista || []).map((d: any, i: number) => i === idx ? { ...d, nome: e.target.value } : d),
+                        }))}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">CPF</Label>
+                      <Input
+                        value={dep.cpf || ""}
+                        onChange={e => setForm(prev => ({
+                          ...prev,
+                          dependentes_lista: (prev.dependentes_lista || []).map((d: any, i: number) => i === idx ? { ...d, cpf: e.target.value } : d),
+                        }))}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Data de Nascimento</Label>
+                      <Input
+                        type="date"
+                        value={dep.dataNascimento || ""}
+                        onChange={e => setForm(prev => ({
+                          ...prev,
+                          dependentes_lista: (prev.dependentes_lista || []).map((d: any, i: number) => i === idx ? { ...d, dataNascimento: e.target.value } : d),
+                        }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {(!form.dependentes_lista || form.dependentes_lista.length === 0) && (
+                <p className="text-xs text-muted-foreground text-center py-3">
+                  Nenhum dependente cadastrado. Clique em "Adicionar" para incluir.
+                </p>
+              )}
             </div>
 
             <div className="mt-4">
