@@ -67,6 +67,7 @@ export function EditFuncionarioForm({ open, onOpenChange, funcionarioId, onSaved
   const [form, setForm] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [gerandoPdf, setGerandoPdf] = useState(false);
   const { empresas, obras, obrasPorEmpresa } = useEmpresasObras();
 
   useEffect(() => {
