@@ -139,7 +139,10 @@ async function loadEmpresa(empresaId?: string | null): Promise<BrandEmpresa> {
 export async function gerarFichaPreCadastroPdf(
   data: FichaPreCadastroData,
   empresaId?: string | null,
-): Promise<void> {
+  options?: { download?: boolean; returnBlob?: boolean },
+): Promise<Blob | void> {
+  const download = options?.download ?? true;
+  const returnBlob = options?.returnBlob ?? false;
   const empresa = await loadEmpresa(empresaId);
 
   const ctx = await initBrandedDoc({
@@ -311,5 +314,6 @@ export async function gerarFichaPreCadastroPdf(
 
   finalizeBranded(ctx);
   const safeName = (data.nome || "funcionario").replace(/[^a-zA-Z0-9]+/g, "_").toLowerCase();
-  doc.save(`ficha_pre_cadastro_${safeName}.pdf`);
+  if (download) doc.save(`ficha_pre_cadastro_${safeName}.pdf`);
+  if (returnBlob) return doc.output("blob");
 }
