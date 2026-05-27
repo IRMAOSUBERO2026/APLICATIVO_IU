@@ -314,5 +314,6 @@ export async function gerarFichaPreCadastroPdf(
 
   finalizeBranded(ctx);
   const safeName = (data.nome || "funcionario").replace(/[^a-zA-Z0-9]+/g, "_").toLowerCase();
-  doc.save(`ficha_pre_cadastro_${safeName}.pdf`);
+  if (download) doc.save(`ficha_pre_cadastro_${safeName}.pdf`);
+  if (returnBlob) return doc.output("blob");
 }
