@@ -119,6 +119,9 @@ export function EditFuncionarioForm({ open, onOpenChange, funcionarioId, onSaved
     updateData.observacoes = stripBonificacoesFromObservacoes(form.observacoes);
     updateData.bonificacoes_padrao = Array.isArray(form.bonificacoes_padrao) ? form.bonificacoes_padrao : [];
     updateData.foto_url = form.foto_url || null;
+    const depsList = Array.isArray(form.dependentes_lista) ? form.dependentes_lista.filter((d: any) => d && (d.nome || d.cpf)) : [];
+    updateData.dependentes_json = depsList;
+    updateData.dependentes = depsList.length || Number(form.dependentes) || 0;
 
     const { error } = await salvarFuncionarioComBonificacoes(funcionarioId, updateData);
     if (error) {
