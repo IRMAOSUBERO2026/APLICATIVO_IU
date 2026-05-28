@@ -2809,6 +2809,7 @@ export type Database = {
       solicitacoes_exame: {
         Row: {
           created_at: string
+          data_agendada: string | null
           data_realizado: string | null
           data_solicitacao: string
           empresa_id: string
@@ -2824,6 +2825,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          data_agendada?: string | null
           data_realizado?: string | null
           data_solicitacao?: string
           empresa_id: string
@@ -2839,6 +2841,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          data_agendada?: string | null
           data_realizado?: string | null
           data_solicitacao?: string
           empresa_id?: string
