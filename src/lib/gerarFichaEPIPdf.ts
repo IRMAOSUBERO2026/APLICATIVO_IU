@@ -354,15 +354,25 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
   // Seção 2 — Equipamentos
   startY = sectionTitle(doc, startY, "Equipamentos Entregues");
 
-  const linhas = (entregas || []).map((e: any, i: number) => [
-    String(i + 1).padStart(2, "0"),
-    safeDate(e.data_entrega),
-    e.produto?.descricao || "Equipamento / EPI",
-    e.produto?.ca_numero || "—", // puxado direto do produto
-    String(e.quantidade ?? 1),
-    e.motivo || e.observacoes || "—",
-    "",
-  ]);
+  const linhas = (entregas || []).map((e: any, i: number) => {
+    const descricao = e.produto?.descricao || "Equipamento / EPI";
+    // Prioriza CA da entrega; fallback para CA do produto.
+    // Se o valor "CA" for igual à descrição (dado corrompido), ignora.
+    let ca = e.ca_numero || e.produto?.ca_numero || "";
+    if (ca && descricao && ca.trim().toUpperCase() === descricao.trim().toUpperCase()) {
+      ca = "";
+    }
+    return [
+      String(i + 1).padStart(2, "0"),
+      safeDate(e.data_entrega),
+      descricao,
+      ca || "—",
+      String(e.quantidade ?? 1),
+      e.motivo || e.observacoes || "—",
+      "",
+    ];
+  });
+
 
   const totalPagesExp = "{total_pages_count_string}";
 
