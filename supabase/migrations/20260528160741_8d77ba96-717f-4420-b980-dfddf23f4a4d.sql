@@ -1,0 +1,1 @@
+ALTER TABLE public.solicitacoes_exame ADD COLUMN IF NOT EXISTS data_agendada date;
