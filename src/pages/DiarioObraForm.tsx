@@ -144,15 +144,28 @@ export default function DiarioObraForm() {
       // incluindo os alocados em obras locadas/de outras empresas, para que a lista
       // completa fique disponível como apoio. A presença automática continua restrita
       // aos funcionários da própria obra.
-      const [funcRes, eqpRes, obrasRes] = await Promise.all([
+      const [funcRes, eqpRes, locRes, obrasRes] = await Promise.all([
         supabase.from("funcionarios").select("id, nome, cargo, obra_id, empresa_id, status")
           .eq("status", "ativo").order("nome"),
         supabase.from("equipamentos_proprios").select("id, codigo, descricao, tipo, obra_id, empresa_id, status")
           .order("descricao"),
+        supabase.from("equipamentos_locados").select("id, descricao, tipo, obra_id, empresa_id, status, numero_oc")
+          .order("descricao"),
         supabase.from("obras").select("id, nome, codigo"),
       ]);
       const funcs = (funcRes.data || []) as FuncionarioRow[];
-      const eqps = (eqpRes.data || []) as EquipamentoRow[];
+      const eqpsProprios = (eqpRes.data || []) as EquipamentoRow[];
+      // Equipamentos locados também aparecem no diário (obras locadas/de terceiros)
+      const eqpsLocados: EquipamentoRow[] = (locRes.data || []).map((l: any) => ({
+        id: l.id,
+        codigo: l.numero_oc ? `LOC-${l.numero_oc}` : "LOCADO",
+        descricao: l.descricao,
+        tipo: l.tipo || "locado",
+        obra_id: l.obra_id ?? null,
+        empresa_id: l.empresa_id,
+        status: l.status,
+      }));
+      const eqps = [...eqpsProprios, ...eqpsLocados];
       const oMap: Record<string, string> = {};
       (obrasRes.data || []).forEach((o: any) => { oMap[o.id] = `${o.codigo} - ${o.nome}`; });
       setObrasMap(oMap);
