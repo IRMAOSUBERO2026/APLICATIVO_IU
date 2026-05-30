@@ -40,7 +40,7 @@ export default function InconsistenciasPonto() {
     const { data } = await query;
     if (data) setInconsistencias(data);
     
-    const { data: obs } = await supabase.from("obras").select("id, nome").eq("status", "em_andamento");
+    const { data: obs } = await supabase.from("obras").select("id, nome").in("status", OBRA_STATUS_ATIVOS_ARR);
     if (obs) setObras(obs);
     
     setLoading(false);
