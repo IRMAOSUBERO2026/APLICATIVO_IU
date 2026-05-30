@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { organizarBatidasDiarias } from "@/utils/afdParser";
+import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 
 export default function ApuracaoPonto() {
   const [obras, setObras] = useState<any[]>([]);
