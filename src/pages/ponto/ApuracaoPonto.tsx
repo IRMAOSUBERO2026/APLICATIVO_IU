@@ -19,7 +19,7 @@ export default function ApuracaoPonto() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    supabase.from("obras").select("id, nome").eq("status", "em_andamento")
+    supabase.from("obras").select("id, nome").in("status", OBRA_STATUS_ATIVOS_ARR)
       .then(({ data }) => { if (data) setObras(data); });
   }, []);
 
