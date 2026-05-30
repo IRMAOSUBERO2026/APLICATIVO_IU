@@ -107,7 +107,7 @@ export default function RH() {
   useEffect(() => {
     loadDbFuncionarios();
     supabase.from("obras").select("id, nome, codigo, status")
-      .in("status", ["em_andamento", "em_execucao", "ativa", "ativo"])
+      .in("status", OBRA_STATUS_ATIVOS_ARR)
       .order("codigo")
       .then(({ data }) => { if (data) setObras(data); });
     supabase.from("empresas").select("id, razao_social, nome_fantasia, cnpj")

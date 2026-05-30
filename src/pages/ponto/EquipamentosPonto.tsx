@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 
 interface Equipamento {
   id: string;
@@ -48,7 +49,7 @@ export default function EquipamentosPonto() {
     const { data: obs } = await supabase
       .from("obras")
       .select("id, nome, codigo")
-      .eq("status", "em_andamento")
+      .in("status", OBRA_STATUS_ATIVOS_ARR)
       .order("codigo");
     
     if (obs) setObras(obs);
