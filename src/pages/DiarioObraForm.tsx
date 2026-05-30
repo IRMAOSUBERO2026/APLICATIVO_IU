@@ -140,12 +140,16 @@ export default function DiarioObraForm() {
   useEffect(() => {
     if (!obra?.empresa_id || !obraId) return;
     (async () => {
+      // Carrega TODOS os funcionários ativos de TODAS as empresas (todos os CNPJs),
+      // incluindo os alocados em obras locadas/de outras empresas, para que a lista
+      // completa fique disponível como apoio. A presença automática continua restrita
+      // aos funcionários da própria obra.
       const [funcRes, eqpRes, obrasRes] = await Promise.all([
         supabase.from("funcionarios").select("id, nome, cargo, obra_id, empresa_id, status")
-          .eq("empresa_id", obra.empresa_id).eq("status", "ativo").order("nome"),
+          .eq("status", "ativo").order("nome"),
         supabase.from("equipamentos_proprios").select("id, codigo, descricao, tipo, obra_id, empresa_id, status")
-          .eq("empresa_id", obra.empresa_id).order("descricao"),
-        supabase.from("obras").select("id, nome, codigo").eq("empresa_id", obra.empresa_id),
+          .order("descricao"),
+        supabase.from("obras").select("id, nome, codigo"),
       ]);
       const funcs = (funcRes.data || []) as FuncionarioRow[];
       const eqps = (eqpRes.data || []) as EquipamentoRow[];
