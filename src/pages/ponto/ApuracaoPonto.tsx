@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { organizarBatidasDiarias } from "@/utils/afdParser";
+import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 
 export default function ApuracaoPonto() {
   const [obras, setObras] = useState<any[]>([]);
@@ -18,7 +19,7 @@ export default function ApuracaoPonto() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    supabase.from("obras").select("id, nome").eq("status", "em_andamento")
+    supabase.from("obras").select("id, nome").in("status", OBRA_STATUS_ATIVOS_ARR)
       .then(({ data }) => { if (data) setObras(data); });
   }, []);
 

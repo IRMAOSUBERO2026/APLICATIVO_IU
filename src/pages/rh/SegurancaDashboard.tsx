@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { calcularVencimento, diasRestantes, verificarAlertas } from "@/utils/seguranca";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Link } from "react-router-dom";
+import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 
 export default function SegurancaDashboard() {
   const [documentos, setDocumentos] = useState<any[]>([]);
@@ -48,7 +49,7 @@ export default function SegurancaDashboard() {
 
     // 1. Obras e Clinicas
     const [{ data: obs }, { data: clins }] = await Promise.all([
-      supabase.from("obras").select("id, nome").in("status", ["em_andamento", "em_execucao", "ativa"]),
+      supabase.from("obras").select("id, nome").in("status", OBRA_STATUS_ATIVOS_ARR),
       supabase.from("seguranca_clinicas").select("id, nome").eq("ativo", true)
     ]);
     if (obs) setObras(obs);

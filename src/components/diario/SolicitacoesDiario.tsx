@@ -32,9 +32,16 @@ export function SolicitacoesDiario({ itens, onChange, disabled }: Props) {
     Promise.all([
       supabase.from("produtos").select("id, descricao, categoria").eq("ativo", true).order("descricao"),
       supabase.from("equipamentos_proprios").select("id, descricao, codigo").order("descricao"),
-    ]).then(([p, e]) => {
+      supabase.from("equipamentos_locados").select("id, descricao, numero_oc").order("descricao"),
+    ]).then(([p, e, l]) => {
       if (p.data) setProdutos(p.data);
-      if (e.data) setEquipamentos(e.data);
+      const proprios = (e.data || []) as Equipamento[];
+      const locados = (l.data || []).map((x: any) => ({
+        id: x.id,
+        descricao: x.descricao,
+        codigo: x.numero_oc ? `LOC-${x.numero_oc}` : "LOCADO",
+      })) as Equipamento[];
+      setEquipamentos([...proprios, ...locados]);
     });
   }, []);
 

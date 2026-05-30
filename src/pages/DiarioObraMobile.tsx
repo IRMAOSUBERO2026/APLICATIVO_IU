@@ -69,11 +69,24 @@ export default function DiarioObraMobile() {
   }, []);
 
   useEffect(() => {
-    if (!obraId) { setPresencaObra([]); setPresencaVisitantes([]); return; }
+    if (!obraId) { setPresencaObra([]); setPresencaVisitantes([]); setEquipsProprios([]); return; }
     const daObra = allFuncionarios.filter(f => f.obra_id === obraId);
     const deOutras = allFuncionarios.filter(f => f.obra_id !== obraId);
     setPresencaObra(daObra.map(f => ({ id: f.id, nome: f.nome, cargo: f.cargo, presente: true, horas: 8 })));
     setPresencaVisitantes(deOutras.map(f => ({ id: f.id, nome: f.nome, cargo: f.cargo, presente: false, horas: 8 })));
+
+    // Carrega equipamentos próprios alocados na obra
+    supabase.from("equipamentos_proprios")
+      .select("id, codigo, descricao")
+      .eq("obra_id", obraId)
+      .order("descricao")
+      .then(({ data }) => {
+        if (data) setEquipsProprios(data.map((e: any) => ({
+          id: e.id,
+          nome: e.codigo ? `${e.codigo} - ${e.descricao}` : e.descricao,
+          selecionado: false,
+        })));
+      });
   }, [obraId, allFuncionarios]);
 
   // Cálculos

@@ -13,6 +13,7 @@ import { GestaoPinsModule } from "@/components/rh/GestaoPinsModule";
 import { TransferirFuncionario } from "@/components/rh/TransferirFuncionario";
 import { EditFuncionarioForm } from "@/components/rh/EditFuncionarioForm";
 import { MonitorAtividadesRH } from "@/components/rh/MonitorAtividadesRH";
+import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 import { supabase } from "@/integrations/supabase/client";
 import { differenceInDays, parseISO, format, addDays } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -107,7 +108,7 @@ export default function RH() {
   useEffect(() => {
     loadDbFuncionarios();
     supabase.from("obras").select("id, nome, codigo, status")
-      .in("status", ["em_andamento", "em_execucao", "ativa", "ativo"])
+      .in("status", OBRA_STATUS_ATIVOS_ARR)
       .order("codigo")
       .then(({ data }) => { if (data) setObras(data); });
     supabase.from("empresas").select("id, razao_social, nome_fantasia, cnpj")
