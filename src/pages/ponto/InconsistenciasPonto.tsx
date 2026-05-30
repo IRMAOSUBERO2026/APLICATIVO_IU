@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { format, parseISO } from "date-fns";
+import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 import { ptBR } from "date-fns/locale";
 
 export default function InconsistenciasPonto() {
