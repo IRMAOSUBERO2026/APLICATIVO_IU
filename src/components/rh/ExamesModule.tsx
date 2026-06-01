@@ -351,7 +351,7 @@ function SolicitacoesView() {
   const loadData = async () => {
     const [{ data: sol }, { data: func }, { data: forn }, { data: prec }, { data: clin }] = await Promise.all([
       supabase.from("solicitacoes_exame").select("*").order("data_solicitacao", { ascending: false }),
-      supabase.from("funcionarios").select("id, nome, cpf, cargo, empresa_id, obra_id, data_aso, data_nr6, data_nr12, data_nr18, data_nr35").eq("status", "ativo"),
+      supabase.from("funcionarios").select("id, nome, cpf, cargo, empresa_id, obra_id, data_aso, data_nr6, data_nr12, data_nr18, data_nr35").neq("status", "desligado"),
       supabase.from("fornecedores").select("id, razao_social, nome_fantasia, telefone, email").eq("ativo", true),
       supabase.from("tabela_precos_exames").select("*").eq("ativo", true),
       supabase.from("seguranca_clinicas").select("id, nome").eq("ativo", true),
