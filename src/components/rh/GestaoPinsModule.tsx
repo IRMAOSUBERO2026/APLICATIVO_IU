@@ -27,6 +27,7 @@ export function GestaoPinsModule() {
   const [mostrarDesligados, setMostrarDesligados] = useState(false);
   const [selectedFunc, setSelectedFunc] = useState<FuncionarioComPin | null>(null);
   const [pin, setPin] = useState("");
+  const [perfil, setPerfil] = useState("colaborador");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
