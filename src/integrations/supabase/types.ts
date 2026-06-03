@@ -2349,6 +2349,7 @@ export type Database = {
           created_at: string
           funcionario_id: string
           id: string
+          perfil_acesso: string
           pin: string | null
           pin_configurado: boolean
           ultimo_acesso: string | null
@@ -2358,6 +2359,7 @@ export type Database = {
           created_at?: string
           funcionario_id: string
           id?: string
+          perfil_acesso?: string
           pin?: string | null
           pin_configurado?: boolean
           ultimo_acesso?: string | null
@@ -2367,6 +2369,7 @@ export type Database = {
           created_at?: string
           funcionario_id?: string
           id?: string
+          perfil_acesso?: string
           pin?: string | null
           pin_configurado?: boolean
           ultimo_acesso?: string | null
