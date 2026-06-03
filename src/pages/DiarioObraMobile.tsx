@@ -200,12 +200,17 @@ export default function DiarioObraMobile() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-primary text-primary-foreground px-4 py-3 flex items-center gap-3 shadow-md">
-        <Link to="/diario-obra" className="p-1"><ArrowLeft className="h-5 w-5" /></Link>
+        {perfilRestrito ? (
+          <button onClick={handleSair} className="p-1" title="Sair"><LogOut className="h-5 w-5" /></button>
+        ) : (
+          <Link to="/diario-obra" className="p-1"><ArrowLeft className="h-5 w-5" /></Link>
+        )}
         <div>
           <h1 className="text-base font-bold">Diário de Obra</h1>
-          <p className="text-[10px] opacity-80">Lançamento Mobile</p>
+          <p className="text-[10px] opacity-80">{perfilRestrito ? "Lançamento de Campo" : "Lançamento Mobile"}</p>
         </div>
       </div>
+
 
       <div className="p-4 space-y-4 pb-28">
         {/* Obra + Data */}
