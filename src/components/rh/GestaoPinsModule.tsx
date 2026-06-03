@@ -18,6 +18,7 @@ type FuncionarioComPin = {
   cargo: string;
   status: string;
   pin_configurado: boolean;
+  perfil_acesso: string;
 };
 
 export function GestaoPinsModule() {
