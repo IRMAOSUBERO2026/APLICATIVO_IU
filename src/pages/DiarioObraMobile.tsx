@@ -4,9 +4,9 @@ import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 import { toast } from "@/hooks/use-toast";
 import {
   Camera, Cloud, Sun, CloudRain, CloudSnow, Users, Save, ArrowLeft,
-  Plus, X, Thermometer, Clock, Calculator, UserPlus, Wrench, Truck, Trash2, ChevronDown, ChevronUp
+  Plus, X, Thermometer, Clock, Calculator, UserPlus, Wrench, Truck, Trash2, ChevronDown, ChevronUp, LogOut
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Checkbox } from "@/components/ui/checkbox";
 
 interface ObraOption { id: string; nome: string; codigo: string; }
