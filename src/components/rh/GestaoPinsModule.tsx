@@ -246,7 +246,23 @@ export function GestaoPinsModule() {
                 Mínimo 4 dígitos. Informe este número ao colaborador.
               </p>
             </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tipo de Acesso</label>
+              <select
+                value={perfil}
+                onChange={e => setPerfil(e.target.value)}
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              >
+                <option value="colaborador">Portal do Colaborador (recibos, ponto, EPIs)</option>
+                <option value="diario">Apenas Diário de Obra (lançamento de campo)</option>
+              </select>
+              <p className="text-xs text-muted-foreground">
+                "Apenas Diário de Obra" entra direto na tela mobile de lançamento, sem acesso aos demais módulos.
+              </p>
+            </div>
           </div>
+
           
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setSelectedFunc(null)}>Cancelar</Button>
