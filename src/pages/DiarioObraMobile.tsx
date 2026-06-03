@@ -4,9 +4,9 @@ import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 import { toast } from "@/hooks/use-toast";
 import {
   Camera, Cloud, Sun, CloudRain, CloudSnow, Users, Save, ArrowLeft,
-  Plus, X, Thermometer, Clock, Calculator, UserPlus, Wrench, Truck, Trash2, ChevronDown, ChevronUp
+  Plus, X, Thermometer, Clock, Calculator, UserPlus, Wrench, Truck, Trash2, ChevronDown, ChevronUp, LogOut
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Checkbox } from "@/components/ui/checkbox";
 
 interface ObraOption { id: string; nome: string; codigo: string; }
@@ -27,6 +27,14 @@ const SERVICOS = ["Carpintaria", "Armação", "Concretagem", "Regularização", 
 const UNIDADES = ["m²", "m³", "kg", "m", "un", "vb"];
 
 export default function DiarioObraMobile() {
+  const navigate = useNavigate();
+  const perfilRestrito = typeof window !== "undefined" && localStorage.getItem("portal_perfil_acesso") === "diario";
+  const handleSair = () => {
+    localStorage.removeItem("portal_user_id");
+    localStorage.removeItem("portal_user_nome");
+    localStorage.removeItem("portal_perfil_acesso");
+    navigate("/login-portal");
+  };
   const [obras, setObras] = useState<ObraOption[]>([]);
   const [allFuncionarios, setAllFuncionarios] = useState<FuncOption[]>([]);
   const [obraId, setObraId] = useState("");
@@ -200,12 +208,17 @@ export default function DiarioObraMobile() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-primary text-primary-foreground px-4 py-3 flex items-center gap-3 shadow-md">
-        <Link to="/diario-obra" className="p-1"><ArrowLeft className="h-5 w-5" /></Link>
+        {perfilRestrito ? (
+          <button onClick={handleSair} className="p-1" title="Sair"><LogOut className="h-5 w-5" /></button>
+        ) : (
+          <Link to="/diario-obra" className="p-1"><ArrowLeft className="h-5 w-5" /></Link>
+        )}
         <div>
           <h1 className="text-base font-bold">Diário de Obra</h1>
-          <p className="text-[10px] opacity-80">Lançamento Mobile</p>
+          <p className="text-[10px] opacity-80">{perfilRestrito ? "Lançamento de Campo" : "Lançamento Mobile"}</p>
         </div>
       </div>
+
 
       <div className="p-4 space-y-4 pb-28">
         {/* Obra + Data */}

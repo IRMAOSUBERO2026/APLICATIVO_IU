@@ -44,7 +44,7 @@ export default function LoginPortal() {
       // Verifica o PIN na tabela de credenciais
       const { data: credData, error: credError } = await supabase
         .from("portal_credentials")
-        .select("pin")
+        .select("pin, perfil_acesso")
         .eq("funcionario_id", funcData.id)
         .maybeSingle();
 
@@ -52,15 +52,20 @@ export default function LoginPortal() {
         throw new Error("PIN incorreto ou não configurado.");
       }
 
+      const perfil = (credData as any).perfil_acesso || "colaborador";
+
       // Login bem sucedido - simulamos a sessão salvando o ID do funcionário
       localStorage.setItem("portal_user_id", funcData.id);
       localStorage.setItem("portal_user_nome", funcData.nome);
+      localStorage.setItem("portal_perfil_acesso", perfil);
 
       toast({
         title: "Login realizado com sucesso!",
         description: `Bem-vindo, ${funcData.nome}.`,
       });
-      navigate("/portal"); 
+
+      // Perfil "diario": acesso restrito apenas ao lançamento do Diário de Obra
+      navigate(perfil === "diario" ? "/diario-obra-mobile" : "/portal"); 
     } catch (error: any) {
       toast({
         title: "Erro no login",

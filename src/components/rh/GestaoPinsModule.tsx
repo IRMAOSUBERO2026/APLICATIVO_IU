@@ -18,6 +18,7 @@ type FuncionarioComPin = {
   cargo: string;
   status: string;
   pin_configurado: boolean;
+  perfil_acesso: string;
 };
 
 export function GestaoPinsModule() {
@@ -27,6 +28,7 @@ export function GestaoPinsModule() {
   const [mostrarDesligados, setMostrarDesligados] = useState(false);
   const [selectedFunc, setSelectedFunc] = useState<FuncionarioComPin | null>(null);
   const [pin, setPin] = useState("");
+  const [perfil, setPerfil] = useState("colaborador");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -42,16 +44,21 @@ export function GestaoPinsModule() {
 
       const { data: pinData, error: pinError } = await supabase
         .from("portal_credentials")
-        .select("funcionario_id, pin_configurado");
+        .select("funcionario_id, pin_configurado, perfil_acesso");
 
       if (pinError) throw pinError;
 
       const pinMap = new Map();
-      pinData?.forEach(p => pinMap.set(p.funcionario_id, p.pin_configurado));
+      const perfilMap = new Map();
+      pinData?.forEach(p => {
+        pinMap.set(p.funcionario_id, p.pin_configurado);
+        perfilMap.set(p.funcionario_id, (p as any).perfil_acesso || "colaborador");
+      });
 
       const merged = funcData.map(f => ({
         ...f,
-        pin_configurado: pinMap.get(f.id) || false
+        pin_configurado: pinMap.get(f.id) || false,
+        perfil_acesso: perfilMap.get(f.id) || "colaborador"
       }));
 
       setFuncionarios(merged);
@@ -68,6 +75,7 @@ export function GestaoPinsModule() {
 
   const handleOpenModal = (f: FuncionarioComPin) => {
     setSelectedFunc(f);
+    setPerfil(f.perfil_acesso || "colaborador");
     // Generate a random 4 digit PIN suggestion
     setPin(Math.floor(1000 + Math.random() * 9000).toString());
   };
@@ -94,8 +102,9 @@ export function GestaoPinsModule() {
           funcionario_id: selectedFunc.id,
           pin_configurado: true,
           pin: pin, // Salvando o PIN direto aqui
+          perfil_acesso: perfil,
           updated_at: new Date().toISOString()
-        });
+        }, { onConflict: "funcionario_id" });
 
       if (error) throw error;
       
@@ -237,7 +246,23 @@ export function GestaoPinsModule() {
                 Mínimo 4 dígitos. Informe este número ao colaborador.
               </p>
             </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tipo de Acesso</label>
+              <select
+                value={perfil}
+                onChange={e => setPerfil(e.target.value)}
+                className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              >
+                <option value="colaborador">Portal do Colaborador (recibos, ponto, EPIs)</option>
+                <option value="diario">Apenas Diário de Obra (lançamento de campo)</option>
+              </select>
+              <p className="text-xs text-muted-foreground">
+                "Apenas Diário de Obra" entra direto na tela mobile de lançamento, sem acesso aos demais módulos.
+              </p>
+            </div>
           </div>
+
           
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setSelectedFunc(null)}>Cancelar</Button>
