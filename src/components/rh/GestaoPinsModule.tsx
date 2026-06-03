@@ -43,12 +43,16 @@ export function GestaoPinsModule() {
 
       const { data: pinData, error: pinError } = await supabase
         .from("portal_credentials")
-        .select("funcionario_id, pin_configurado");
+        .select("funcionario_id, pin_configurado, perfil_acesso");
 
       if (pinError) throw pinError;
 
       const pinMap = new Map();
-      pinData?.forEach(p => pinMap.set(p.funcionario_id, p.pin_configurado));
+      const perfilMap = new Map();
+      pinData?.forEach(p => {
+        pinMap.set(p.funcionario_id, p.pin_configurado);
+        perfilMap.set(p.funcionario_id, (p as any).perfil_acesso || "colaborador");
+      });
 
       const merged = funcData.map(f => ({
         ...f,
