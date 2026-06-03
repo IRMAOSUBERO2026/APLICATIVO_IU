@@ -57,7 +57,8 @@ export function GestaoPinsModule() {
 
       const merged = funcData.map(f => ({
         ...f,
-        pin_configurado: pinMap.get(f.id) || false
+        pin_configurado: pinMap.get(f.id) || false,
+        perfil_acesso: perfilMap.get(f.id) || "colaborador"
       }));
 
       setFuncionarios(merged);
