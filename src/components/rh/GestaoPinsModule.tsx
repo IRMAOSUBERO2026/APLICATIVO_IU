@@ -75,6 +75,7 @@ export function GestaoPinsModule() {
 
   const handleOpenModal = (f: FuncionarioComPin) => {
     setSelectedFunc(f);
+    setPerfil(f.perfil_acesso || "colaborador");
     // Generate a random 4 digit PIN suggestion
     setPin(Math.floor(1000 + Math.random() * 9000).toString());
   };
