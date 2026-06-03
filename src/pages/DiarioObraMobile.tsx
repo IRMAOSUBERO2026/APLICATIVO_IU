@@ -27,6 +27,14 @@ const SERVICOS = ["Carpintaria", "Armação", "Concretagem", "Regularização", 
 const UNIDADES = ["m²", "m³", "kg", "m", "un", "vb"];
 
 export default function DiarioObraMobile() {
+  const navigate = useNavigate();
+  const perfilRestrito = typeof window !== "undefined" && localStorage.getItem("portal_perfil_acesso") === "diario";
+  const handleSair = () => {
+    localStorage.removeItem("portal_user_id");
+    localStorage.removeItem("portal_user_nome");
+    localStorage.removeItem("portal_perfil_acesso");
+    navigate("/login-portal");
+  };
   const [obras, setObras] = useState<ObraOption[]>([]);
   const [allFuncionarios, setAllFuncionarios] = useState<FuncOption[]>([]);
   const [obraId, setObraId] = useState("");
