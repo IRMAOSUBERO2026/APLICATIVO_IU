@@ -44,19 +44,21 @@ export function GestaoPinsModule() {
 
       const { data: pinData, error: pinError } = await supabase
         .from("portal_credentials")
-        .select("funcionario_id, pin_configurado");
+        .select("funcionario_id, pin_configurado, perfil_acesso");
 
       if (pinError) throw pinError;
 
       const pinMap = new Map();
+      const perfilMap = new Map();
       pinData?.forEach(p => {
         pinMap.set(p.funcionario_id, p.pin_configurado);
+        perfilMap.set(p.funcionario_id, p.perfil_acesso);
       });
 
       const merged = funcData.map(f => ({
         ...f,
         pin_configurado: pinMap.get(f.id) || false,
-        perfil_acesso: "colaborador"
+        perfil_acesso: perfilMap.get(f.id) || "colaborador"
       }));
 
       setFuncionarios(merged);
@@ -100,6 +102,7 @@ export function GestaoPinsModule() {
           funcionario_id: selectedFunc.id,
           pin_configurado: true,
           pin: pin, // Salvando o PIN direto aqui
+          perfil_acesso: perfil,
           updated_at: new Date().toISOString()
         }, { onConflict: "funcionario_id" });
 

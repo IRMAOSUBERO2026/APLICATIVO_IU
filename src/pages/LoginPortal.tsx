@@ -46,7 +46,7 @@ export default function LoginPortal() {
       // Verifica o PIN na tabela de credenciais
       const { data: credData, error: credError } = await supabase
         .from("portal_credentials")
-        .select("pin")
+        .select("pin, perfil_acesso")
         .eq("funcionario_id", funcData.id)
         .maybeSingle();
 
@@ -54,11 +54,14 @@ export default function LoginPortal() {
         throw new Error("PIN incorreto ou não configurado.");
       }
 
-      // Define o perfil de acesso a partir do cargo do funcionário.
-      // Cargos de direção/administração têm acesso Master a todo o sistema.
+      // Define o perfil de acesso.
+      // 1) Cargos de direção/administração têm acesso Master a todo o sistema.
+      // 2) Caso contrário, usa o perfil liberado pelo RH (ex.: "diario").
+      // 3) Padrão: colaborador (apenas portal).
       const cargo = (funcData.cargo || "").toLowerCase();
       const isMaster = /(diretor|administrador|admin|master|gestor|s[oó]cio|propriet)/.test(cargo);
-      const perfil = isMaster ? "admin" : "colaborador";
+      const perfilSalvo = (credData.perfil_acesso || "colaborador").toLowerCase();
+      const perfil = isMaster ? "admin" : perfilSalvo === "diario" ? "diario" : "colaborador";
 
       // Login bem sucedido - simulamos a sessão salvando o ID do funcionário
       localStorage.setItem("portal_user_id", funcData.id);
@@ -70,8 +73,9 @@ export default function LoginPortal() {
         description: `Bem-vindo, ${funcData.nome}.`,
       });
 
-      // Acesso Master (direção/admin): vai para o sistema completo.
-      navigate(isMaster ? "/" : "/portal"); 
+      // Direciona conforme o perfil.
+      const destino = perfil === "admin" ? "/" : perfil === "diario" ? "/diario-obra-mobile" : "/portal";
+      navigate(destino);
     } catch (error: any) {
       toast({
         title: "Erro no login",

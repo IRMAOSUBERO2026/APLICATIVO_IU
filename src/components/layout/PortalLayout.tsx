@@ -1,5 +1,5 @@
 import { Outlet, useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { getPortalUser, portalLogout } from "@/lib/portalAuth";
 import { 
   LogOut, 
   Menu, 
@@ -16,12 +16,12 @@ import { Button } from "../ui/button";
 import { InstallPWA } from "../portal/InstallPWA";
 
 export function PortalLayout() {
-  const { session, role, signOut } = useAuth();
+  const user = getPortalUser();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const handleLogout = async () => {
-    await signOut();
+  const handleLogout = () => {
+    portalLogout();
     navigate("/login-portal");
   };
 
@@ -65,8 +65,8 @@ export function PortalLayout() {
         </div>
 
         <div className="p-4 border-b border-white/10">
-          <p className="text-sm text-gray-300 truncate">{session?.user?.email}</p>
-          <p className="text-xs text-gray-400 capitalize mt-1">Perfil: {role}</p>
+          <p className="text-sm text-gray-300 truncate">{user?.nome}</p>
+          <p className="text-xs text-gray-400 capitalize mt-1">Perfil: {user?.perfil}</p>
         </div>
 
         <nav className="flex-1 overflow-y-auto p-4 space-y-2">
