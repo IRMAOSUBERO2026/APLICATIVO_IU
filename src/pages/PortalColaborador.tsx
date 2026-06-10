@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { HardHat, AlertTriangle } from "lucide-react";
+import { HardHat, AlertTriangle, FileSignature } from "lucide-react";
 
 export default function PortalColaborador() {
   const { session, role, signOut, isLoading } = useAuth();
@@ -123,6 +123,18 @@ export default function PortalColaborador() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-gray-500">Visualize seus equipamentos de proteção individual e confirme o recebimento.</p>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate("/portal/assinatura")}>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileSignature size={24} className="text-indigo-500" />
+              Minha Assinatura
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-500">Crie sua assinatura digital e assine documentos com validade jurídica em poucos toques.</p>
           </CardContent>
         </Card>
         
