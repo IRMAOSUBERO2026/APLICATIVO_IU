@@ -516,6 +516,34 @@ function FichaEPICompleta({ dados }: { dados: any }) {
           {termo.map((p, i) => <p key={i}>{p}</p>)}
         </div>
       )}
+
+      {dados?.auditoria_assinatura && <RodapeAssinatura aud={dados.auditoria_assinatura} />}
+    </div>
+  );
+}
+
+function RodapeAssinatura({ aud }: { aud: any }) {
+  return (
+    <div className="px-4 py-3 border-t-2 border-primary/30 bg-primary/5 text-[10px] space-y-2">
+      <p className="text-xs font-bold uppercase text-primary">Comprovante de Assinatura Digital</p>
+      <div className="flex items-start gap-3">
+        {aud.assinatura_url && (
+          <div className="border rounded bg-white p-1 w-28 h-14 flex items-center justify-center shrink-0">
+            <img src={aud.assinatura_url} alt="Assinatura" className="max-h-full max-w-full object-contain" />
+          </div>
+        )}
+        <div className="space-y-0.5">
+          <p><strong>Assinado por:</strong> {aud.assinado_por}</p>
+          {aud.cpf && <p><strong>CPF:</strong> {aud.cpf}</p>}
+          <p><strong>Data/Hora:</strong> {safeFormatDate(aud.data_assinatura, "dd/MM/yyyy 'às' HH:mm:ss")}</p>
+          <p><strong>Plataforma:</strong> {aud.plataforma || "Portal do Colaborador"}</p>
+          {aud.selfie_url && <p>📸 Selfie de comprovação registrada</p>}
+        </div>
+      </div>
+      <p className="text-[9px] text-muted-foreground italic pt-1 border-t border-dashed">
+        Documento assinado eletronicamente com validade jurídica conforme Lei 14.063/2020 e MP 2.200-2/2001.
+        Dispositivo: {aud.user_agent || "—"}
+      </p>
     </div>
   );
 }
