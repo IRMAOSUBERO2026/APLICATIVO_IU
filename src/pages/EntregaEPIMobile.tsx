@@ -386,17 +386,19 @@ export default function EntregaEPIMobile() {
                       key={p.id}
                       onClick={() => addItem(p)}
                       disabled={jaAdicionado}
-                      className="w-full flex items-center justify-between px-4 py-2.5 border-b last:border-0 text-left hover:bg-muted/50 disabled:opacity-40 disabled:bg-primary/5 transition-colors"
+                      className="w-full flex items-start gap-3 px-4 py-3 border-b last:border-0 text-left hover:bg-muted/50 disabled:opacity-50 disabled:bg-primary/5 transition-colors"
                     >
+                      <span className={`mt-0.5 shrink-0 flex h-6 w-6 items-center justify-center rounded-full ${jaAdicionado ? "bg-primary/15" : "bg-primary/10"}`}>
+                        {jaAdicionado ? (
+                          <Check className="h-4 w-4 text-primary" />
+                        ) : (
+                          <Plus className="h-4 w-4 text-primary" />
+                        )}
+                      </span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{p.descricao}</p>
-                        {p.ca_numero && <p className="text-[10px] text-muted-foreground">CA: {p.ca_numero}</p>}
+                        <p className="text-sm font-medium leading-snug break-words">{p.descricao}</p>
+                        {p.ca_numero && <p className="mt-0.5 text-[10px] text-muted-foreground">CA: {p.ca_numero}</p>}
                       </div>
-                      {jaAdicionado ? (
-                        <Check className="h-4 w-4 text-primary shrink-0" />
-                      ) : (
-                        <Plus className="h-4 w-4 text-primary shrink-0" />
-                      )}
                     </button>
                   );
                 })
