@@ -648,7 +648,8 @@ export default function EntregaEPI() {
 
 
             {/* Carrinho */}
-            <div className="w-5/12 p-8 overflow-y-auto bg-white flex flex-col justify-between">
+            <div className="w-full lg:w-5/12 p-4 sm:p-8 lg:overflow-y-auto bg-white flex flex-col justify-between gap-6">
+
               <div className="space-y-6">
                 <div className="flex items-center justify-between pb-6 border-b border-slate-100">
                   <div className="flex items-center gap-3"><ShoppingCart className="text-slate-300" size={24} /><p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Itens para Entrega</p></div>
