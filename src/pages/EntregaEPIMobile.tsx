@@ -370,7 +370,7 @@ export default function EntregaEPIMobile() {
             </div>
 
             {/* Lista completa de EPIs (sempre visível) */}
-            <div className="rounded-xl border bg-card max-h-72 overflow-y-auto">
+            <div className="rounded-xl border bg-card max-h-[55vh] overflow-y-auto">
               <div className="px-3 py-2 border-b bg-muted/30 sticky top-0">
                 <p className="text-[10px] font-semibold uppercase text-muted-foreground tracking-wide">
                   {prodFiltered.length} EPI(s) disponível(is) — toque para adicionar
