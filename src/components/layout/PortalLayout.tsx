@@ -65,8 +65,8 @@ export function PortalLayout() {
         </div>
 
         <div className="p-4 border-b border-white/10">
-          <p className="text-sm text-gray-300 truncate">{session?.user?.email}</p>
-          <p className="text-xs text-gray-400 capitalize mt-1">Perfil: {role}</p>
+          <p className="text-sm text-gray-300 truncate">{user?.nome}</p>
+          <p className="text-xs text-gray-400 capitalize mt-1">Perfil: {user?.perfil}</p>
         </div>
 
         <nav className="flex-1 overflow-y-auto p-4 space-y-2">
