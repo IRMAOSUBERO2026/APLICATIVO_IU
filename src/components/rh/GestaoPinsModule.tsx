@@ -102,6 +102,7 @@ export function GestaoPinsModule() {
           funcionario_id: selectedFunc.id,
           pin_configurado: true,
           pin: pin, // Salvando o PIN direto aqui
+          perfil_acesso: perfil,
           updated_at: new Date().toISOString()
         }, { onConflict: "funcionario_id" });
 
