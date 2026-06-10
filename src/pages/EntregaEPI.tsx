@@ -588,21 +588,21 @@ export default function EntregaEPI() {
 
       {/* ─── Dialog: Nova Entrega ──────────────────────────────────────────────── */}
       <Dialog open={showNewDelivery} onOpenChange={setShowNewDelivery}>
-        <DialogContent className="max-w-6xl h-[90vh] flex flex-col p-0 overflow-hidden rounded-[2.5rem] border-none shadow-2xl">
-          <DialogHeader className="p-8 border-b bg-white flex flex-row items-center justify-between">
+        <DialogContent className="w-[96vw] max-w-6xl h-[92vh] flex flex-col p-0 overflow-hidden rounded-3xl sm:rounded-[2.5rem] border-none shadow-2xl">
+          <DialogHeader className="p-4 sm:p-8 border-b bg-white flex flex-row items-center justify-between">
             <div className="space-y-1">
-              <DialogTitle className="text-2xl font-black flex items-center gap-3 text-slate-800 uppercase tracking-tight italic">
-                <div className="p-2 bg-amber-500 text-white rounded-xl shadow-lg shadow-amber-500/30"><HardHat size={24} /></div>
+              <DialogTitle className="text-lg sm:text-2xl font-black flex items-center gap-2 sm:gap-3 text-slate-800 uppercase tracking-tight italic">
+                <div className="p-2 bg-amber-500 text-white rounded-xl shadow-lg shadow-amber-500/30"><HardHat size={20} /></div>
                 Checkout de Segurança
               </DialogTitle>
-              <p className="text-slate-400 font-medium text-sm">Selecione os itens e confirme o recebimento do colaborador.</p>
+              <p className="text-slate-400 font-medium text-xs sm:text-sm">Selecione os itens e confirme o recebimento do colaborador.</p>
             </div>
           </DialogHeader>
 
-          <div className="flex-1 flex overflow-hidden">
+          <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
             {/* Produtos */}
-            <div className="w-7/12 border-r bg-slate-50/50 p-8 overflow-y-auto space-y-8">
-              <div className="grid grid-cols-2 gap-6">
+            <div className="w-full lg:w-7/12 border-b lg:border-b-0 lg:border-r bg-slate-50/50 p-4 sm:p-8 lg:overflow-y-auto space-y-6 sm:space-y-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <div className="space-y-2">
                   <Label className="text-slate-400 font-black uppercase text-[9px] tracking-widest ml-1">📍 Destino / Obra</Label>
                   <Select value={form.obra_id} onValueChange={v => setForm({ ...form, obra_id: v, funcionario_id: "" })}>
@@ -624,30 +624,32 @@ export default function EntregaEPI() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
                 {produtos.map(p => {
                   const isSelected = selectedItems.find(i => i.produto_id === p.id);
                   const semCA = !p.ca_numero;
                   return (
-                    <button key={p.id} onClick={() => handleToggleItem(p)} className={`group p-6 rounded-3xl border-2 transition-all relative overflow-hidden flex flex-col items-center text-center gap-3 ${isSelected ? "border-amber-500 bg-amber-50 shadow-lg scale-95" : "border-white bg-white hover:border-slate-200 shadow-sm hover:shadow-md"}`}>
-                      <div className={`p-4 rounded-2xl transition-all ${isSelected ? "bg-amber-500 text-white" : "bg-slate-50 text-slate-300 group-hover:text-amber-500"}`}>
-                        <Package size={24} />
+                    <button key={p.id} onClick={() => handleToggleItem(p)} className={`group p-4 rounded-2xl sm:rounded-3xl border-2 transition-all relative flex flex-row sm:flex-col items-center text-left sm:text-center gap-3 ${isSelected ? "border-amber-500 bg-amber-50 shadow-lg" : "border-white bg-white hover:border-slate-200 shadow-sm hover:shadow-md"}`}>
+                      <div className={`shrink-0 p-3 sm:p-4 rounded-2xl transition-all ${isSelected ? "bg-amber-500 text-white" : "bg-slate-50 text-slate-300 group-hover:text-amber-500"}`}>
+                        <Package size={22} />
                       </div>
-                      <div className="space-y-1">
-                        <p className="text-[11px] font-black text-slate-700 uppercase leading-tight h-8 overflow-hidden">{p.descricao}</p>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Estoque: <span className={p.saldo < 1 ? "text-rose-500" : "text-emerald-600"}>{p.saldo} un</span></p>
-                        {semCA && <p className="text-[9px] text-amber-600 font-bold">⚠️ Sem CA</p>}
-                        {!semCA && <p className="text-[9px] text-emerald-600 font-bold">CA: {p.ca_numero}</p>}
+                      <div className="flex-1 min-w-0 w-full space-y-1">
+                        <p className="text-[13px] sm:text-[11px] font-black text-slate-700 uppercase leading-tight break-words sm:line-clamp-2 sm:min-h-[2.2em]">{p.descricao}</p>
+                        <p className="text-[11px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Estoque: <span className={p.saldo < 1 ? "text-rose-500" : "text-emerald-600"}>{p.saldo} un</span></p>
+                        {semCA && <p className="text-[10px] sm:text-[9px] text-amber-600 font-bold">⚠️ Sem CA</p>}
+                        {!semCA && <p className="text-[10px] sm:text-[9px] text-emerald-600 font-bold break-words">CA: {p.ca_numero}</p>}
                       </div>
-                      {isSelected && <div className="absolute top-3 right-3 bg-amber-500 text-white rounded-full p-1"><CheckCircle2 size={12} /></div>}
+                      {isSelected && <div className="absolute top-2 right-2 bg-amber-500 text-white rounded-full p-1"><CheckCircle2 size={12} /></div>}
                     </button>
                   );
                 })}
               </div>
             </div>
 
+
             {/* Carrinho */}
-            <div className="w-5/12 p-8 overflow-y-auto bg-white flex flex-col justify-between">
+            <div className="w-full lg:w-5/12 p-4 sm:p-8 lg:overflow-y-auto bg-white flex flex-col justify-between gap-6">
+
               <div className="space-y-6">
                 <div className="flex items-center justify-between pb-6 border-b border-slate-100">
                   <div className="flex items-center gap-3"><ShoppingCart className="text-slate-300" size={24} /><p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Itens para Entrega</p></div>
