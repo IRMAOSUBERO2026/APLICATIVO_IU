@@ -30,11 +30,13 @@ export default function LoginPortal() {
         throw new Error("O PIN deve ter no mínimo 4 dígitos.");
       }
 
-      // Busca o funcionário pelo CPF (comparando com a string exata do campo cpf que pode ter máscara)
+      // Busca o funcionário pelo CPF. O banco pode armazenar com ou sem máscara,
+      // então buscamos por ambos os formatos.
+      const maskedCpf = cleanCpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
       const { data: funcData, error: funcError } = await supabase
         .from("funcionarios")
         .select("id, nome, cargo")
-        .eq("cpf", cpf)
+        .or(`cpf.eq.${cleanCpf},cpf.eq.${maskedCpf}`)
         .maybeSingle();
 
       if (funcError || !funcData) {
