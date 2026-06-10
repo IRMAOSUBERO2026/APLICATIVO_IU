@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { gerarFichaEPIEEnviarAssinatura } from "@/lib/gerarFichaEPI";
 import { gerarFichaEPIPdf } from "@/lib/gerarFichaEPIPdf";
-import { FileSignature, FileDown, Search, Loader2, Copy, ExternalLink, Users, RefreshCw, CheckCircle2, Clock, AlertTriangle, AlertCircle, XCircle } from "lucide-react";
+import { FileSignature, FileDown, Search, Loader2, Copy, ExternalLink, Users, RefreshCw, CheckCircle2, Clock, AlertTriangle, AlertCircle, XCircle, MessageCircle } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 
@@ -14,6 +14,7 @@ interface FuncRow {
   status: string;
   empresa_id: string;
   obra_id: string | null;
+  telefone: string | null;
   total_entregas: number;
   ultima_entrega: string | null;
   ultima_assinatura: { status: string; created_at: string; token: string } | null;
@@ -39,7 +40,7 @@ export default function FichasEPIPanel() {
   const [search, setSearch] = useState("");
   const [filterObra, setFilterObra] = useState<string>("todas");
   const [busy, setBusy] = useState<string | null>(null);
-  const [linkAtivo, setLinkAtivo] = useState<{ funcId: string; url: string } | null>(null);
+  const [linkAtivo, setLinkAtivo] = useState<{ funcId: string; url: string; nome: string; telefone: string | null } | null>(null);
   const [kpiFilter, setKpiFilter] = useState<"all" | "ativos" | "pendentes" | "desligados" | "expirados">("all");
   const [kpis, setKpis] = useState({
     epiAtivosCount: 0,
@@ -53,7 +54,7 @@ export default function FichasEPIPanel() {
     
     // Fetch resources
     const [funcRes, entRes, assRes, obrasRes] = await Promise.all([
-      supabase.from("funcionarios").select("id, nome, cargo, status, empresa_id, obra_id").order("nome"),
+      supabase.from("funcionarios").select("id, nome, cargo, status, empresa_id, obra_id, telefone").order("nome"),
       supabase.from("entregas_epi").select("id, funcionario_id, status, confirmacao_tipo, data_entrega").order("data_entrega", { ascending: false }),
       supabase.from("assinaturas_digitais").select("funcionario_id, status, created_at, token_acesso").eq("documento_tipo", "ficha_epi").order("created_at", { ascending: false }),
       supabase.from("obras").select("id, nome, codigo").order("codigo"),
@@ -164,7 +165,7 @@ export default function FichasEPIPanel() {
     try {
       const res = await gerarFichaEPIEEnviarAssinatura(r.id, r.empresa_id);
       const url = `${window.location.origin}/assinatura?token=${res.token}`;
-      setLinkAtivo({ funcId: r.id, url });
+      setLinkAtivo({ funcId: r.id, url, nome: r.nome, telefone: r.telefone });
       toast({ title: "Ficha enviada para assinatura digital", description: `${res.totalItens} item(ns) — link válido por 7 dias.` });
       await load();
     } catch (e: any) {
@@ -316,6 +317,23 @@ export default function FichasEPIPanel() {
             >
               <ExternalLink className="h-3 w-3" /> Abrir
             </a>
+            <button
+              onClick={() => {
+                const tel = (linkAtivo.telefone || "").replace(/\D/g, "");
+                if (!tel) {
+                  toast({ title: "Sem telefone cadastrado", description: "Cadastre o telefone do funcionário no RH para enviar via WhatsApp.", variant: "destructive" });
+                  return;
+                }
+                const fullPhone = tel.startsWith("55") ? tel : `55${tel}`;
+                const msg = encodeURIComponent(
+                  `Olá ${linkAtivo.nome.split(" ")[0]}! Sua Ficha de EPI (NR-6) está pronta para assinatura digital. Acesse o link abaixo para conferir e assinar (válido por 7 dias):\n\n${linkAtivo.url}`
+                );
+                window.open(`https://wa.me/${fullPhone}?text=${msg}`, "_blank");
+              }}
+              className="inline-flex items-center gap-1 rounded-md bg-success px-3 py-1.5 text-xs font-medium text-success-foreground hover:bg-success/90"
+            >
+              <MessageCircle className="h-3 w-3" /> Enviar por WhatsApp
+            </button>
             <button onClick={() => setLinkAtivo(null)} className="text-xs text-muted-foreground underline ml-auto">
               Fechar
             </button>
