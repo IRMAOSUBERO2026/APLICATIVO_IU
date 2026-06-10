@@ -14,6 +14,7 @@ interface FuncRow {
   status: string;
   empresa_id: string;
   obra_id: string | null;
+  telefone: string | null;
   total_entregas: number;
   ultima_entrega: string | null;
   ultima_assinatura: { status: string; created_at: string; token: string } | null;
