@@ -40,7 +40,7 @@ export default function FichasEPIPanel() {
   const [search, setSearch] = useState("");
   const [filterObra, setFilterObra] = useState<string>("todas");
   const [busy, setBusy] = useState<string | null>(null);
-  const [linkAtivo, setLinkAtivo] = useState<{ funcId: string; url: string } | null>(null);
+  const [linkAtivo, setLinkAtivo] = useState<{ funcId: string; url: string; nome: string; telefone: string | null } | null>(null);
   const [kpiFilter, setKpiFilter] = useState<"all" | "ativos" | "pendentes" | "desligados" | "expirados">("all");
   const [kpis, setKpis] = useState({
     epiAtivosCount: 0,
@@ -54,7 +54,7 @@ export default function FichasEPIPanel() {
     
     // Fetch resources
     const [funcRes, entRes, assRes, obrasRes] = await Promise.all([
-      supabase.from("funcionarios").select("id, nome, cargo, status, empresa_id, obra_id").order("nome"),
+      supabase.from("funcionarios").select("id, nome, cargo, status, empresa_id, obra_id, telefone").order("nome"),
       supabase.from("entregas_epi").select("id, funcionario_id, status, confirmacao_tipo, data_entrega").order("data_entrega", { ascending: false }),
       supabase.from("assinaturas_digitais").select("funcionario_id, status, created_at, token_acesso").eq("documento_tipo", "ficha_epi").order("created_at", { ascending: false }),
       supabase.from("obras").select("id, nome, codigo").order("codigo"),
