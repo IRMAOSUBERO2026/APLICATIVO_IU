@@ -1,39 +1,31 @@
-import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { HardHat, AlertTriangle, FileSignature } from "lucide-react";
+import { getPortalUser } from "@/lib/portalAuth";
 
 export default function PortalColaborador() {
-  const { session, role, signOut, isLoading } = useAuth();
+  const user = getPortalUser();
   const navigate = useNavigate();
   const [tokenEpiPendente, setTokenEpiPendente] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isLoading && !session) {
+    if (!user) {
       navigate("/login-portal");
+      return;
     }
-  }, [session, isLoading, navigate]);
-
-  useEffect(() => {
-    if (!session?.user?.id) return;
     checkEpiToken();
-  }, [session]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function checkEpiToken() {
     try {
-      const { data: func } = await supabase
-        .from("funcionarios")
-        .select("id")
-        .eq("user_id", session!.user.id)
-        .single();
-      if (!func) return;
+      if (!user) return;
       const { data: tokens } = await supabase
         .from("epi_tokens_assinatura")
         .select("token")
-        .eq("funcionario_id", func.id)
+        .eq("funcionario_id", user.id)
         .eq("status", "pendente")
         .gt("expira_em", new Date().toISOString())
         .limit(1);
@@ -41,18 +33,10 @@ export default function PortalColaborador() {
     } catch {}
   }
 
-  const handleLogout = async () => {
-    await signOut();
-    navigate("/login-portal");
-  };
-
-  if (isLoading) {
-    return <div className="flex items-center justify-center min-h-screen">Carregando...</div>;
-  }
-
-  if (!session) {
+  if (!user) {
     return null;
   }
+
 
   return (
     <div className="max-w-4xl mx-auto w-full space-y-6">
