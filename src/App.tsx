@@ -59,7 +59,7 @@ import InconsistenciasPonto from "./pages/ponto/InconsistenciasPonto";
 import ApuracaoPonto from "./pages/ponto/ApuracaoPonto";
 import { EmpresaObraProvider } from "./contexts/EmpresaObraContext";
 import { AuthProvider } from "./contexts/AuthContext";
-import { ProtectedRoute } from "./components/ProtectedRoute";
+import { RequirePortal, RequireAdmin, RequireDiario } from "./components/PortalGuard";
 import { PortalLayout } from "./components/layout/PortalLayout";
 import { ScrollToTop } from "./components/layout/ScrollToTop";
 
