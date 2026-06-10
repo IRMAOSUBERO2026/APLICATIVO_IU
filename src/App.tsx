@@ -51,6 +51,7 @@ import AtendimentoRH from "./pages/portal/AtendimentoRH";
 import Sugestoes from "./pages/portal/Sugestoes";
 import MeusDados from "./pages/portal/MeusDados";
 import MeusEPIs from "./pages/portal/MeusEPIs";
+import MinhaAssinatura from "./pages/portal/MinhaAssinatura";
 import AssinaturaEPI from "./pages/AssinaturaEPI";
 import EquipamentosPonto from "./pages/ponto/EquipamentosPonto";
 import ImportacaoAFDNew from "./pages/ponto/ImportacaoAFDNew";
@@ -88,6 +89,7 @@ const App = () => (
               <Route path="/portal/sugestoes" element={<Sugestoes />} />
               <Route path="/portal/dados" element={<MeusDados />} />
               <Route path="/portal/epis" element={<MeusEPIs />} />
+              <Route path="/portal/assinatura" element={<MinhaAssinatura />} />
             </Route>
           </Route>
 

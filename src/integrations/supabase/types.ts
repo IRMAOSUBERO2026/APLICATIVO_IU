@@ -191,6 +191,39 @@ export type Database = {
         }
         Relationships: []
       }
+      assinaturas_perfil: {
+        Row: {
+          assinatura_url: string | null
+          cpf_confirmado: boolean
+          created_at: string
+          empresa_id: string | null
+          funcionario_id: string
+          id: string
+          selfie_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          assinatura_url?: string | null
+          cpf_confirmado?: boolean
+          created_at?: string
+          empresa_id?: string | null
+          funcionario_id: string
+          id?: string
+          selfie_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assinatura_url?: string | null
+          cpf_confirmado?: boolean
+          created_at?: string
+          empresa_id?: string | null
+          funcionario_id?: string
+          id?: string
+          selfie_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       avisos: {
         Row: {
           categoria: string

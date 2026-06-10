@@ -8,6 +8,7 @@ import {
   FileText, 
   MessageSquare, 
   User as UserIcon,
+  FileSignature,
   X
 } from "lucide-react";
 import { useState } from "react";
@@ -28,6 +29,7 @@ export function PortalLayout() {
     { name: "Início", path: "/portal", icon: Home },
     { name: "Meu Ponto", path: "/portal/ponto", icon: Clock },
     { name: "Holerites", path: "/portal/holerites", icon: FileText },
+    { name: "Minha Assinatura", path: "/portal/assinatura", icon: FileSignature },
     { name: "Recados", path: "/portal/recados", icon: MessageSquare },
     { name: "Meus Dados", path: "/portal/dados", icon: UserIcon },
   ];
