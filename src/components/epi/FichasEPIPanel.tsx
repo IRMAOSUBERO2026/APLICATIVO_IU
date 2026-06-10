@@ -165,7 +165,7 @@ export default function FichasEPIPanel() {
     try {
       const res = await gerarFichaEPIEEnviarAssinatura(r.id, r.empresa_id);
       const url = `${window.location.origin}/assinatura?token=${res.token}`;
-      setLinkAtivo({ funcId: r.id, url });
+      setLinkAtivo({ funcId: r.id, url, nome: r.nome, telefone: r.telefone });
       toast({ title: "Ficha enviada para assinatura digital", description: `${res.totalItens} item(ns) — link válido por 7 dias.` });
       await load();
     } catch (e: any) {
