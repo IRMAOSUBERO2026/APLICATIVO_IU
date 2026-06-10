@@ -42,12 +42,12 @@ export default function PortalColaborador() {
     <div className="max-w-4xl mx-auto w-full space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Bem-vindo!</CardTitle>
+          <CardTitle>Bem-vindo, {user.nome}!</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-gray-600">
-            Você está logado no Portal do Colaborador.
-            Sua role atual: <span className="font-bold">{role}</span>
+            Você está logado no Portal do Colaborador. Aqui você acompanha seus
+            dados, ponto, recibos, EPIs e os avisos da empresa.
           </p>
         </CardContent>
       </Card>
