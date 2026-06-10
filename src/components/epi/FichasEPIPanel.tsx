@@ -317,6 +317,23 @@ export default function FichasEPIPanel() {
             >
               <ExternalLink className="h-3 w-3" /> Abrir
             </a>
+            <button
+              onClick={() => {
+                const tel = (linkAtivo.telefone || "").replace(/\D/g, "");
+                if (!tel) {
+                  toast({ title: "Sem telefone cadastrado", description: "Cadastre o telefone do funcionário no RH para enviar via WhatsApp.", variant: "destructive" });
+                  return;
+                }
+                const fullPhone = tel.startsWith("55") ? tel : `55${tel}`;
+                const msg = encodeURIComponent(
+                  `Olá ${linkAtivo.nome.split(" ")[0]}! Sua Ficha de EPI (NR-6) está pronta para assinatura digital. Acesse o link abaixo para conferir e assinar (válido por 7 dias):\n\n${linkAtivo.url}`
+                );
+                window.open(`https://wa.me/${fullPhone}?text=${msg}`, "_blank");
+              }}
+              className="inline-flex items-center gap-1 rounded-md bg-success px-3 py-1.5 text-xs font-medium text-success-foreground hover:bg-success/90"
+            >
+              <MessageCircle className="h-3 w-3" /> Enviar por WhatsApp
+            </button>
             <button onClick={() => setLinkAtivo(null)} className="text-xs text-muted-foreground underline ml-auto">
               Fechar
             </button>
