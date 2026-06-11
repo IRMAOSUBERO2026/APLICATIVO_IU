@@ -475,9 +475,9 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
 
   let finalY = (doc as any).lastAutoTable.finalY + 2;
 
-  // Verifica se há espaço na página atual para o Termo + Assinaturas
-  // Altura aproximada do Termo (25) + Assinaturas (35) = 60mm
-  if (finalY + 60 > PAGE_H - FOOTER_H) {
+  // Verifica se há espaço na página atual para o Termo + Assinaturas + Comprovação
+  const alturaNecessaria = 60 + (fotoDataUrl ? 40 : 12);
+  if (finalY + alturaNecessaria > PAGE_H - FOOTER_H) {
     doc.addPage();
     finalY = HEADER_H + 3;
   }
@@ -493,8 +493,11 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
   doc.text(`${empresa.cidade || "—"}, ${format(new Date(), "dd 'de' MMMM 'de' yyyy")}`, PAGE_W - MX, finalY + 1, { align: "right" });
   finalY += 4;
 
+  // Seção — Comprovação fotográfica da entrega (validade jurídica)
+  finalY = drawComprovacao(doc, finalY, comComprovante, fotoDataUrl);
+
   // Assinaturas e Carimbo Digital
-  finalY = drawAssinaturas(doc, finalY, func, empresa, logo, docHash);
+  finalY = drawAssinaturas(doc, finalY, func, empresa, logo, docHash, sigImg, assinatura.origem);
 
   // Atualiza placeholders de paginação
   const pages = doc.getNumberOfPages();
