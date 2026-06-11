@@ -33,6 +33,13 @@ interface ItemEntrega {
   is_novo?: boolean;
 }
 
+function formatData(d: Date): string {
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return `${dd}${mm}${yyyy}`;
+}
+
 export default function EntregaEPIMobile() {
   const [obras, setObras] = useState<Obra[]>([]);
   const [allFuncionarios, setAllFuncionarios] = useState<Funcionario[]>([]);
