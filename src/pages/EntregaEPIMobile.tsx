@@ -210,11 +210,23 @@ export default function EntregaEPIMobile() {
     setFuncionarioId("");
     setItens([]);
     setObservacoes("");
+    setLocalEntrega("");
+    setFotoFile(null);
+    setFotoPreview(null);
     setSaved(false);
     setFichaUrl(null);
     setStep("obra");
     setSearchFunc("");
     setSearchProd("");
+  };
+
+  const handleFoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFotoFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setFotoPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
   };
 
   const handleGerarFicha = async () => {
