@@ -8,6 +8,7 @@ import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import logoBranco from "@/assets/logo-oficial.png";
+import { carregarAssinaturaFuncionario } from "@/lib/assinaturaImagem";
 
 // ---------- Paleta ----------
 const C_GREEN: [number, number, number] = [45, 106, 26];      // #2D6A1A
