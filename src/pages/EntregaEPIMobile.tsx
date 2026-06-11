@@ -111,6 +111,35 @@ export default function EntregaEPIMobile() {
     const func = allFuncionarios.find(f => f.id === funcionarioId);
     if (!func) { setSaving(false); return; }
 
+    const agora = new Date();
+
+    // Upload da foto de comprovação (se houver) — nome padrão Epi-DDMMAAAA-Nome
+    let fotoUrl: string | null = null;
+    if (fotoFile) {
+      try {
+        const ext = (fotoFile.name.split(".").pop() || "jpg").toLowerCase();
+        const primeiroNome = (func.nome || "func")
+          .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+          .split(/\s+/)[0].replace(/[^a-zA-Z0-9]/g, "");
+        const nomeArquivo = `Epi-${formatData(agora)}-${primeiroNome}_${agora.getTime()}.${ext}`;
+        const path = `funcionarios/${func.id}/EPI/${nomeArquivo}`;
+        const { error: upErr } = await supabase.storage
+          .from("documentos")
+          .upload(path, fotoFile, { upsert: true, contentType: fotoFile.type || undefined });
+        if (upErr) {
+          toast({ title: "Erro ao enviar foto", description: upErr.message, variant: "destructive" });
+        } else {
+          fotoUrl = supabase.storage.from("documentos").getPublicUrl(path).data.publicUrl;
+        }
+      } catch (e: any) {
+        toast({ title: "Falha no upload da foto", description: e?.message, variant: "destructive" });
+      }
+    }
+
+    const localFinal = localEntrega.trim()
+      || (obraId ? `${obras.find(o => o.id === obraId)?.codigo} - ${obras.find(o => o.id === obraId)?.nome}` : "")
+      || null;
+
     for (const item of itens) {
       let produtoId = item.produto_id;
 
@@ -145,6 +174,9 @@ export default function EntregaEPIMobile() {
         ca_numero: item.ca_numero || null,
         motivo: item.motivo || "Primeira entrega",
         observacoes: observacoes || null,
+        foto_entrega_url: fotoUrl,
+        local_entrega: localFinal,
+        data_hora_entrega: agora.toISOString(),
       } as any);
 
       if (epiError) {
