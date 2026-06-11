@@ -596,6 +596,54 @@ export default function EntregaEPIMobile() {
               </div>
             )}
 
+            {/* Local da entrega */}
+            <div className="rounded-xl border bg-card p-4 space-y-2">
+              <label className="text-xs font-semibold text-foreground">Local da entrega</label>
+              <input
+                type="text"
+                value={localEntrega}
+                onChange={e => setLocalEntrega(e.target.value)}
+                placeholder={obraId ? `${obras.find(o => o.id === obraId)?.codigo} - ${obras.find(o => o.id === obraId)?.nome}` : "Ex: Canteiro de obras / Almoxarifado"}
+                className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm"
+              />
+              <p className="text-[10px] text-muted-foreground">Se vazio, será usado o nome da obra selecionada.</p>
+            </div>
+
+            {/* Foto de comprovação (gera rubrica/assinatura automática) */}
+            <div className="rounded-xl border bg-card p-4 space-y-3">
+              <div className="flex items-start gap-2">
+                <Camera className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold">Foto da entrega (comprovação)</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Anexe a foto da entrega no lugar da assinatura manual. A rubrica e a assinatura do funcionário são geradas automaticamente na ficha. A foto é salva no documento do funcionário (Epi-{formatData(new Date())}-{selectedFunc?.nome.split(" ")[0]}).
+                  </p>
+                </div>
+              </div>
+
+              {fotoPreview ? (
+                <div className="relative w-full max-w-xs">
+                  <img src={fotoPreview} alt="Comprovação da entrega" className="w-full rounded-lg border" />
+                  <button
+                    onClick={() => { setFotoFile(null); setFotoPreview(null); }}
+                    className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full w-7 h-7 text-xs flex items-center justify-center"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => fotoRef.current?.click()}
+                  className="w-full rounded-xl border-2 border-dashed py-6 flex flex-col items-center justify-center gap-1.5 hover:bg-muted/50 transition-colors"
+                >
+                  <Camera className="h-8 w-8 text-muted-foreground" />
+                  <span className="text-xs font-medium text-muted-foreground">Tirar foto / anexar comprovação</span>
+                </button>
+              )}
+              <input ref={fotoRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFoto} />
+            </div>
+
+
             <button
               onClick={handleSave}
               disabled={saving}
