@@ -344,6 +344,65 @@ function drawAssinaturas(doc: jsPDF, y: number, func: any, empresa: any, logo: s
   return Math.max(yColab + 11, yEmp + hEmp + 2);
 }
 
+// ---------- Comprovação fotográfica + validade jurídica ----------
+function drawComprovacao(doc: jsPDF, y: number, entrega: any, fotoDataUrl: string | null): number {
+  let yy = sectionTitle(doc, y, "Comprovação da Entrega");
+
+  const w = PAGE_W - MX * 2;
+  const fotoW = fotoDataUrl ? 34 : 0;
+  const fotoH = 26;
+  const boxH = fotoDataUrl ? fotoH + 4 : 16;
+
+  doc.setFillColor(C_RUBRICA_BG[0], C_RUBRICA_BG[1], C_RUBRICA_BG[2]);
+  doc.setDrawColor(C_BORDER[0], C_BORDER[1], C_BORDER[2]);
+  doc.setLineWidth(0.2);
+  doc.roundedRect(MX, yy, w, boxH, 0.8, 0.8, "FD");
+
+  // Foto da entrega
+  if (fotoDataUrl) {
+    try {
+      doc.addImage(fotoDataUrl, "JPEG", MX + 2, yy + 2, fotoW, fotoH, undefined, "FAST");
+      doc.setDrawColor(C_GREEN[0], C_GREEN[1], C_GREEN[2]);
+      doc.setLineWidth(0.3);
+      doc.rect(MX + 2, yy + 2, fotoW, fotoH, "S");
+    } catch { /* ignore */ }
+  }
+
+  const tx = MX + fotoW + 5;
+  const innerW = w - fotoW - 8;
+  let ty = yy + 4.5;
+
+  // Data/hora/local
+  const dataHora = entrega?.data_hora_entrega
+    ? format(new Date(entrega.data_hora_entrega), "dd/MM/yyyy 'às' HH:mm")
+    : (entrega?.data_entrega ? safeDate(entrega.data_entrega) : "—");
+  const local = entrega?.local_entrega || "—";
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  doc.setTextColor(C_GREEN_DARK[0], C_GREEN_DARK[1], C_GREEN_DARK[2]);
+  if (fotoDataUrl) {
+    doc.text("ENTREGA COM COMPROVAÇÃO FOTOGRÁFICA", tx, ty);
+  } else {
+    doc.text("REGISTRO DA ENTREGA", tx, ty);
+  }
+  ty += 4;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6.8);
+  doc.setTextColor(C_BODY[0], C_BODY[1], C_BODY[2]);
+  doc.text(`Data e hora: ${dataHora}`, tx, ty); ty += 3.2;
+  doc.text(fit(doc, `Local: ${local}`, innerW), tx, ty); ty += 3.6;
+
+  const legal = "Documento assinado eletronicamente nos termos da MP 2.200-2/2001 e da Lei 14.063/2020. A assinatura/rubrica e a comprovação fotográfica acima atestam o recebimento dos EPIs pelo colaborador, conferindo validade jurídica a este termo.";
+  doc.setFontSize(6);
+  doc.setTextColor(C_LABEL[0], C_LABEL[1], C_LABEL[2]);
+  const ll = doc.splitTextToSize(legal, innerW);
+  doc.text(ll, tx, ty);
+
+  return yy + boxH + 3;
+}
+
 // ---------- Main ----------
 export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string): Promise<Blob> {
   const { data: func } = await supabase.from("funcionarios").select("*").eq("id", funcionarioId).single();
