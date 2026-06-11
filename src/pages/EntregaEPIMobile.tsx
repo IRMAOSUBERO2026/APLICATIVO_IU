@@ -43,6 +43,10 @@ export default function EntregaEPIMobile() {
   const [searchProd, setSearchProd] = useState("");
   const [itens, setItens] = useState<ItemEntrega[]>([]);
   const [observacoes, setObservacoes] = useState("");
+  const [localEntrega, setLocalEntrega] = useState("");
+  const [fotoFile, setFotoFile] = useState<File | null>(null);
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  const fotoRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [gerandoFicha, setGerandoFicha] = useState(false);
