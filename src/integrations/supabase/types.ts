@@ -855,9 +855,12 @@ export type Database = {
           ca_numero: string | null
           created_at: string
           data_entrega: string
+          data_hora_entrega: string | null
           empresa_id: string
+          foto_entrega_url: string | null
           funcionario_id: string
           id: string
+          local_entrega: string | null
           motivo: string | null
           obra_id: string | null
           observacoes: string | null
@@ -868,9 +871,12 @@ export type Database = {
           ca_numero?: string | null
           created_at?: string
           data_entrega?: string
+          data_hora_entrega?: string | null
           empresa_id: string
+          foto_entrega_url?: string | null
           funcionario_id: string
           id?: string
+          local_entrega?: string | null
           motivo?: string | null
           obra_id?: string | null
           observacoes?: string | null
@@ -881,9 +887,12 @@ export type Database = {
           ca_numero?: string | null
           created_at?: string
           data_entrega?: string
+          data_hora_entrega?: string | null
           empresa_id?: string
+          foto_entrega_url?: string | null
           funcionario_id?: string
           id?: string
+          local_entrega?: string | null
           motivo?: string | null
           obra_id?: string | null
           observacoes?: string | null

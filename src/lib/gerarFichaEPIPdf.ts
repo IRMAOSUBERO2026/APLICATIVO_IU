@@ -8,6 +8,7 @@ import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import logoBranco from "@/assets/logo-oficial.png";
+import { carregarAssinaturaFuncionario } from "@/lib/assinaturaImagem";
 
 // ---------- Paleta ----------
 const C_GREEN: [number, number, number] = [45, 106, 26];      // #2D6A1A
@@ -258,13 +259,23 @@ function drawTermo(doc: jsPDF, y: number): number {
 }
 
 // ---------- Assinaturas ----------
-function drawAssinaturas(doc: jsPDF, y: number, func: any, empresa: any, logo: string | null, docHash: string): number {
+function drawAssinaturas(doc: jsPDF, y: number, func: any, empresa: any, logo: string | null, docHash: string, sigImg: string | null, origem: string): number {
   const gap = 8;
   const colW = (PAGE_W - MX * 2 - gap) / 2;
   
   // Colaborador (Esquerda)
   const xColab = MX;
   const yColab = y + 12;
+
+  // Imagem de assinatura sobre a linha
+  if (sigImg) {
+    try {
+      const imgW = Math.min(colW - 8, 46);
+      const imgH = imgW / 3; // proporção ~3:1 (600x200)
+      doc.addImage(sigImg, "PNG", xColab + (colW - imgW) / 2, yColab - imgH - 0.5, imgW, imgH, undefined, "FAST");
+    } catch { /* ignore */ }
+  }
+
   doc.setDrawColor(42, 42, 42);
   doc.setLineWidth(0.3);
   doc.line(xColab, yColab, xColab + colW, yColab);
@@ -281,6 +292,12 @@ function drawAssinaturas(doc: jsPDF, y: number, func: any, empresa: any, logo: s
     doc.setTextColor(153, 153, 153);
     doc.text(`CPF: ${func.cpf}`, xColab + colW / 2, yColab + 9, { align: "center" });
   }
+  doc.setFontSize(5.5);
+  doc.setTextColor(C_GREEN[0], C_GREEN[1], C_GREEN[2]);
+  doc.text(
+    origem === "portal" ? "Assinatura eletrônica cadastrada no Portal" : "Assinatura eletrônica (carimbo nominal)",
+    xColab + colW / 2, yColab + 11.5, { align: "center" }
+  );
 
   // Carimbo Digital (Direita)
   const xEmp = MX + colW + gap;
@@ -327,6 +344,65 @@ function drawAssinaturas(doc: jsPDF, y: number, func: any, empresa: any, logo: s
   return Math.max(yColab + 11, yEmp + hEmp + 2);
 }
 
+// ---------- Comprovação fotográfica + validade jurídica ----------
+function drawComprovacao(doc: jsPDF, y: number, entrega: any, fotoDataUrl: string | null): number {
+  let yy = sectionTitle(doc, y, "Comprovação da Entrega");
+
+  const w = PAGE_W - MX * 2;
+  const fotoW = fotoDataUrl ? 34 : 0;
+  const fotoH = 26;
+  const boxH = fotoDataUrl ? fotoH + 4 : 16;
+
+  doc.setFillColor(C_RUBRICA_BG[0], C_RUBRICA_BG[1], C_RUBRICA_BG[2]);
+  doc.setDrawColor(C_BORDER[0], C_BORDER[1], C_BORDER[2]);
+  doc.setLineWidth(0.2);
+  doc.roundedRect(MX, yy, w, boxH, 0.8, 0.8, "FD");
+
+  // Foto da entrega
+  if (fotoDataUrl) {
+    try {
+      doc.addImage(fotoDataUrl, "JPEG", MX + 2, yy + 2, fotoW, fotoH, undefined, "FAST");
+      doc.setDrawColor(C_GREEN[0], C_GREEN[1], C_GREEN[2]);
+      doc.setLineWidth(0.3);
+      doc.rect(MX + 2, yy + 2, fotoW, fotoH, "S");
+    } catch { /* ignore */ }
+  }
+
+  const tx = MX + fotoW + 5;
+  const innerW = w - fotoW - 8;
+  let ty = yy + 4.5;
+
+  // Data/hora/local
+  const dataHora = entrega?.data_hora_entrega
+    ? format(new Date(entrega.data_hora_entrega), "dd/MM/yyyy 'às' HH:mm")
+    : (entrega?.data_entrega ? safeDate(entrega.data_entrega) : "—");
+  const local = entrega?.local_entrega || "—";
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  doc.setTextColor(C_GREEN_DARK[0], C_GREEN_DARK[1], C_GREEN_DARK[2]);
+  if (fotoDataUrl) {
+    doc.text("ENTREGA COM COMPROVAÇÃO FOTOGRÁFICA", tx, ty);
+  } else {
+    doc.text("REGISTRO DA ENTREGA", tx, ty);
+  }
+  ty += 4;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6.8);
+  doc.setTextColor(C_BODY[0], C_BODY[1], C_BODY[2]);
+  doc.text(`Data e hora: ${dataHora}`, tx, ty); ty += 3.2;
+  doc.text(fit(doc, `Local: ${local}`, innerW), tx, ty); ty += 3.6;
+
+  const legal = "Documento assinado eletronicamente nos termos da MP 2.200-2/2001 e da Lei 14.063/2020. A assinatura/rubrica e a comprovação fotográfica acima atestam o recebimento dos EPIs pelo colaborador, conferindo validade jurídica a este termo.";
+  doc.setFontSize(6);
+  doc.setTextColor(C_LABEL[0], C_LABEL[1], C_LABEL[2]);
+  const ll = doc.splitTextToSize(legal, innerW);
+  doc.text(ll, tx, ty);
+
+  return yy + boxH + 3;
+}
+
 // ---------- Main ----------
 export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string): Promise<Blob> {
   const { data: func } = await supabase.from("funcionarios").select("*").eq("id", funcionarioId).single();
@@ -339,9 +415,23 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
   const { data: entregas } = await supabase
     .from("entregas_epi")
     .select(`id, data_entrega, quantidade, ca_numero, motivo, observacoes,
+      foto_entrega_url, local_entrega, data_hora_entrega,
       produto:produtos!left (descricao, ca_numero)`)
     .eq("funcionario_id", funcionarioId)
     .order("data_entrega", { ascending: true });
+
+  // Assinatura/rubrica automática (Portal ou carimbo cursivo)
+  const assinatura = await carregarAssinaturaFuncionario(funcionarioId, func.nome || "");
+  const sigImg = assinatura.assinaturaDataUrl;
+
+  // Comprovação fotográfica: usa a entrega mais recente com foto
+  const comComprovante = (entregas || [])
+    .filter((e: any) => e.foto_entrega_url)
+    .sort((a: any, b: any) => String(b.data_hora_entrega || b.data_entrega).localeCompare(String(a.data_hora_entrega || a.data_entrega)))[0];
+  let fotoDataUrl: string | null = null;
+  if (comComprovante?.foto_entrega_url) {
+    fotoDataUrl = await fetchAsDataUrl(comComprovante.foto_entrega_url);
+  }
 
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
   const logo = await getLogoBranco();
@@ -414,9 +504,25 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
       6: { halign: "center", cellWidth: 28, fillColor: C_RUBRICA_BG, textColor: C_RUBRICA_TX, fontSize: 5.5 },
     },
     didParseCell: (data) => {
-      // Conteúdo "assinatura" só visual nas linhas do corpo
+      // Limpa o texto da coluna de rubrica — a imagem é desenhada em didDrawCell
       if (data.section === "body" && data.column.index === 6) {
-        data.cell.text = ["assinatura"];
+        data.cell.text = [""];
+      }
+    },
+    didDrawCell: (data) => {
+      // Desenha a assinatura/rubrica automática em cada linha de entrega
+      if (data.section === "body" && data.column.index === 6 && sigImg && linhas.length) {
+        try {
+          const cell = data.cell;
+          const maxW = cell.width - 3;
+          const maxH = cell.height - 1.5;
+          let w = maxW;
+          let h = w / 3; // proporção 3:1
+          if (h > maxH) { h = maxH; w = h * 3; }
+          const cx = cell.x + (cell.width - w) / 2;
+          const cy = cell.y + (cell.height - h) / 2;
+          doc.addImage(sigImg, "PNG", cx, cy, w, h, undefined, "FAST");
+        } catch { /* ignore */ }
       }
     },
     didDrawPage: (data) => {
@@ -428,9 +534,9 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
 
   let finalY = (doc as any).lastAutoTable.finalY + 2;
 
-  // Verifica se há espaço na página atual para o Termo + Assinaturas
-  // Altura aproximada do Termo (25) + Assinaturas (35) = 60mm
-  if (finalY + 60 > PAGE_H - FOOTER_H) {
+  // Verifica se há espaço na página atual para o Termo + Assinaturas + Comprovação
+  const alturaNecessaria = 60 + (fotoDataUrl ? 40 : 12);
+  if (finalY + alturaNecessaria > PAGE_H - FOOTER_H) {
     doc.addPage();
     finalY = HEADER_H + 3;
   }
@@ -446,8 +552,11 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
   doc.text(`${empresa.cidade || "—"}, ${format(new Date(), "dd 'de' MMMM 'de' yyyy")}`, PAGE_W - MX, finalY + 1, { align: "right" });
   finalY += 4;
 
+  // Seção — Comprovação fotográfica da entrega (validade jurídica)
+  finalY = drawComprovacao(doc, finalY, comComprovante, fotoDataUrl);
+
   // Assinaturas e Carimbo Digital
-  finalY = drawAssinaturas(doc, finalY, func, empresa, logo, docHash);
+  finalY = drawAssinaturas(doc, finalY, func, empresa, logo, docHash, sigImg, assinatura.origem);
 
   // Atualiza placeholders de paginação
   const pages = doc.getNumberOfPages();

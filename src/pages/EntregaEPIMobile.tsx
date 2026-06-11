@@ -33,6 +33,13 @@ interface ItemEntrega {
   is_novo?: boolean;
 }
 
+function formatData(d: Date): string {
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return `${dd}${mm}${yyyy}`;
+}
+
 export default function EntregaEPIMobile() {
   const [obras, setObras] = useState<Obra[]>([]);
   const [allFuncionarios, setAllFuncionarios] = useState<Funcionario[]>([]);
@@ -43,6 +50,10 @@ export default function EntregaEPIMobile() {
   const [searchProd, setSearchProd] = useState("");
   const [itens, setItens] = useState<ItemEntrega[]>([]);
   const [observacoes, setObservacoes] = useState("");
+  const [localEntrega, setLocalEntrega] = useState("");
+  const [fotoFile, setFotoFile] = useState<File | null>(null);
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  const fotoRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [gerandoFicha, setGerandoFicha] = useState(false);
@@ -107,6 +118,35 @@ export default function EntregaEPIMobile() {
     const func = allFuncionarios.find(f => f.id === funcionarioId);
     if (!func) { setSaving(false); return; }
 
+    const agora = new Date();
+
+    // Upload da foto de comprovação (se houver) — nome padrão Epi-DDMMAAAA-Nome
+    let fotoUrl: string | null = null;
+    if (fotoFile) {
+      try {
+        const ext = (fotoFile.name.split(".").pop() || "jpg").toLowerCase();
+        const primeiroNome = (func.nome || "func")
+          .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+          .split(/\s+/)[0].replace(/[^a-zA-Z0-9]/g, "");
+        const nomeArquivo = `Epi-${formatData(agora)}-${primeiroNome}_${agora.getTime()}.${ext}`;
+        const path = `funcionarios/${func.id}/EPI/${nomeArquivo}`;
+        const { error: upErr } = await supabase.storage
+          .from("documentos")
+          .upload(path, fotoFile, { upsert: true, contentType: fotoFile.type || undefined });
+        if (upErr) {
+          toast({ title: "Erro ao enviar foto", description: upErr.message, variant: "destructive" });
+        } else {
+          fotoUrl = supabase.storage.from("documentos").getPublicUrl(path).data.publicUrl;
+        }
+      } catch (e: any) {
+        toast({ title: "Falha no upload da foto", description: e?.message, variant: "destructive" });
+      }
+    }
+
+    const localFinal = localEntrega.trim()
+      || (obraId ? `${obras.find(o => o.id === obraId)?.codigo} - ${obras.find(o => o.id === obraId)?.nome}` : "")
+      || null;
+
     for (const item of itens) {
       let produtoId = item.produto_id;
 
@@ -141,6 +181,9 @@ export default function EntregaEPIMobile() {
         ca_numero: item.ca_numero || null,
         motivo: item.motivo || "Primeira entrega",
         observacoes: observacoes || null,
+        foto_entrega_url: fotoUrl,
+        local_entrega: localFinal,
+        data_hora_entrega: agora.toISOString(),
       } as any);
 
       if (epiError) {
@@ -167,11 +210,23 @@ export default function EntregaEPIMobile() {
     setFuncionarioId("");
     setItens([]);
     setObservacoes("");
+    setLocalEntrega("");
+    setFotoFile(null);
+    setFotoPreview(null);
     setSaved(false);
     setFichaUrl(null);
     setStep("obra");
     setSearchFunc("");
     setSearchProd("");
+  };
+
+  const handleFoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFotoFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setFotoPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
   };
 
   const handleGerarFicha = async () => {
@@ -540,6 +595,54 @@ export default function EntregaEPIMobile() {
                 <p className="text-xs text-muted-foreground">{observacoes}</p>
               </div>
             )}
+
+            {/* Local da entrega */}
+            <div className="rounded-xl border bg-card p-4 space-y-2">
+              <label className="text-xs font-semibold text-foreground">Local da entrega</label>
+              <input
+                type="text"
+                value={localEntrega}
+                onChange={e => setLocalEntrega(e.target.value)}
+                placeholder={obraId ? `${obras.find(o => o.id === obraId)?.codigo} - ${obras.find(o => o.id === obraId)?.nome}` : "Ex: Canteiro de obras / Almoxarifado"}
+                className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm"
+              />
+              <p className="text-[10px] text-muted-foreground">Se vazio, será usado o nome da obra selecionada.</p>
+            </div>
+
+            {/* Foto de comprovação (gera rubrica/assinatura automática) */}
+            <div className="rounded-xl border bg-card p-4 space-y-3">
+              <div className="flex items-start gap-2">
+                <Camera className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-semibold">Foto da entrega (comprovação)</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Anexe a foto da entrega no lugar da assinatura manual. A rubrica e a assinatura do funcionário são geradas automaticamente na ficha. A foto é salva no documento do funcionário (Epi-{formatData(new Date())}-{selectedFunc?.nome.split(" ")[0]}).
+                  </p>
+                </div>
+              </div>
+
+              {fotoPreview ? (
+                <div className="relative w-full max-w-xs">
+                  <img src={fotoPreview} alt="Comprovação da entrega" className="w-full rounded-lg border" />
+                  <button
+                    onClick={() => { setFotoFile(null); setFotoPreview(null); }}
+                    className="absolute top-2 right-2 bg-destructive text-destructive-foreground rounded-full w-7 h-7 text-xs flex items-center justify-center"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => fotoRef.current?.click()}
+                  className="w-full rounded-xl border-2 border-dashed py-6 flex flex-col items-center justify-center gap-1.5 hover:bg-muted/50 transition-colors"
+                >
+                  <Camera className="h-8 w-8 text-muted-foreground" />
+                  <span className="text-xs font-medium text-muted-foreground">Tirar foto / anexar comprovação</span>
+                </button>
+              )}
+              <input ref={fotoRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFoto} />
+            </div>
+
 
             <button
               onClick={handleSave}
