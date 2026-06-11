@@ -356,9 +356,23 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
   const { data: entregas } = await supabase
     .from("entregas_epi")
     .select(`id, data_entrega, quantidade, ca_numero, motivo, observacoes,
+      foto_entrega_url, local_entrega, data_hora_entrega,
       produto:produtos!left (descricao, ca_numero)`)
     .eq("funcionario_id", funcionarioId)
     .order("data_entrega", { ascending: true });
+
+  // Assinatura/rubrica automática (Portal ou carimbo cursivo)
+  const assinatura = await carregarAssinaturaFuncionario(funcionarioId, func.nome || "");
+  const sigImg = assinatura.assinaturaDataUrl;
+
+  // Comprovação fotográfica: usa a entrega mais recente com foto
+  const comComprovante = (entregas || [])
+    .filter((e: any) => e.foto_entrega_url)
+    .sort((a: any, b: any) => String(b.data_hora_entrega || b.data_entrega).localeCompare(String(a.data_hora_entrega || a.data_entrega)))[0];
+  let fotoDataUrl: string | null = null;
+  if (comComprovante?.foto_entrega_url) {
+    fotoDataUrl = await fetchAsDataUrl(comComprovante.foto_entrega_url);
+  }
 
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
   const logo = await getLogoBranco();
