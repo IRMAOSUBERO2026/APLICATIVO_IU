@@ -259,13 +259,23 @@ function drawTermo(doc: jsPDF, y: number): number {
 }
 
 // ---------- Assinaturas ----------
-function drawAssinaturas(doc: jsPDF, y: number, func: any, empresa: any, logo: string | null, docHash: string): number {
+function drawAssinaturas(doc: jsPDF, y: number, func: any, empresa: any, logo: string | null, docHash: string, sigImg: string | null, origem: string): number {
   const gap = 8;
   const colW = (PAGE_W - MX * 2 - gap) / 2;
   
   // Colaborador (Esquerda)
   const xColab = MX;
   const yColab = y + 12;
+
+  // Imagem de assinatura sobre a linha
+  if (sigImg) {
+    try {
+      const imgW = Math.min(colW - 8, 46);
+      const imgH = imgW / 3; // proporção ~3:1 (600x200)
+      doc.addImage(sigImg, "PNG", xColab + (colW - imgW) / 2, yColab - imgH - 0.5, imgW, imgH, undefined, "FAST");
+    } catch { /* ignore */ }
+  }
+
   doc.setDrawColor(42, 42, 42);
   doc.setLineWidth(0.3);
   doc.line(xColab, yColab, xColab + colW, yColab);
@@ -282,6 +292,12 @@ function drawAssinaturas(doc: jsPDF, y: number, func: any, empresa: any, logo: s
     doc.setTextColor(153, 153, 153);
     doc.text(`CPF: ${func.cpf}`, xColab + colW / 2, yColab + 9, { align: "center" });
   }
+  doc.setFontSize(5.5);
+  doc.setTextColor(C_GREEN[0], C_GREEN[1], C_GREEN[2]);
+  doc.text(
+    origem === "portal" ? "Assinatura eletrônica cadastrada no Portal" : "Assinatura eletrônica (carimbo nominal)",
+    xColab + colW / 2, yColab + 11.5, { align: "center" }
+  );
 
   // Carimbo Digital (Direita)
   const xEmp = MX + colW + gap;
