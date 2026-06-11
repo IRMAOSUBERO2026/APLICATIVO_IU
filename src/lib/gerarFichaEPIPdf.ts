@@ -445,9 +445,25 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
       6: { halign: "center", cellWidth: 28, fillColor: C_RUBRICA_BG, textColor: C_RUBRICA_TX, fontSize: 5.5 },
     },
     didParseCell: (data) => {
-      // Conteúdo "assinatura" só visual nas linhas do corpo
+      // Limpa o texto da coluna de rubrica — a imagem é desenhada em didDrawCell
       if (data.section === "body" && data.column.index === 6) {
-        data.cell.text = ["assinatura"];
+        data.cell.text = [""];
+      }
+    },
+    didDrawCell: (data) => {
+      // Desenha a assinatura/rubrica automática em cada linha de entrega
+      if (data.section === "body" && data.column.index === 6 && sigImg && linhas.length) {
+        try {
+          const cell = data.cell;
+          const maxW = cell.width - 3;
+          const maxH = cell.height - 1.5;
+          let w = maxW;
+          let h = w / 3; // proporção 3:1
+          if (h > maxH) { h = maxH; w = h * 3; }
+          const cx = cell.x + (cell.width - w) / 2;
+          const cy = cell.y + (cell.height - h) / 2;
+          doc.addImage(sigImg, "PNG", cx, cy, w, h, undefined, "FAST");
+        } catch { /* ignore */ }
       }
     },
     didDrawPage: (data) => {
