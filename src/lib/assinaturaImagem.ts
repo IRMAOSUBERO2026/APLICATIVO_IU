@@ -35,10 +35,11 @@ async function fetchAsDataUrl(url: string): Promise<string | null> {
 }
 
 /**
- * Gera uma assinatura em escrita cursiva a partir do nome.
- * Retorna um PNG (dataURL) com fundo transparente.
+ * Gera um "carimbo" de assinatura padrão a partir do nome (e CPF, quando houver).
+ * Usado para funcionários que ainda NÃO cadastraram a assinatura no Portal.
+ * Retorna um PNG (dataURL). Nunca retorna vazio se houver nome.
  */
-export function gerarAssinaturaCursiva(nome: string): string {
+export function gerarAssinaturaCursiva(nome: string, cpf?: string | null): string {
   const W = 600;
   const H = 200;
   const canvas = document.createElement("canvas");
@@ -47,30 +48,46 @@ export function gerarAssinaturaCursiva(nome: string): string {
   const ctx = canvas.getContext("2d");
   if (!ctx) return "";
 
+  const nomeSeguro = (nome || "Colaborador").trim();
+
   ctx.clearRect(0, 0, W, H);
-  ctx.fillStyle = "#0f172a";
   ctx.textBaseline = "middle";
   ctx.textAlign = "center";
 
-  // Ajusta o tamanho da fonte para caber o nome
-  let fontSize = 70;
+  // 1) Nome em escrita cursiva (assinatura)
+  ctx.fillStyle = "#0f172a";
+  let fontSize = 64;
   const fontFamily = `'Brush Script MT', 'Segoe Script', 'Snell Roundhand', 'Lucida Handwriting', cursive`;
   do {
     ctx.font = `italic ${fontSize}px ${fontFamily}`;
-    if (ctx.measureText(nome).width <= W - 40) break;
+    if (ctx.measureText(nomeSeguro).width <= W - 60) break;
     fontSize -= 4;
-  } while (fontSize > 24);
-
+  } while (fontSize > 22);
   ctx.font = `italic ${fontSize}px ${fontFamily}`;
-  ctx.fillText(nome, W / 2, H / 2 - 12);
+  ctx.fillText(nomeSeguro, W / 2, H / 2 - 22);
 
-  // Linha de assinatura
+  // 2) Linha de assinatura
   ctx.strokeStyle = "#334155";
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(40, H / 2 + 30);
-  ctx.lineTo(W - 40, H / 2 + 30);
+  ctx.moveTo(40, H / 2 + 16);
+  ctx.lineTo(W - 40, H / 2 + 16);
   ctx.stroke();
+
+  // 3) Carimbo com dados (nome impresso + CPF) abaixo da linha
+  ctx.fillStyle = "#1A3D0A";
+  ctx.font = `bold 22px Arial, Helvetica, sans-serif`;
+  ctx.fillText(nomeSeguro.toUpperCase(), W / 2, H / 2 + 38);
+
+  if (cpf) {
+    ctx.fillStyle = "#475569";
+    ctx.font = `18px Arial, Helvetica, sans-serif`;
+    ctx.fillText(`CPF: ${cpf}`, W / 2, H / 2 + 62);
+  }
+
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = `italic 14px Arial, Helvetica, sans-serif`;
+  ctx.fillText("Assinatura eletrônica - MP 2.200-2/2001 / Lei 14.063/2020", W / 2, H / 2 + 84);
 
   return canvas.toDataURL("image/png");
 }
