@@ -1,0 +1,7 @@
+ALTER TABLE public.entregas_epi
+  ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'ativo',
+  ADD COLUMN IF NOT EXISTS data_devolucao DATE,
+  ADD COLUMN IF NOT EXISTS disponivel_reuso BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS confirmacao_tipo TEXT,
+  ADD COLUMN IF NOT EXISTS confirmacao_url TEXT,
+  ADD COLUMN IF NOT EXISTS confirmacao_em TIMESTAMPTZ;
