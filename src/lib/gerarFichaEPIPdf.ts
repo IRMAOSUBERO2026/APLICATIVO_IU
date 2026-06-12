@@ -420,8 +420,8 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
     .eq("funcionario_id", funcionarioId)
     .order("data_entrega", { ascending: true });
 
-  // Assinatura/rubrica automática (Portal ou carimbo cursivo)
-  const assinatura = await carregarAssinaturaFuncionario(funcionarioId, func.nome || "");
+  // Assinatura/rubrica automática (Portal ou carimbo padrão com nome + CPF)
+  const assinatura = await carregarAssinaturaFuncionario(funcionarioId, func.nome || "", func.cpf || null);
   const sigImg = assinatura.assinaturaDataUrl;
 
   // Comprovação fotográfica: usa a entrega mais recente com foto
