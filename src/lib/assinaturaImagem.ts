@@ -98,7 +98,8 @@ export function gerarAssinaturaCursiva(nome: string, cpf?: string | null): strin
  */
 export async function carregarAssinaturaFuncionario(
   funcionarioId: string,
-  nome: string
+  nome: string,
+  cpf?: string | null
 ): Promise<AssinaturaFuncionario> {
   let assinaturaDataUrl: string | null = null;
   let selfieUrl: string | null = null;
@@ -122,9 +123,9 @@ export async function carregarAssinaturaFuncionario(
     /* ignore */
   }
 
-  // Fallback: carimbo cursivo gerado a partir do nome
-  if (!assinaturaDataUrl && nome) {
-    assinaturaDataUrl = gerarAssinaturaCursiva(nome);
+  // Fallback: carimbo padrão com nome + CPF (funcionário sem cadastro no Portal)
+  if (!assinaturaDataUrl) {
+    assinaturaDataUrl = gerarAssinaturaCursiva(nome, cpf);
     origem = "carimbo";
   }
 
