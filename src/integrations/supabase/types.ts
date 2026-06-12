@@ -853,9 +853,14 @@ export type Database = {
       entregas_epi: {
         Row: {
           ca_numero: string | null
+          confirmacao_em: string | null
+          confirmacao_tipo: string | null
+          confirmacao_url: string | null
           created_at: string
+          data_devolucao: string | null
           data_entrega: string
           data_hora_entrega: string | null
+          disponivel_reuso: boolean
           empresa_id: string
           foto_entrega_url: string | null
           funcionario_id: string
@@ -866,12 +871,18 @@ export type Database = {
           observacoes: string | null
           produto_id: string
           quantidade: number
+          status: string
         }
         Insert: {
           ca_numero?: string | null
+          confirmacao_em?: string | null
+          confirmacao_tipo?: string | null
+          confirmacao_url?: string | null
           created_at?: string
+          data_devolucao?: string | null
           data_entrega?: string
           data_hora_entrega?: string | null
+          disponivel_reuso?: boolean
           empresa_id: string
           foto_entrega_url?: string | null
           funcionario_id: string
@@ -882,12 +893,18 @@ export type Database = {
           observacoes?: string | null
           produto_id: string
           quantidade?: number
+          status?: string
         }
         Update: {
           ca_numero?: string | null
+          confirmacao_em?: string | null
+          confirmacao_tipo?: string | null
+          confirmacao_url?: string | null
           created_at?: string
+          data_devolucao?: string | null
           data_entrega?: string
           data_hora_entrega?: string | null
+          disponivel_reuso?: boolean
           empresa_id?: string
           foto_entrega_url?: string | null
           funcionario_id?: string
@@ -898,6 +915,7 @@ export type Database = {
           observacoes?: string | null
           produto_id?: string
           quantidade?: number
+          status?: string
         }
         Relationships: [
           {
