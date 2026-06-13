@@ -202,6 +202,39 @@ export default function FichasEPIPanel() {
     }
   }
 
+  async function handleFotoConfirmacao(r: FuncRow, file: File) {
+    if (r.total_entregas === 0) {
+      toast({ title: "Sem entregas registradas", description: "Registre ao menos uma entrega de EPI antes de confirmar por foto.", variant: "destructive" });
+      return;
+    }
+    setFotoBusy(r.id);
+    try {
+      const timestamp = Date.now();
+      const path = `${r.obra_id || "central"}/${r.id}/${timestamp}_foto.jpg`;
+      const { error: upErr } = await supabase.storage.from("documentos-epi").upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+
+      const { data: urlData } = supabase.storage.from("documentos-epi").getPublicUrl(path);
+
+      // Atualiza TODAS as entregas ativas do funcionário
+      const { error } = await supabase.from("entregas_epi").update({
+        confirmacao_tipo: "foto_responsavel",
+        confirmacao_url: urlData.publicUrl,
+        confirmacao_em: new Date().toISOString(),
+      })
+        .eq("funcionario_id", r.id)
+        .eq("status", "ativo");
+      if (error) throw error;
+
+      toast({ title: "✅ Confirmação por foto registrada!", description: `Todas as entregas ativas de ${r.nome} foram confirmadas.` });
+      await load();
+    } catch (e: any) {
+      toast({ title: "Erro ao confirmar por foto", description: e.message, variant: "destructive" });
+    } finally {
+      setFotoBusy(null);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
