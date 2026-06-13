@@ -192,13 +192,15 @@ export default function EntregaEPIMobile() {
         return;
       }
 
-      await supabase.from("movimentacoes_estoque").insert({
+      const { error: movErr } = await supabase.from("movimentacoes_estoque").insert({
         produto_id: produtoId!,
-        tipo: "saida_epi",
+        tipo: "saida",
         quantidade: item.quantidade,
         obra_id: obraId || null,
         observacoes: `EPI para ${func.nome} - ${item.produto_nome}`,
       });
+      // Movimentação de estoque é complementar — não bloqueia a entrega/ficha.
+      if (movErr) console.warn("Falha ao registrar movimentação de estoque:", movErr.message);
     }
 
     setSaving(false);
