@@ -3,7 +3,7 @@ import {
   Search, Package, AlertTriangle, Smartphone, Plus,
   FileSignature, History, CheckCircle2, User, HardHat,
   Trash2, ShoppingCart, RefreshCw, Clipboard, Edit,
-  Camera, Pen, FileDown, RotateCcw, AlertCircle, XCircle,
+  Pen, FileDown, RotateCcw, AlertCircle, XCircle,
   QrCode, Copy, Clock, CheckCheck, FileText
 } from "lucide-react";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";

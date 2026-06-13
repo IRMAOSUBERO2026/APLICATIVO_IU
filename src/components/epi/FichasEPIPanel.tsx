@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { gerarFichaEPIEEnviarAssinatura } from "@/lib/gerarFichaEPI";
 import { gerarFichaEPIPdf } from "@/lib/gerarFichaEPIPdf";
-import { FileSignature, FileDown, Search, Loader2, Copy, ExternalLink, Users, RefreshCw, CheckCircle2, Clock, AlertTriangle, AlertCircle, XCircle, MessageCircle } from "lucide-react";
+import { FileSignature, FileDown, Search, Loader2, Copy, ExternalLink, Users, RefreshCw, CheckCircle2, Clock, AlertTriangle, AlertCircle, XCircle, MessageCircle, Camera } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 
