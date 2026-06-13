@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { gerarFichaEPIEEnviarAssinatura } from "@/lib/gerarFichaEPI";
 import { gerarFichaEPIPdf } from "@/lib/gerarFichaEPIPdf";
-import { FileSignature, FileDown, Search, Loader2, Copy, ExternalLink, Users, RefreshCw, CheckCircle2, Clock, AlertTriangle, AlertCircle, XCircle, MessageCircle } from "lucide-react";
+import { FileSignature, FileDown, Search, Loader2, Copy, ExternalLink, Users, RefreshCw, CheckCircle2, Clock, AlertTriangle, AlertCircle, XCircle, MessageCircle, Camera } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 
@@ -40,6 +40,7 @@ export default function FichasEPIPanel() {
   const [search, setSearch] = useState("");
   const [filterObra, setFilterObra] = useState<string>("todas");
   const [busy, setBusy] = useState<string | null>(null);
+  const [fotoBusy, setFotoBusy] = useState<string | null>(null);
   const [linkAtivo, setLinkAtivo] = useState<{ funcId: string; url: string; nome: string; telefone: string | null } | null>(null);
   const [kpiFilter, setKpiFilter] = useState<"all" | "ativos" | "pendentes" | "desligados" | "expirados">("all");
   const [kpis, setKpis] = useState({
@@ -196,6 +197,39 @@ export default function FichasEPIPanel() {
       toast({ title: "Erro ao gerar PDF", description: e.message, variant: "destructive" });
     } finally {
       setBusy(null);
+    }
+  }
+
+  async function handleFotoConfirmacao(r: FuncRow, file: File) {
+    if (r.total_entregas === 0) {
+      toast({ title: "Sem entregas registradas", description: "Registre ao menos uma entrega de EPI antes de confirmar por foto.", variant: "destructive" });
+      return;
+    }
+    setFotoBusy(r.id);
+    try {
+      const timestamp = Date.now();
+      const path = `${r.obra_id || "central"}/${r.id}/${timestamp}_foto.jpg`;
+      const { error: upErr } = await supabase.storage.from("documentos-epi").upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+
+      const { data: urlData } = supabase.storage.from("documentos-epi").getPublicUrl(path);
+
+      // Atualiza TODAS as entregas ativas do funcionário
+      const { error } = await supabase.from("entregas_epi").update({
+        confirmacao_tipo: "foto_responsavel",
+        confirmacao_url: urlData.publicUrl,
+        confirmacao_em: new Date().toISOString(),
+      })
+        .eq("funcionario_id", r.id)
+        .eq("status", "ativo");
+      if (error) throw error;
+
+      toast({ title: "✅ Confirmação por foto registrada!", description: `Todas as entregas ativas de ${r.nome} foram confirmadas.` });
+      await load();
+    } catch (e: any) {
+      toast({ title: "Erro ao confirmar por foto", description: e.message, variant: "destructive" });
+    } finally {
+      setFotoBusy(null);
     }
   }
 
@@ -399,6 +433,25 @@ export default function FichasEPIPanel() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-2">
+                          <label
+                            className={`inline-flex items-center gap-1 rounded-md border bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 cursor-pointer ${r.total_entregas === 0 ? 'opacity-40 cursor-not-allowed' : ''}`}
+                            title="Confirmar entrega com foto"
+                            onClick={e => { if (r.total_entregas === 0) e.preventDefault(); }}
+                          >
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              disabled={r.total_entregas === 0 || fotoBusy === r.id}
+                              onChange={ev => {
+                                const file = ev.target.files?.[0];
+                                if (file) handleFotoConfirmacao(r, file);
+                                ev.target.value = "";
+                              }}
+                            />
+                            {fotoBusy === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Camera className="h-3 w-3" />}
+                            Foto
+                          </label>
                           <button
                             onClick={() => handleAssinaturaDigital(r)}
                             disabled={isBusy || r.total_entregas === 0}

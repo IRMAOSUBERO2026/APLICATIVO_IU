@@ -3,7 +3,7 @@ import {
   Search, Package, AlertTriangle, Smartphone, Plus,
   FileSignature, History, CheckCircle2, User, HardHat,
   Trash2, ShoppingCart, RefreshCw, Clipboard, Edit,
-  Camera, Pen, FileDown, RotateCcw, AlertCircle, XCircle,
+  Pen, FileDown, RotateCcw, AlertCircle, XCircle,
   QrCode, Copy, Clock, CheckCheck, FileText
 } from "lucide-react";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
@@ -202,30 +202,6 @@ export default function EntregaEPI() {
       loadData();
     } catch (err: any) {
       toast({ title: "Erro ao salvar entrega", description: err.message, variant: "destructive" });
-    }
-  };
-
-  // ─── Confirmação: Foto ──────────────────────────────────────────────────────
-  const handleFotoConfirmacao = async (entrega: any, file: File) => {
-    try {
-      const timestamp = Date.now();
-      const path = `${entrega.obra_id || "central"}/${entrega.funcionario_id}/${timestamp}_foto.jpg`;
-      const { error: upErr } = await supabase.storage.from("documentos-epi").upload(path, file, { upsert: true });
-      if (upErr) throw upErr;
-
-      const { data: urlData } = supabase.storage.from("documentos-epi").getPublicUrl(path);
-
-      const { error } = await supabase.from("entregas_epi").update({
-        confirmacao_tipo: "foto_responsavel",
-        confirmacao_url: urlData.publicUrl,
-        confirmacao_em: new Date().toISOString(),
-      }).eq("id", entrega.id);
-      if (error) throw error;
-
-      toast({ title: "✅ Confirmação por foto registrada!" });
-      loadData();
-    } catch (err: any) {
-      toast({ title: "Erro ao confirmar por foto", description: err.message, variant: "destructive" });
     }
   };
 
@@ -522,20 +498,7 @@ export default function EntregaEPI() {
                         </td>
                         <td className="px-4 py-4">
                           <div className="flex items-center justify-end gap-1">
-                            {/* Botão 1: Foto */}
-                            {(e.status || "ativo") === "ativo" && (
-                              <label className="cursor-pointer" title="📷 Confirmar com Foto">
-                                <input type="file" accept="image/*" className="hidden" onChange={ev => {
-                                  const file = ev.target.files?.[0];
-                                  if (file) handleFotoConfirmacao(e, file);
-                                  ev.target.value = "";
-                                }} />
-                                <span className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 text-[10px] font-bold transition-colors">
-                                  <Camera size={12} /> Foto
-                                </span>
-                              </label>
-                            )}
-                            {/* Botão 2: Assinatura Digital */}
+                            {/* Botão 1: Assinatura Digital */}
                             {(e.status || "ativo") === "ativo" && (
                               <button
                                 onClick={() => handleGerarAssinaturaDigital(e)}
@@ -546,7 +509,7 @@ export default function EntregaEPI() {
                                 <QrCode size={12} /> QR
                               </button>
                             )}
-                            {/* Botão 3: PDF */}
+                            {/* Botão 2: PDF */}
                             {(e.status || "ativo") === "ativo" && (
                               <button
                                 onClick={() => handleGerarPDF(e)}
