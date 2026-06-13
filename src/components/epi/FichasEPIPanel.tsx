@@ -435,6 +435,25 @@ export default function FichasEPIPanel() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-2">
+                          <label
+                            className={`inline-flex items-center gap-1 rounded-md border bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 cursor-pointer ${r.total_entregas === 0 ? 'opacity-40 cursor-not-allowed' : ''}`}
+                            title="Confirmar entrega com foto"
+                            onClick={e => { if (r.total_entregas === 0) e.preventDefault(); }}
+                          >
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              disabled={r.total_entregas === 0 || fotoBusy === r.id}
+                              onChange={ev => {
+                                const file = ev.target.files?.[0];
+                                if (file) handleFotoConfirmacao(r, file);
+                                ev.target.value = "";
+                              }}
+                            />
+                            {fotoBusy === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Camera className="h-3 w-3" />}
+                            Foto
+                          </label>
                           <button
                             onClick={() => handleAssinaturaDigital(r)}
                             disabled={isBusy || r.total_entregas === 0}
