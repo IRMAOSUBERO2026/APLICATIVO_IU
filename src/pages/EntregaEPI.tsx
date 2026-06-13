@@ -522,20 +522,7 @@ export default function EntregaEPI() {
                         </td>
                         <td className="px-4 py-4">
                           <div className="flex items-center justify-end gap-1">
-                            {/* Botão 1: Foto */}
-                            {(e.status || "ativo") === "ativo" && (
-                              <label className="cursor-pointer" title="📷 Confirmar com Foto">
-                                <input type="file" accept="image/*" className="hidden" onChange={ev => {
-                                  const file = ev.target.files?.[0];
-                                  if (file) handleFotoConfirmacao(e, file);
-                                  ev.target.value = "";
-                                }} />
-                                <span className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 text-[10px] font-bold transition-colors">
-                                  <Camera size={12} /> Foto
-                                </span>
-                              </label>
-                            )}
-                            {/* Botão 2: Assinatura Digital */}
+                            {/* Botão 1: Assinatura Digital */}
                             {(e.status || "ativo") === "ativo" && (
                               <button
                                 onClick={() => handleGerarAssinaturaDigital(e)}
@@ -546,7 +533,7 @@ export default function EntregaEPI() {
                                 <QrCode size={12} /> QR
                               </button>
                             )}
-                            {/* Botão 3: PDF */}
+                            {/* Botão 2: PDF */}
                             {(e.status || "ativo") === "ativo" && (
                               <button
                                 onClick={() => handleGerarPDF(e)}
