@@ -205,30 +205,6 @@ export default function EntregaEPI() {
     }
   };
 
-  // ─── Confirmação: Foto ──────────────────────────────────────────────────────
-  const handleFotoConfirmacao = async (entrega: any, file: File) => {
-    try {
-      const timestamp = Date.now();
-      const path = `${entrega.obra_id || "central"}/${entrega.funcionario_id}/${timestamp}_foto.jpg`;
-      const { error: upErr } = await supabase.storage.from("documentos-epi").upload(path, file, { upsert: true });
-      if (upErr) throw upErr;
-
-      const { data: urlData } = supabase.storage.from("documentos-epi").getPublicUrl(path);
-
-      const { error } = await supabase.from("entregas_epi").update({
-        confirmacao_tipo: "foto_responsavel",
-        confirmacao_url: urlData.publicUrl,
-        confirmacao_em: new Date().toISOString(),
-      }).eq("id", entrega.id);
-      if (error) throw error;
-
-      toast({ title: "✅ Confirmação por foto registrada!" });
-      loadData();
-    } catch (err: any) {
-      toast({ title: "Erro ao confirmar por foto", description: err.message, variant: "destructive" });
-    }
-  };
-
   // ─── Confirmação: Assinatura Digital ───────────────────────────────────────
   const handleGerarAssinaturaDigital = async (entrega: any) => {
     setGeneratingQR(true);
