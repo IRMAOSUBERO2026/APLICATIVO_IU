@@ -38,7 +38,9 @@ export function AppLayout({ children }: AppLayoutProps) {
           >
             <Menu className="h-5 w-5" />
           </button>
-          <img src={logoPreto} alt="IU Engenharia" className="h-7 w-auto lg:hidden" />
+          <div className="h-7 flex items-center justify-center bg-black rounded-md px-1 lg:hidden">
+            <img src={logoPreto} alt="IU Engenharia" className="h-6 w-auto" />
+          </div>
           <div className="flex-1 lg:flex lg:items-center lg:justify-end gap-3">
             <ContextoSelector />
             <UsuarioImpressaoBadge />
