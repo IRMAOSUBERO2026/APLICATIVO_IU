@@ -43,14 +43,30 @@ export default function LoginPortal() {
         throw new Error("Funcionário não encontrado com este CPF.");
       }
 
-      // Verifica o PIN na tabela de credenciais
-      const { data: credData, error: credError } = await supabase
+      // Verifica o PIN na tabela de credenciais.
+      // A coluna "perfil_acesso" pode não existir em todos os bancos, então
+      // buscamos primeiro com ela e, se houver erro de coluna, refazemos sem ela.
+      let credData: { pin?: string; perfil_acesso?: string } | null = null;
+
+      const comPerfil = await supabase
         .from("portal_credentials")
         .select("pin, perfil_acesso")
         .eq("funcionario_id", funcData.id)
         .maybeSingle();
 
-      if (credError || !credData || credData.pin !== pin) {
+      if (comPerfil.error) {
+        // Provável ausência da coluna perfil_acesso (PostgREST 42703) — refaz só com o PIN.
+        const semPerfil = await supabase
+          .from("portal_credentials")
+          .select("pin")
+          .eq("funcionario_id", funcData.id)
+          .maybeSingle();
+        credData = semPerfil.data as any;
+      } else {
+        credData = comPerfil.data as any;
+      }
+
+      if (!credData || credData.pin !== pin) {
         throw new Error("PIN incorreto ou não configurado.");
       }
 
