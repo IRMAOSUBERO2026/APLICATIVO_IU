@@ -32,7 +32,7 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { verificarAlertas } from "@/utils/seguranca";
-import logoBranco from "@/assets/logo-branco.png";
+import logoMark from "@/assets/logo-iu-mark.svg";
 
 const menuSections = [
   {
