@@ -1,7 +1,7 @@
 import { ReactNode, useState } from "react";
 import { AppSidebar } from "./AppSidebar";
 import { Menu } from "lucide-react";
-import logoPreto from "@/assets/logo-preto.png";
+import logoMark from "@/assets/logo-iu-mark.svg";
 import { ContextoSelector } from "./ContextoSelector";
 import { UsuarioImpressaoBadge } from "./UsuarioImpressaoBadge";
 
