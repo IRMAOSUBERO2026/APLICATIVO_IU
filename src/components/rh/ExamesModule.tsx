@@ -524,11 +524,12 @@ function SolicitacoesView() {
       toast({ title: "Fornecedor sem telefone cadastrado", variant: "destructive" });
       return;
     }
-    const phone = fornecedor.telefone.replace(/\D/g, "");
+    const rawPhone = fornecedor.telefone.replace(/\D/g, "");
+    const phone = rawPhone.startsWith("55") ? rawPhone : `55${rawPhone}`;
     const msg = encodeURIComponent(
       `Olá, gostaríamos de solicitar o exame/treinamento: ${sol.tipo_exame} para o funcionário ${sol.funcionario_nome}. Aguardamos retorno.`
     );
-    window.open(`https://wa.me/55${phone}?text=${msg}`, "_blank");
+    window.open(`https://wa.me/${phone}?text=${msg}`, "_blank");
   };
 
   const handleEmail = (sol: SolicitacaoExame) => {

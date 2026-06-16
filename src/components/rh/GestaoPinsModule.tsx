@@ -274,10 +274,11 @@ export function GestaoPinsModule() {
                 variant="secondary" 
                 className="bg-success hover:bg-success/90 text-white gap-2"
                 onClick={() => {
-                  const cleanPhone = (selectedFunc as any).telefone?.replace(/\D/g, "") || "";
+                  const rawPhone = (selectedFunc as any).telefone?.replace(/\D/g, "") || "";
+                  const cleanPhone = rawPhone.startsWith("55") ? rawPhone : `55${rawPhone}`;
                   const cleanCpf = (selectedFunc.cpf || "").replace(/\D/g, "");
                   const msg = `Olá *${selectedFunc.nome}*,\n\nSeu acesso ao *Portal do Colaborador* está liberado!\n\n*Link:* https://iuengenharia.lovable.app/login-portal\n*Login:* ${cleanCpf}\n*Senha (PIN):* ${pin}\n\n_Guarde este código para acessar seus recibos e ponto._`;
-                  window.open(`https://wa.me/55${cleanPhone}?text=${encodeURIComponent(msg)}`, "_blank");
+                  window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`, "_blank");
                 }}
               >
                 Enviar via WhatsApp

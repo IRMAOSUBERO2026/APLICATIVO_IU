@@ -274,13 +274,14 @@ export default function RH() {
       return;
     }
     
-    const cleanPhone = funcionario.telefone.replace(/\D/g, "");
+    const rawPhone = funcionario.telefone.replace(/\D/g, "");
+    const cleanPhone = rawPhone.startsWith("55") ? rawPhone : `55${rawPhone}`;
     const cleanCpf = (funcionario.cpf || "").replace(/\D/g, "");
     const url = "https://iuengenharia.lovable.app/login-portal";
     
     const message = `Olá *${funcionario.nome}*,\n\nEste é o seu link de acesso ao *Portal do Colaborador Irmãos Ubero*: ${url}\n\n*Seu Login:* ${cleanCpf}\n*Sua Senha (PIN):* Solicite ao RH seu código de 4 dígitos para o primeiro acesso.\n\n_Dica: Ao abrir o link no celular, clique em "Adicionar à tela de início" para instalar como aplicativo._`;
     
-    window.open(`https://wa.me/55${cleanPhone}?text=${encodeURIComponent(message)}`, "_blank");
+    window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, "_blank");
     toast({ title: "Convite preparado", description: "Redirecionando para o WhatsApp..." });
   };
 
