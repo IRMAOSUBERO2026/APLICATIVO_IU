@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 440" fill="none">
+<defs><clipPath id="tri"><path d="M250,40 L460,400 L40,400 Z"/></clipPath></defs>
+<g clip-path="url(#tri)">
+<path d="M250,400 L227.2,-199.6 L99.8,-180.9 Z" fill="#3f8c14"/>
+<path d="M250,400 L76.2,-174.3 L-42.4,-124.0 Z" fill="#3f8c14"/>
+<path d="M250,400 L-63.6,-111.5 L-165.5,-32.9 Z" fill="#3f8c14"/>
+<path d="M250,400 L-182.9,-15.5 L-261.5,86.4 Z" fill="#3f8c14"/>
+<path d="M250,400 L-274.0,107.6 L-324.3,226.2 Z" fill="#3f8c14"/>
+<path d="M250,400 L-330.9,249.8 L-349.6,377.2 Z" fill="#3f8c14"/>
+<path d="M250,400 L849.6,377.2 L830.9,249.8 Z" fill="#1b1b1b"/>
+<path d="M250,400 L824.3,226.2 L774.0,107.6 Z" fill="#1b1b1b"/>
+<path d="M250,400 L761.5,86.4 L682.9,-15.5 Z" fill="#1b1b1b"/>
+<path d="M250,400 L665.5,-32.9 L563.6,-111.5 Z" fill="#1b1b1b"/>
+<path d="M250,400 L542.4,-124.0 L423.8,-174.3 Z" fill="#1b1b1b"/>
+<path d="M250,400 L400.2,-180.9 L272.8,-199.6 Z" fill="#1b1b1b"/>
+</g></svg>

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" fill="none">
+<defs><clipPath id="tri"><path d="M250,35 L408,322 L92,322 Z"/></clipPath></defs>
+<g clip-path="url(#tri)">
+<path d="M250,322 L229.8,-177.6 L126.1,-162.4 Z" fill="#3f8c14"/>
+<path d="M250,322 L103.9,-156.2 L7.5,-115.3 Z" fill="#3f8c14"/>
+<path d="M250,322 L-12.4,-103.6 L-95.3,-39.6 Z" fill="#3f8c14"/>
+<path d="M250,322 L-111.6,-23.3 L-175.6,59.6 Z" fill="#3f8c14"/>
+<path d="M250,322 L-187.3,79.5 L-228.2,175.9 Z" fill="#3f8c14"/>
+<path d="M250,322 L-234.4,198.1 L-249.6,301.8 Z" fill="#3f8c14"/>
+<path d="M250,322 L749.6,301.8 L734.4,198.1 Z" fill="#1b1b1b"/>
+<path d="M250,322 L728.2,175.9 L687.3,79.5 Z" fill="#1b1b1b"/>
+<path d="M250,322 L675.6,59.6 L611.6,-23.3 Z" fill="#1b1b1b"/>
+<path d="M250,322 L595.3,-39.6 L512.4,-103.6 Z" fill="#1b1b1b"/>
+<path d="M250,322 L492.5,-115.3 L396.1,-156.2 Z" fill="#1b1b1b"/>
+<path d="M250,322 L373.9,-162.4 L270.2,-177.6 Z" fill="#1b1b1b"/>
+</g>
+<text x="250" y="392" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="800" font-size="62" fill="#111" letter-spacing="1">IRMÃOS UBERO</text>
+<text x="250" y="430" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="400" font-size="34" fill="#111" letter-spacing="14">ENGENHARIA</text>
+<text x="250" y="460" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="400" font-size="15" fill="#111" letter-spacing="6">EMPREITEIRA DE MÃO DE OBRA</text>
+</svg>
