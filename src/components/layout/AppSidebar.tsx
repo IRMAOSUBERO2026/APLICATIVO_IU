@@ -118,8 +118,8 @@ export function AppSidebar({ onClose }: AppSidebarProps) {
     <div className="flex h-full flex-col overflow-y-auto scrollbar-saas bg-[#0D0D0D] w-[240px]">
       <div className="flex h-20 items-center justify-between px-6 border-b border-[#2A2A2A]">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-md bg-black p-1 shadow-md">
-            <img src={logoBranco} alt="Irmãos Ubero Engenharia" className="h-10 w-auto" />
+          <div className="flex h-12 w-12 items-center justify-center rounded-md bg-black p-1.5 shadow-md">
+            <img src={logoMark} alt="Irmãos Ubero Engenharia" className="h-9 w-auto" />
           </div>
           <div className="hidden sm:block">
             <h1 className="text-[11px] font-black text-white tracking-[0.08em] leading-tight uppercase">IRMÃOS UBERO</h1>
