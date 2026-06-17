@@ -293,11 +293,16 @@ function drawAssinaturas(doc: jsPDF, y: number, func: any, empresa: any, logo: s
     doc.text(`CPF: ${func.cpf}`, xColab + colW / 2, yColab + 9, { align: "center" });
   }
   doc.setFontSize(5.5);
-  doc.setTextColor(C_GREEN[0], C_GREEN[1], C_GREEN[2]);
-  doc.text(
-    origem === "portal" ? "Assinatura eletrônica cadastrada no Portal" : "Assinatura eletrônica (carimbo nominal)",
-    xColab + colW / 2, yColab + 11.5, { align: "center" }
-  );
+  if (sigImg) {
+    doc.setTextColor(C_GREEN[0], C_GREEN[1], C_GREEN[2]);
+    doc.text(
+      origem === "portal" ? "Assinatura eletrônica cadastrada no Portal" : "Assinatura eletrônica (carimbo nominal)",
+      xColab + colW / 2, yColab + 11.5, { align: "center" }
+    );
+  } else {
+    doc.setTextColor(C_LABEL[0], C_LABEL[1], C_LABEL[2]);
+    doc.text("Assinar manualmente — coleta física", xColab + colW / 2, yColab + 11.5, { align: "center" });
+  }
 
   // Carimbo Digital (Direita)
   const xEmp = MX + colW + gap;
