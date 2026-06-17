@@ -56,6 +56,7 @@ export default function EntregaEPI() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("entregas");
+  const [fichasRefreshKey, setFichasRefreshKey] = useState(0);
   const [showNewDelivery, setShowNewDelivery] = useState(false);
 
   const [selectedItems, setSelectedItems] = useState<any[]>([]);
@@ -382,7 +383,11 @@ export default function EntregaEPI() {
             <Button onClick={() => { setSelectedItems([]); setShowNewDelivery(true); }} className="bg-amber-500 hover:bg-amber-600 text-white border-none h-12 gap-3 px-8 shadow-xl shadow-amber-500/20 rounded-xl font-bold">
               <Plus size={20} /> Nova Entrega
             </Button>
-            <ImportarFichasAntigas onImported={loadData} />
+            <ImportarFichasAntigas onImported={() => {
+              loadData();
+              setFichasRefreshKey((key) => key + 1);
+              setTab("fichas");
+            }} />
             <Button variant="outline" asChild className="h-12 rounded-xl border-slate-200">
               <a href="/entrega-epi-mobile" className="gap-2"><Smartphone size={18} /> Mobile</a>
             </Button>
@@ -544,7 +549,7 @@ export default function EntregaEPI() {
           </TabsContent>
 
           <TabsContent value="fichas">
-            <FichasEPIPanel />
+            <FichasEPIPanel refreshKey={fichasRefreshKey} />
           </TabsContent>
         </Tabs>
       </div>

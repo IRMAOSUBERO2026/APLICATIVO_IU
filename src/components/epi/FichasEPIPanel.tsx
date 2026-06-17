@@ -25,6 +25,16 @@ interface FuncRow {
 
 interface Obra { id: string; nome: string; codigo: string; }
 
+interface FichasEPIPanelProps {
+  refreshKey?: number;
+}
+
+const normalizeSearch = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
 const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   pendente: { label: "Pendente", cls: "bg-warning/15 text-warning-foreground border-warning/30" },
   visualizado: { label: "Visualizado", cls: "bg-info/15 text-info-foreground border-info/30" },
@@ -33,7 +43,7 @@ const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   expirado: { label: "Expirado", cls: "bg-muted text-muted-foreground border-border" },
 };
 
-export default function FichasEPIPanel() {
+export default function FichasEPIPanel({ refreshKey = 0 }: FichasEPIPanelProps) {
   const [rows, setRows] = useState<FuncRow[]>([]);
   const [obras, setObras] = useState<Obra[]>([]);
   const [loading, setLoading] = useState(true);
@@ -123,7 +133,7 @@ export default function FichasEPIPanel() {
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [refreshKey]);
 
   const filtered = useMemo(() => {
     return rows.filter(r => {
@@ -131,9 +141,10 @@ export default function FichasEPIPanel() {
       if (filterObra !== "todas" && r.obra_id !== filterObra) return false;
       
       // 2. Search filter
-      if (search) {
-        const s = search.toLowerCase();
-        const matchSearch = r.nome.toLowerCase().includes(s) || (r.cargo || "").toLowerCase().includes(s);
+      const hasSearch = search.trim().length > 0;
+      if (hasSearch) {
+        const s = normalizeSearch(search);
+        const matchSearch = normalizeSearch(r.nome).includes(s) || normalizeSearch(r.cargo || "").includes(s);
         if (!matchSearch) return false;
       }
       
@@ -149,7 +160,7 @@ export default function FichasEPIPanel() {
       }
 
       // Default behavior: hide deactivated employees in default lists unless filtering specifically for them
-      if (kpiFilter !== "desligados" && r.status !== "ativo") {
+      if (kpiFilter !== "desligados" && r.status !== "ativo" && !hasSearch) {
         return false;
       }
       
