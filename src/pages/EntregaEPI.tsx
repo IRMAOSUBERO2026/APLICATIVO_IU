@@ -95,7 +95,7 @@ export default function EntregaEPI() {
         supabase.from("produtos").select("*").order("descricao"),
         supabase.from("movimentacoes_estoque").select("produto_id, tipo, quantidade"),
         supabase.from("obras").select("id, nome, codigo").in("status", OBRA_STATUS_ATIVOS_ARR),
-        supabase.from("funcionarios").select("id, nome, obra_id, empresa_id").neq("status", "desligado").order("nome"),
+        supabase.from("funcionarios").select("id, nome, obra_id, empresa_id, status").order("nome"),
       ]);
 
       if (ent.data) setEntregas(ent.data);
