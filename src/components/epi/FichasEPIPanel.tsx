@@ -52,6 +52,7 @@ export default function FichasEPIPanel({ refreshKey = 0 }: FichasEPIPanelProps) 
   const [filterObra, setFilterObra] = useState<string>("todas");
   const [busy, setBusy] = useState<string | null>(null);
   const [fotoBusy, setFotoBusy] = useState<string | null>(null);
+  const [atestarFunc, setAtestarFunc] = useState<{ id: string; nome: string } | null>(null);
   const [linkAtivo, setLinkAtivo] = useState<{ funcId: string; url: string; nome: string; telefone: string | null } | null>(null);
   const [kpiFilter, setKpiFilter] = useState<"all" | "ativos" | "pendentes" | "desligados" | "expirados">("all");
   const [kpis, setKpis] = useState({
