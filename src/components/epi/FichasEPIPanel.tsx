@@ -502,6 +502,14 @@ export default function FichasEPIPanel({ refreshKey = 0 }: FichasEPIPanelProps) 
           </table>
         </div>
       </div>
+
+      <AtestarItensDialog
+        open={!!atestarFunc}
+        onOpenChange={(o) => { if (!o) setAtestarFunc(null); }}
+        funcionarioId={atestarFunc?.id || null}
+        funcionarioNome={atestarFunc?.nome || ""}
+        onChanged={load}
+      />
     </div>
   );
 }
