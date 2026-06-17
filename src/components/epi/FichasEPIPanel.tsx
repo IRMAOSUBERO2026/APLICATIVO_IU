@@ -3,7 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { gerarFichaEPIEEnviarAssinatura } from "@/lib/gerarFichaEPI";
 import { gerarFichaEPIPdf } from "@/lib/gerarFichaEPIPdf";
-import { FileSignature, FileDown, Search, Loader2, Copy, ExternalLink, Users, RefreshCw, CheckCircle2, Clock, AlertTriangle, AlertCircle, XCircle, MessageCircle, Camera } from "lucide-react";
+import AtestarItensDialog from "@/components/epi/AtestarItensDialog";
+import { FileSignature, FileDown, Search, Loader2, Copy, ExternalLink, Users, RefreshCw, CheckCircle2, Clock, AlertTriangle, AlertCircle, XCircle, MessageCircle, Camera, ShieldCheck } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 
@@ -51,6 +52,7 @@ export default function FichasEPIPanel({ refreshKey = 0 }: FichasEPIPanelProps) 
   const [filterObra, setFilterObra] = useState<string>("todas");
   const [busy, setBusy] = useState<string | null>(null);
   const [fotoBusy, setFotoBusy] = useState<string | null>(null);
+  const [atestarFunc, setAtestarFunc] = useState<{ id: string; nome: string } | null>(null);
   const [linkAtivo, setLinkAtivo] = useState<{ funcId: string; url: string; nome: string; telefone: string | null } | null>(null);
   const [kpiFilter, setKpiFilter] = useState<"all" | "ativos" | "pendentes" | "desligados" | "expirados">("all");
   const [kpis, setKpis] = useState({
@@ -464,6 +466,15 @@ export default function FichasEPIPanel({ refreshKey = 0 }: FichasEPIPanelProps) 
                             Foto
                           </label>
                           <button
+                            onClick={() => setAtestarFunc({ id: r.id, nome: r.nome })}
+                            disabled={r.total_entregas === 0}
+                            className="inline-flex items-center gap-1 rounded-md border bg-card px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+                            title="Atestar itens via sistema (exibe rubrica no PDF)"
+                          >
+                            <ShieldCheck className="h-3 w-3" />
+                            Atestar Itens
+                          </button>
+                          <button
                             onClick={() => handleAssinaturaDigital(r)}
                             disabled={isBusy || r.total_entregas === 0}
                             className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed"
@@ -491,6 +502,14 @@ export default function FichasEPIPanel({ refreshKey = 0 }: FichasEPIPanelProps) 
           </table>
         </div>
       </div>
+
+      <AtestarItensDialog
+        open={!!atestarFunc}
+        onOpenChange={(o) => { if (!o) setAtestarFunc(null); }}
+        funcionarioId={atestarFunc?.id || null}
+        funcionarioNome={atestarFunc?.nome || ""}
+        onChanged={load}
+      />
     </div>
   );
 }

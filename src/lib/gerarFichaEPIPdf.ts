@@ -293,11 +293,16 @@ function drawAssinaturas(doc: jsPDF, y: number, func: any, empresa: any, logo: s
     doc.text(`CPF: ${func.cpf}`, xColab + colW / 2, yColab + 9, { align: "center" });
   }
   doc.setFontSize(5.5);
-  doc.setTextColor(C_GREEN[0], C_GREEN[1], C_GREEN[2]);
-  doc.text(
-    origem === "portal" ? "Assinatura eletrônica cadastrada no Portal" : "Assinatura eletrônica (carimbo nominal)",
-    xColab + colW / 2, yColab + 11.5, { align: "center" }
-  );
+  if (sigImg) {
+    doc.setTextColor(C_GREEN[0], C_GREEN[1], C_GREEN[2]);
+    doc.text(
+      origem === "portal" ? "Assinatura eletrônica cadastrada no Portal" : "Assinatura eletrônica (carimbo nominal)",
+      xColab + colW / 2, yColab + 11.5, { align: "center" }
+    );
+  } else {
+    doc.setTextColor(C_LABEL[0], C_LABEL[1], C_LABEL[2]);
+    doc.text("Assinar manualmente — coleta física", xColab + colW / 2, yColab + 11.5, { align: "center" });
+  }
 
   // Carimbo Digital (Direita)
   const xEmp = MX + colW + gap;
@@ -415,10 +420,17 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
   const { data: entregas } = await supabase
     .from("entregas_epi")
     .select(`id, data_entrega, quantidade, ca_numero, motivo, observacoes,
-      foto_entrega_url, local_entrega, data_hora_entrega,
+      foto_entrega_url, local_entrega, data_hora_entrega, status, confirmacao_tipo, confirmacao_em,
       produto:produtos!left (descricao, ca_numero)`)
     .eq("funcionario_id", funcionarioId)
     .order("data_entrega", { ascending: true });
+
+  // Cada item é considerado "atestado" quando possui confirmação registrada no sistema.
+  const atestados: boolean[] = (entregas || []).map((e: any) => {
+    const tipo = (e.confirmacao_tipo || "").trim().toLowerCase();
+    return !!tipo && tipo !== "pendente";
+  });
+  const temAlgumAtestado = atestados.some(Boolean);
 
   // Assinatura/rubrica automática (Portal ou carimbo padrão com nome + CPF)
   const assinatura = await carregarAssinaturaFuncionario(funcionarioId, func.nome || "", func.cpf || null);
@@ -510,8 +522,9 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
       }
     },
     didDrawCell: (data) => {
-      // Desenha a assinatura/rubrica automática em cada linha de entrega
-      if (data.section === "body" && data.column.index === 6 && sigImg && linhas.length) {
+      // Desenha a rubrica APENAS nos itens atestados no sistema.
+      // Itens não atestados ficam em branco para coleta manual da assinatura.
+      if (data.section === "body" && data.column.index === 6 && sigImg && atestados[data.row.index]) {
         try {
           const cell = data.cell;
           const maxW = cell.width - 3;
@@ -556,7 +569,7 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
   finalY = drawComprovacao(doc, finalY, comComprovante, fotoDataUrl);
 
   // Assinaturas e Carimbo Digital
-  finalY = drawAssinaturas(doc, finalY, func, empresa, logo, docHash, sigImg, assinatura.origem);
+  finalY = drawAssinaturas(doc, finalY, func, empresa, logo, docHash, temAlgumAtestado ? sigImg : null, assinatura.origem);
 
   // Atualiza placeholders de paginação
   const pages = doc.getNumberOfPages();
