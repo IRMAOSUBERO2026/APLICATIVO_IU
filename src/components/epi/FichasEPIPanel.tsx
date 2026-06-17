@@ -466,6 +466,15 @@ export default function FichasEPIPanel({ refreshKey = 0 }: FichasEPIPanelProps) 
                             Foto
                           </label>
                           <button
+                            onClick={() => setAtestarFunc({ id: r.id, nome: r.nome })}
+                            disabled={r.total_entregas === 0}
+                            className="inline-flex items-center gap-1 rounded-md border bg-card px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+                            title="Atestar itens via sistema (exibe rubrica no PDF)"
+                          >
+                            <ShieldCheck className="h-3 w-3" />
+                            Atestar Itens
+                          </button>
+                          <button
                             onClick={() => handleAssinaturaDigital(r)}
                             disabled={isBusy || r.total_entregas === 0}
                             className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed"
