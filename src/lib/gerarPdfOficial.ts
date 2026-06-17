@@ -27,20 +27,8 @@ export async function gerarPdfA4(
   const larg = pageW - marginX * 2;
   const linhaH = 5.6;
 
-  // Título destacado
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(15);
-  doc.setTextColor(BRAND.black[0], BRAND.black[1], BRAND.black[2]);
-  const tituloFmt = doc.splitTextToSize(documentTitle.toUpperCase(), larg);
-  doc.text(tituloFmt, marginX, y);
-  y += tituloFmt.length * 6;
-  doc.setDrawColor(ctx.primary[0], ctx.primary[1], ctx.primary[2]);
-  doc.setLineWidth(0.6);
-  doc.line(marginX, y, marginX + 30, y);
-  y += 6;
-
-  // Corpo
-  const linhasCorpo = texto.split("\n").slice(1); // pula o título
+  // Corpo — renderiza fielmente TODO o texto da caixa de mensagem (sem omitir nenhuma linha)
+  const linhasCorpo = texto.split("\n");
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10.5);
   doc.setTextColor(BRAND.graphite[0], BRAND.graphite[1], BRAND.graphite[2]);
