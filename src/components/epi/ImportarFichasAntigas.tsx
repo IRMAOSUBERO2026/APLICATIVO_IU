@@ -102,7 +102,7 @@ export function ImportarFichasAntigas({ onImported }: Props) {
             <Select value={funcionarioId} onValueChange={setFuncionarioId}>
               <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
               <SelectContent>
-                {funcionarios.map(f => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
+                {funcionarios.map(f => <SelectItem key={f.id} value={f.id}>{f.nome}{f.status && f.status !== "ativo" ? ` (${f.status})` : ""}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
