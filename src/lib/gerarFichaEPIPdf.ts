@@ -415,10 +415,17 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
   const { data: entregas } = await supabase
     .from("entregas_epi")
     .select(`id, data_entrega, quantidade, ca_numero, motivo, observacoes,
-      foto_entrega_url, local_entrega, data_hora_entrega,
+      foto_entrega_url, local_entrega, data_hora_entrega, status, confirmacao_tipo, confirmacao_em,
       produto:produtos!left (descricao, ca_numero)`)
     .eq("funcionario_id", funcionarioId)
     .order("data_entrega", { ascending: true });
+
+  // Cada item é considerado "atestado" quando possui confirmação registrada no sistema.
+  const atestados: boolean[] = (entregas || []).map((e: any) => {
+    const tipo = (e.confirmacao_tipo || "").trim().toLowerCase();
+    return !!tipo && tipo !== "pendente";
+  });
+  const temAlgumAtestado = atestados.some(Boolean);
 
   // Assinatura/rubrica automática (Portal ou carimbo padrão com nome + CPF)
   const assinatura = await carregarAssinaturaFuncionario(funcionarioId, func.nome || "", func.cpf || null);
