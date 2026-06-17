@@ -581,7 +581,7 @@ export default function EntregaEPI() {
                   <Select value={form.funcionario_id} onValueChange={v => setForm({ ...form, funcionario_id: v })}>
                     <SelectTrigger className="bg-white rounded-2xl h-14 shadow-sm border-slate-100 focus:ring-amber-500"><SelectValue placeholder="Buscar funcionário..." /></SelectTrigger>
                     <SelectContent className="rounded-2xl">
-                      {funcionarios.filter(f => form.obra_id === "central" || f.obra_id === form.obra_id).map(f => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
+                      {funcionarios.filter(f => form.obra_id === "central" || f.obra_id === form.obra_id).map(f => <SelectItem key={f.id} value={f.id}>{f.nome}{f.status && f.status !== "ativo" ? ` (${f.status})` : ""}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
