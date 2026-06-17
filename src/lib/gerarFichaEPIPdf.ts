@@ -517,8 +517,9 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
       }
     },
     didDrawCell: (data) => {
-      // Desenha a assinatura/rubrica automática em cada linha de entrega
-      if (data.section === "body" && data.column.index === 6 && sigImg && linhas.length) {
+      // Desenha a rubrica APENAS nos itens atestados no sistema.
+      // Itens não atestados ficam em branco para coleta manual da assinatura.
+      if (data.section === "body" && data.column.index === 6 && sigImg && atestados[data.row.index]) {
         try {
           const cell = data.cell;
           const maxW = cell.width - 3;
