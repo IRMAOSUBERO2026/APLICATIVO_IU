@@ -32,7 +32,7 @@ export function ImportarFichasAntigas({ onImported }: Props) {
     if (!open) return;
     (async () => {
       const [{ data: f }, { data: p }] = await Promise.all([
-        supabase.from("funcionarios").select("id, nome, empresa_id, obra_id").eq("status", "ativo").order("nome"),
+        supabase.from("funcionarios").select("id, nome, empresa_id, obra_id, status").order("nome"),
         supabase.from("produtos").select("id, descricao, ca_numero, categoria").order("descricao"),
       ]);
       setFuncionarios(f || []);
@@ -102,7 +102,7 @@ export function ImportarFichasAntigas({ onImported }: Props) {
             <Select value={funcionarioId} onValueChange={setFuncionarioId}>
               <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
               <SelectContent>
-                {funcionarios.map(f => <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>)}
+                {funcionarios.map(f => <SelectItem key={f.id} value={f.id}>{f.nome}{f.status && f.status !== "ativo" ? ` (${f.status})` : ""}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
