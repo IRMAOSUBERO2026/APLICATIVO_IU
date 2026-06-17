@@ -564,7 +564,7 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
   finalY = drawComprovacao(doc, finalY, comComprovante, fotoDataUrl);
 
   // Assinaturas e Carimbo Digital
-  finalY = drawAssinaturas(doc, finalY, func, empresa, logo, docHash, sigImg, assinatura.origem);
+  finalY = drawAssinaturas(doc, finalY, func, empresa, logo, docHash, temAlgumAtestado ? sigImg : null, assinatura.origem);
 
   // Atualiza placeholders de paginação
   const pages = doc.getNumberOfPages();
