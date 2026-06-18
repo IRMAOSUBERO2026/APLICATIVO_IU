@@ -378,10 +378,11 @@ function drawComprovacao(doc: jsPDF, y: number, entrega: any, fotoDataUrl: strin
   let ty = yy + 4.5;
 
   // Data/hora/local
-  const dataHora = entrega?.data_hora_entrega
-    ? format(new Date(entrega.data_hora_entrega), "dd/MM/yyyy 'às' HH:mm")
+  const dataHora = entrega?.confirmacao_em
+    ? format(new Date(entrega.confirmacao_em), "dd/MM/yyyy 'às' HH:mm")
     : (entrega?.data_entrega ? safeDate(entrega.data_entrega) : "—");
-  const local = entrega?.local_entrega || "—";
+  const local = "—";
+
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7);
