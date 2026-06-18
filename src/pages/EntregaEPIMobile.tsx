@@ -180,11 +180,12 @@ export default function EntregaEPIMobile() {
         quantidade: item.quantidade,
         ca_numero: item.ca_numero || null,
         motivo: item.motivo || "Primeira entrega",
-        observacoes: observacoes || null,
-        foto_entrega_url: fotoUrl,
-        local_entrega: localFinal,
-        data_hora_entrega: agora.toISOString(),
+        observacoes: [observacoes, localFinal ? `Local: ${localFinal}` : null].filter(Boolean).join(" | ") || null,
+        confirmacao_url: fotoUrl || null,
+        confirmacao_tipo: fotoUrl ? "foto_responsavel" : "pendente",
+        confirmacao_em: fotoUrl ? agora.toISOString() : null,
       } as any);
+
 
       if (epiError) {
         toast({ title: "Erro ao salvar", description: epiError.message, variant: "destructive" });

@@ -378,10 +378,11 @@ function drawComprovacao(doc: jsPDF, y: number, entrega: any, fotoDataUrl: strin
   let ty = yy + 4.5;
 
   // Data/hora/local
-  const dataHora = entrega?.data_hora_entrega
-    ? format(new Date(entrega.data_hora_entrega), "dd/MM/yyyy 'às' HH:mm")
+  const dataHora = entrega?.confirmacao_em
+    ? format(new Date(entrega.confirmacao_em), "dd/MM/yyyy 'às' HH:mm")
     : (entrega?.data_entrega ? safeDate(entrega.data_entrega) : "—");
-  const local = entrega?.local_entrega || "—";
+  const local = "—";
+
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7);
@@ -420,7 +421,7 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
   const { data: entregas } = await supabase
     .from("entregas_epi")
     .select(`id, data_entrega, quantidade, ca_numero, motivo, observacoes,
-      foto_entrega_url, local_entrega, data_hora_entrega, status, confirmacao_tipo, confirmacao_em,
+      confirmacao_url, status, confirmacao_tipo, confirmacao_em,
       produto:produtos!left (descricao, ca_numero)`)
     .eq("funcionario_id", funcionarioId)
     .order("data_entrega", { ascending: true });
@@ -436,14 +437,15 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
   const assinatura = await carregarAssinaturaFuncionario(funcionarioId, func.nome || "", func.cpf || null);
   const sigImg = assinatura.assinaturaDataUrl;
 
-  // Comprovação fotográfica: usa a entrega mais recente com foto
+  // Comprovação fotográfica: usa a entrega mais recente com foto de confirmação
   const comComprovante = (entregas || [])
-    .filter((e: any) => e.foto_entrega_url)
-    .sort((a: any, b: any) => String(b.data_hora_entrega || b.data_entrega).localeCompare(String(a.data_hora_entrega || a.data_entrega)))[0];
+    .filter((e: any) => e.confirmacao_url)
+    .sort((a: any, b: any) => String(b.confirmacao_em || b.data_entrega).localeCompare(String(a.confirmacao_em || a.data_entrega)))[0];
   let fotoDataUrl: string | null = null;
-  if (comComprovante?.foto_entrega_url) {
-    fotoDataUrl = await fetchAsDataUrl(comComprovante.foto_entrega_url);
+  if (comComprovante?.confirmacao_url) {
+    fotoDataUrl = await fetchAsDataUrl(comComprovante.confirmacao_url);
   }
+
 
   const doc = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
   const logo = await getLogoBranco();
