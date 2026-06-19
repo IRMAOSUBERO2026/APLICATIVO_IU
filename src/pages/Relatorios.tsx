@@ -53,8 +53,24 @@ export default function Relatorios() {
     setLoading(true);
 
     try {
+      // Relatório especial: planilha formatada de funcionários ativos por obra
+      if (selectedRelatorio === "funcionarios_obra") {
+        const total = await gerarRelatorioFuncionariosObra({
+          empresaId: filterEmpresa || undefined,
+          obraId: filterObra || undefined,
+        });
+        if (total === 0) {
+          toast({ title: "Nenhum funcionário ativo encontrado", description: "Tente ajustar os filtros.", variant: "destructive" });
+        } else {
+          toast({ title: "Planilha gerada!", description: `${total} funcionários ativos exportados por obra.` });
+        }
+        setLoading(false);
+        return;
+      }
+
       let data: any[] = [];
       let filename = selectedRelatorio;
+
 
       switch (selectedRelatorio) {
         case "funcionarios": {
