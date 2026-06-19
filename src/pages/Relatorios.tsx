@@ -4,11 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { FileSpreadsheet, FileText, Download, Users, Building2, HardHat, CreditCard, ShoppingCart, Warehouse, Calendar, Filter } from "lucide-react";
 import * as XLSX from "xlsx";
+import { gerarRelatorioFuncionariosObra } from "@/lib/gerarRelatorioFuncionariosObra";
 
 interface Empresa { id: string; razao_social: string; nome_fantasia: string | null; }
 interface Obra { id: string; nome: string; codigo: string; }
 
 const RELATORIOS = [
+  { id: "funcionarios_obra", label: "Funcionários Ativos por Obra", icon: HardHat, desc: "Planilha formatada agrupada por obra (somente ativos)" },
   { id: "funcionarios", label: "Lista de Funcionários", icon: Users, desc: "Nome, CPF, cargo, salário, obra, status" },
   { id: "folha", label: "Folha de Pagamento", icon: CreditCard, desc: "Resumo salarial por funcionário e mês" },
   { id: "compras", label: "Relatório de Compras", icon: ShoppingCart, desc: "NF-e, fornecedor, valores, status" },
@@ -51,8 +53,24 @@ export default function Relatorios() {
     setLoading(true);
 
     try {
+      // Relatório especial: planilha formatada de funcionários ativos por obra
+      if (selectedRelatorio === "funcionarios_obra") {
+        const total = await gerarRelatorioFuncionariosObra({
+          empresaId: filterEmpresa || undefined,
+          obraId: filterObra || undefined,
+        });
+        if (total === 0) {
+          toast({ title: "Nenhum funcionário ativo encontrado", description: "Tente ajustar os filtros.", variant: "destructive" });
+        } else {
+          toast({ title: "Planilha gerada!", description: `${total} funcionários ativos exportados por obra.` });
+        }
+        setLoading(false);
+        return;
+      }
+
       let data: any[] = [];
       let filename = selectedRelatorio;
+
 
       switch (selectedRelatorio) {
         case "funcionarios": {
