@@ -143,6 +143,7 @@ const App = () => (
             <Route path="/ponto-consolidado" element={<PontoConsolidado />} />
             <Route path="/ponto/equipamentos" element={<EquipamentosPonto />} />
             <Route path="/ponto/importar" element={<ImportacaoAFDNew />} />
+            <Route path="/ponto/importar-csv" element={<ImportacaoPontoCSV />} />
             <Route path="/ponto/inconsistencias" element={<InconsistenciasPonto />} />
             <Route path="/ponto/apuracao" element={<ApuracaoPonto />} />
           </Route>
