@@ -66,6 +66,7 @@ const menuSections = [
       { icon: Shield, label: "Segurança e NRs", path: "/rh/seguranca/painel" },
       { icon: Calculator, label: "Equipamentos de Ponto", path: "/ponto/equipamentos" },
       { icon: Upload, label: "Importar AFD", path: "/ponto/importar" },
+      { icon: Upload, label: "Importar CSV (RHiD)", path: "/ponto/importar-csv" },
       { icon: Bell, label: "Inconsistências", path: "/ponto/inconsistencias" },
       { icon: BarChart3, label: "Apuração Mensal", path: "/ponto/apuracao" },
       { icon: Palmtree, label: "Férias", path: "/ferias" },
