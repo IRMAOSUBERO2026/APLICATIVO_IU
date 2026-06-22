@@ -55,6 +55,7 @@ import MinhaAssinatura from "./pages/portal/MinhaAssinatura";
 import AssinaturaEPI from "./pages/AssinaturaEPI";
 import EquipamentosPonto from "./pages/ponto/EquipamentosPonto";
 import ImportacaoAFDNew from "./pages/ponto/ImportacaoAFDNew";
+import ImportacaoPontoCSV from "./pages/ponto/ImportacaoPontoCSV";
 import InconsistenciasPonto from "./pages/ponto/InconsistenciasPonto";
 import ApuracaoPonto from "./pages/ponto/ApuracaoPonto";
 import { EmpresaObraProvider } from "./contexts/EmpresaObraContext";
@@ -142,6 +143,7 @@ const App = () => (
             <Route path="/ponto-consolidado" element={<PontoConsolidado />} />
             <Route path="/ponto/equipamentos" element={<EquipamentosPonto />} />
             <Route path="/ponto/importar" element={<ImportacaoAFDNew />} />
+            <Route path="/ponto/importar-csv" element={<ImportacaoPontoCSV />} />
             <Route path="/ponto/inconsistencias" element={<InconsistenciasPonto />} />
             <Route path="/ponto/apuracao" element={<ApuracaoPonto />} />
           </Route>
