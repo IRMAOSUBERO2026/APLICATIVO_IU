@@ -3,47 +3,74 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+
+// Raiz
 import Index from "./pages/Index";
-import Obras from "./pages/Obras";
-import RH from "./pages/RH";
-import ImportacaoAFD from "./pages/ponto/ImportacaoAFD";
-import PontoConsolidado from "./pages/ponto/PontoConsolidado";
-import Folha from "./pages/Folha";
-import Estoque from "./pages/Estoque";
-import EquipamentosProprios from "./pages/EquipamentosProprios";
-import EquipamentosLocados from "./pages/EquipamentosLocados";
-import Financeiro from "./pages/Financeiro";
-import Acesso from "./pages/Acesso";
-import Empresas from "./pages/Empresas";
-import Fornecedores from "./pages/Fornecedores";
-import DiarioObra from "./pages/DiarioObra";
-import DiarioObraPainel from "./pages/DiarioObraPainel";
-import DiarioObraForm from "./pages/DiarioObraForm";
-import EntregaEPI from "./pages/EntregaEPI";
-import EntregaEPIMobile from "./pages/EntregaEPIMobile";
-import Ferias from "./pages/Ferias";
-import Orcamento from "./pages/Orcamento";
-import Compras from "./pages/Compras";
-import DocumentacaoMensal from "./pages/DocumentacaoMensal";
-import ContratosLocacao from "./pages/ContratosLocacao";
-import DiarioObraMobile from "./pages/DiarioObraMobile";
-import Comunicacoes from "./pages/Comunicacoes";
 import Relatorios from "./pages/Relatorios";
-import Medicoes from "./pages/Medicoes";
-import AreaFuncionario from "./pages/AreaFuncionario";
-import ConfigDocumentos from "./pages/ConfigDocumentos";
-import Assinaturas from "./pages/Assinaturas";
-import AssinaturaPublica from "./pages/AssinaturaPublica";
-import CustosObra from "./pages/CustosObra";
-import Clientes from "./pages/Clientes";
-import Solicitacoes from "./pages/Solicitacoes";
-import SegurancaTrabalho from "./pages/SegurancaTrabalho";
 import NotFound from "./pages/NotFound";
+
+// 1. Obras
+import Obras from "./pages/obras/Obras";
+import DiarioObra from "./pages/obras/DiarioObra";
+import DiarioObraPainel from "./pages/obras/DiarioObraPainel";
+import DiarioObraForm from "./pages/obras/DiarioObraForm";
+import DiarioObraMobile from "./pages/obras/DiarioObraMobile";
+import Medicoes from "./pages/obras/Medicoes";
+import CustosObra from "./pages/obras/CustosObra";
+import Orcamento from "./pages/obras/Orcamento";
+
+// 2. Equipamentos
+import EquipamentosProprios from "./pages/equipamentos/EquipamentosProprios";
+import EquipamentosLocados from "./pages/equipamentos/EquipamentosLocados";
+import ContratosLocacao from "./pages/equipamentos/ContratosLocacao";
+
+// 3. Suprimentos
+import Estoque from "./pages/suprimentos/Estoque";
+import Compras from "./pages/suprimentos/Compras";
+import Fornecedores from "./pages/suprimentos/Fornecedores";
+
+// 4. Financeiro
+import Financeiro from "./pages/financeiro/Financeiro";
+import Clientes from "./pages/financeiro/Clientes";
+
+// 5. RH
+import RH from "./pages/rh/RH";
+import Folha from "./pages/rh/Folha";
+import Ferias from "./pages/rh/Ferias";
+import AreaFuncionario from "./pages/rh/AreaFuncionario";
+import EntregaEPI from "./pages/rh/EntregaEPI";
+import EntregaEPIMobile from "./pages/rh/EntregaEPIMobile";
+import SegurancaTrabalho from "./pages/rh/SegurancaTrabalho";
 import SegurancaDashboard from "./pages/rh/SegurancaDashboard";
 import ImportacaoHistoricoASO from "./pages/rh/ImportacaoHistoricoASO";
 import FichaSegurancaFuncionario from "./pages/rh/FichaSegurancaFuncionario";
-import LoginPortal from "./pages/LoginPortal";
-import PortalColaborador from "./pages/PortalColaborador";
+
+// 6. Documentos
+import DocumentacaoMensal from "./pages/documentos/DocumentacaoMensal";
+import ConfigDocumentos from "./pages/documentos/ConfigDocumentos";
+import Assinaturas from "./pages/documentos/Assinaturas";
+import AssinaturaPublica from "./pages/documentos/AssinaturaPublica";
+import AssinaturaEPI from "./pages/documentos/AssinaturaEPI";
+
+// 7. Admin
+import Empresas from "./pages/admin/Empresas";
+import Acesso from "./pages/admin/Acesso";
+import Comunicacoes from "./pages/admin/Comunicacoes";
+import Solicitacoes from "./pages/admin/Solicitacoes";
+
+// 8. Ponto
+import ImportacaoAFD from "./pages/ponto/ImportacaoAFD";
+import PontoConsolidado from "./pages/ponto/PontoConsolidado";
+import EquipamentosPonto from "./pages/ponto/EquipamentosPonto";
+import ImportacaoAFDNew from "./pages/ponto/ImportacaoAFDNew";
+import ImportacaoPontoCSV from "./pages/ponto/ImportacaoPontoCSV";
+import InconsistenciasPonto from "./pages/ponto/InconsistenciasPonto";
+import ApuracaoPonto from "./pages/ponto/ApuracaoPonto";
+import ImportacaoCSVRHiD from "./pages/ponto/ImportacaoCSVRHiD";
+
+// 9. Portal do Colaborador
+import LoginPortal from "./pages/portal/LoginPortal";
+import PortalColaborador from "./pages/portal/PortalColaborador";
 import MeuPonto from "./pages/portal/MeuPonto";
 import Justificativas from "./pages/portal/Justificativas";
 import Mural from "./pages/portal/Mural";
@@ -52,12 +79,7 @@ import Sugestoes from "./pages/portal/Sugestoes";
 import MeusDados from "./pages/portal/MeusDados";
 import MeusEPIs from "./pages/portal/MeusEPIs";
 import MinhaAssinatura from "./pages/portal/MinhaAssinatura";
-import AssinaturaEPI from "./pages/AssinaturaEPI";
-import EquipamentosPonto from "./pages/ponto/EquipamentosPonto";
-import ImportacaoAFDNew from "./pages/ponto/ImportacaoAFDNew";
-import ImportacaoPontoCSV from "./pages/ponto/ImportacaoPontoCSV";
-import InconsistenciasPonto from "./pages/ponto/InconsistenciasPonto";
-import ApuracaoPonto from "./pages/ponto/ApuracaoPonto";
+
 import { EmpresaObraProvider } from "./contexts/EmpresaObraContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { RequirePortal, RequireAdmin, RequireDiario } from "./components/PortalGuard";
@@ -144,6 +166,7 @@ const App = () => (
             <Route path="/ponto/equipamentos" element={<EquipamentosPonto />} />
             <Route path="/ponto/importar" element={<ImportacaoAFDNew />} />
             <Route path="/ponto/importar-csv" element={<ImportacaoPontoCSV />} />
+            <Route path="/ponto/importar-rhid" element={<ImportacaoCSVRHiD />} />
             <Route path="/ponto/inconsistencias" element={<InconsistenciasPonto />} />
             <Route path="/ponto/apuracao" element={<ApuracaoPonto />} />
           </Route>
@@ -151,7 +174,7 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
-        </EmpresaObraProvider>
+      </EmpresaObraProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
