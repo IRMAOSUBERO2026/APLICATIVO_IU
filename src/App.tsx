@@ -63,10 +63,10 @@ import ImportacaoAFD from "./pages/ponto/ImportacaoAFD";
 import PontoConsolidado from "./pages/ponto/PontoConsolidado";
 import EquipamentosPonto from "./pages/ponto/EquipamentosPonto";
 import ImportacaoAFDNew from "./pages/ponto/ImportacaoAFDNew";
-import ImportacaoPontoCSV from "./pages/ponto/ImportacaoPontoCSV";
 import InconsistenciasPonto from "./pages/ponto/InconsistenciasPonto";
 import ApuracaoPonto from "./pages/ponto/ApuracaoPonto";
 import ImportacaoCSVRHiD from "./pages/ponto/ImportacaoCSVRHiD";
+import ConsultaRelatorioRHiD from "./pages/ponto/ConsultaRelatorioRHiD";
 
 // 9. Portal do Colaborador
 import LoginPortal from "./pages/portal/LoginPortal";
@@ -165,8 +165,9 @@ const App = () => (
             <Route path="/ponto-consolidado" element={<PontoConsolidado />} />
             <Route path="/ponto/equipamentos" element={<EquipamentosPonto />} />
             <Route path="/ponto/importar" element={<ImportacaoAFDNew />} />
-            <Route path="/ponto/importar-csv" element={<ImportacaoPontoCSV />} />
             <Route path="/ponto/importar-rhid" element={<ImportacaoCSVRHiD />} />
+            <Route path="/ponto/relatorio-rhid" element={<ConsultaRelatorioRHiD />} />
+            <Route path="/ponto/importar-csv" element={<ImportacaoCSVRHiD />} />
             <Route path="/ponto/inconsistencias" element={<InconsistenciasPonto />} />
             <Route path="/ponto/apuracao" element={<ApuracaoPonto />} />
           </Route>
