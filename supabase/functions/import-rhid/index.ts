@@ -19,8 +19,17 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    // O app usa o projeto externo OFICIAL (wtrefsziscauokudnxgz), onde vivem as
+    // tabelas ponto_relatorio_*. Esta função roda no Lovable Cloud, então grava
+    // no projeto externo usando a service role key dele (secret dedicada).
+    const supabaseUrl = Deno.env.get("EXT_SUPABASE_URL") || "https://wtrefsziscauokudnxgz.supabase.co";
+    const serviceKey = Deno.env.get("EXT_SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    if (!serviceKey) {
+      return new Response(
+        JSON.stringify({ error: "EXT_SUPABASE_SERVICE_ROLE_KEY não configurada." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
     const admin = createClient(supabaseUrl, serviceKey);
 
     const { importacao, registros } = await req.json();
