@@ -102,36 +102,11 @@ export async function importarRelatorioRHiD(
     if (!maps.funcPorCpf.has(f.cpf)) naoEncontrados.push(f);
   }
 
-  // 1) Criar lote de importação
-  const { data: logRow, error: logErr } = await supabase
-    .from("ponto_relatorio_importacoes")
-    .insert({
-      nome_arquivo: fileName,
-      hash_arquivo: hash,
-      competencia_mes: parse.competenciaMes || 0,
-      competencia_ano: parse.competenciaAno || 0,
-      total_linhas: parse.totalLinhas,
-      total_funcionarios: parse.cpfs.length,
-      cnpjs_encontrados: parse.cnpjs,
-      funcionarios_nao_encontrados: naoEncontrados,
-      status: "processando",
-    })
-    .select("id")
-    .single();
-
-  if (logErr || !logRow) {
-    erros.push(`Falha ao criar lote: ${logErr?.message || "sem retorno"}`);
-    return stats;
-  }
-  const importacaoId = (logRow as any).id as string;
-  stats.importacaoId = importacaoId;
-
-  // 2) Gravar registros diários em lotes
-  const rows = parse.registros.map((r: RHiDLinha) => {
+  // Monta os registros diários (parsing e matching continuam no cliente).
+  const registros = parse.registros.map((r: RHiDLinha) => {
     const func = maps.funcPorCpf.get(r.cpf) || null;
     if (!func) stats.funcionariosNaoEncontrados++;
     return {
-      importacao_id: importacaoId,
       funcionario_id: func?.id || null,
       cpf_funcionario: r.cpf,
       nome_funcionario_rhid: r.nomeRhid,
@@ -164,30 +139,40 @@ export async function importarRelatorioRHiD(
     };
   });
 
-  for (let k = 0; k < rows.length; k += 300) {
-    const chunk = rows.slice(k, k + 300);
-    const { error } = await supabase
-      .from("ponto_relatorio_rhid_diario")
-      .upsert(chunk, { onConflict: "cpf_funcionario, data, importacao_id" });
-    if (error) erros.push(`Registros (lote ${Math.floor(k / 300) + 1}): ${error.message}`);
-    else stats.gravados += chunk.length;
+  // A gravação é feita numa Edge Function com service role key (não há login de
+  // admin no ERP; o RLS bloquearia a gravação direta do cliente).
+  const { data, error } = await supabase.functions.invoke("import-rhid", {
+    body: {
+      importacao: {
+        nome_arquivo: fileName,
+        hash_arquivo: hash,
+        competencia_mes: parse.competenciaMes || 0,
+        competencia_ano: parse.competenciaAno || 0,
+        total_linhas: parse.totalLinhas,
+        total_funcionarios: parse.cpfs.length,
+        cnpjs_encontrados: parse.cnpjs,
+        funcionarios_nao_encontrados: naoEncontrados,
+        total_nao_encontrados: stats.funcionariosNaoEncontrados,
+        erros_parsing: parse.erros,
+      },
+      registros,
+    },
+  });
+
+  if (error) {
+    erros.push(`Falha na gravação (edge function): ${error.message}`);
+    return stats;
   }
 
-  // 3) Fechar lote
-  const status =
-    erros.length > parse.erros.length
-      ? "erro"
-      : naoEncontrados.length > 0
-      ? "concluido_com_avisos"
-      : "concluido";
-
-  await supabase
-    .from("ponto_relatorio_importacoes")
-    .update({
-      status,
-      mensagens_erro: erros.length ? erros.slice(0, 200) : null,
-    })
-    .eq("id", importacaoId);
+  const res = (data as any) || {};
+  stats.importacaoId = res.importacaoId || null;
+  stats.gravados = res.gravados || 0;
+  if (Array.isArray(res.erros)) {
+    for (const e of res.erros) if (!erros.includes(e)) erros.push(e);
+  }
+  if (!stats.importacaoId && !erros.length) {
+    erros.push("Erro desconhecido ao gravar importação.");
+  }
 
   return stats;
 }
