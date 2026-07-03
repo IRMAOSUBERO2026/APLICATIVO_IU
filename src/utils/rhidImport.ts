@@ -141,23 +141,45 @@ export async function importarRelatorioRHiD(
 
   // A gravação é feita numa Edge Function com service role key (não há login de
   // admin no ERP; o RLS bloquearia a gravação direta do cliente).
-  const { data, error } = await supabase.functions.invoke("import-rhid", {
-    body: {
-      importacao: {
-        nome_arquivo: fileName,
-        hash_arquivo: hash,
-        competencia_mes: parse.competenciaMes || 0,
-        competencia_ano: parse.competenciaAno || 0,
-        total_linhas: parse.totalLinhas,
-        total_funcionarios: parse.cpfs.length,
-        cnpjs_encontrados: parse.cnpjs,
-        funcionarios_nao_encontrados: naoEncontrados,
-        total_nao_encontrados: stats.funcionariosNaoEncontrados,
-        erros_parsing: parse.erros,
+  // A função está hospedada no Lovable Cloud (não no projeto externo do app),
+  // por isso chamamos o endpoint dela diretamente com a anon key do Cloud.
+  const CLOUD_PROJECT_ID = (import.meta as any).env?.VITE_SUPABASE_PROJECT_ID as string | undefined;
+  const CLOUD_ANON = (import.meta as any).env?.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+
+  let data: any = null;
+  let error: { message: string } | null = null;
+  try {
+    const resp = await fetch(
+      `https://${CLOUD_PROJECT_ID}.supabase.co/functions/v1/import-rhid`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: CLOUD_ANON || "",
+          Authorization: `Bearer ${CLOUD_ANON || ""}`,
+        },
+        body: JSON.stringify({
+          importacao: {
+            nome_arquivo: fileName,
+            hash_arquivo: hash,
+            competencia_mes: parse.competenciaMes || 0,
+            competencia_ano: parse.competenciaAno || 0,
+            total_linhas: parse.totalLinhas,
+            total_funcionarios: parse.cpfs.length,
+            cnpjs_encontrados: parse.cnpjs,
+            funcionarios_nao_encontrados: naoEncontrados,
+            total_nao_encontrados: stats.funcionariosNaoEncontrados,
+            erros_parsing: parse.erros,
+          },
+          registros,
+        }),
       },
-      registros,
-    },
-  });
+    );
+    data = await resp.json().catch(() => null);
+    if (!resp.ok) error = { message: data?.error || `HTTP ${resp.status}` };
+  } catch (e: any) {
+    error = { message: e?.message || "Falha de rede" };
+  }
 
   if (error) {
     erros.push(`Falha na gravação (edge function): ${error.message}`);
