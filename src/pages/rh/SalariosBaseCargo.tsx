@@ -128,11 +128,13 @@ export default function SalariosBaseCargo() {
 
   const remover = async (id: string, cargo: string) => {
     if (!confirm(`Remover o salário-base de "${cargo}"?`)) return;
+    const anterior = lista.find((r) => r.id === id)?.salario_base ?? null;
     const { error } = await supabase.from("salarios_base_cargo").delete().eq("id", id);
     if (error) {
       toast({ title: "Erro ao remover", description: error.message, variant: "destructive" });
       return;
     }
+    await registrarLog({ cargo, acao: "remocao", valor_anterior: anterior !== null ? Number(anterior) : null, valor_novo: null });
     toast({ title: "Removido", description: cargo });
     carregar();
   };
