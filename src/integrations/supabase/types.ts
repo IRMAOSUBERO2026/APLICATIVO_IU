@@ -2536,6 +2536,36 @@ export type Database = {
         }
         Relationships: []
       }
+      salarios_base_cargo_log: {
+        Row: {
+          acao: string
+          cargo: string
+          created_at: string
+          id: string
+          usuario: string | null
+          valor_anterior: number | null
+          valor_novo: number | null
+        }
+        Insert: {
+          acao: string
+          cargo: string
+          created_at?: string
+          id?: string
+          usuario?: string | null
+          valor_anterior?: number | null
+          valor_novo?: number | null
+        }
+        Update: {
+          acao?: string
+          cargo?: string
+          created_at?: string
+          id?: string
+          usuario?: string | null
+          valor_anterior?: number | null
+          valor_novo?: number | null
+        }
+        Relationships: []
+      }
       seguranca_contratos_assessoria: {
         Row: {
           created_at: string
