@@ -60,7 +60,7 @@ export default function EntregaEPI() {
   const [showNewDelivery, setShowNewDelivery] = useState(false);
 
   const [selectedItems, setSelectedItems] = useState<any[]>([]);
-  const [form, setForm] = useState({ funcionario_id: "", obra_id: "central" });
+  const [form, setForm] = useState({ funcionario_id: "", obra_id: "central", data_entrega: format(new Date(), "yyyy-MM-dd") });
 
   const [editingDelivery, setEditingDelivery] = useState<any>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -177,7 +177,7 @@ export default function EntregaEPI() {
         ca_numero: item.ca_numero || null,
         motivo: item.observacoes,
         observacoes: `Entrega via sistema - ${item.observacoes}`,
-        data_entrega: new Date().toISOString(),
+        data_entrega: form.data_entrega ? new Date(form.data_entrega + "T12:00:00").toISOString() : new Date().toISOString(),
         status: "ativo",
         confirmacao_tipo: "pendente",
       }));
@@ -590,7 +590,17 @@ export default function EntregaEPI() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label className="text-slate-400 font-black uppercase text-[9px] tracking-widest ml-1">📅 Data da Entrega</Label>
+                  <Input
+                    type="date"
+                    value={form.data_entrega}
+                    onChange={e => setForm({ ...form, data_entrega: e.target.value })}
+                    className="bg-white rounded-2xl h-14 shadow-sm border-slate-100 focus-visible:ring-amber-500"
+                  />
+                </div>
               </div>
+
 
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
                 {produtos.map(p => {

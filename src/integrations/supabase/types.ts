@@ -1428,6 +1428,7 @@ export type Database = {
           banco: string | null
           bonificacoes_padrao: Json
           cargo: string
+          carteira_reservista: string | null
           categoria_cnh: string | null
           cep: string | null
           cidade: string | null
@@ -1459,6 +1460,7 @@ export type Database = {
           id: string
           motivo_rescisao: string | null
           nacionalidade: string | null
+          naturalidade: string | null
           nome: string
           nome_mae: string | null
           nome_pai: string | null
@@ -1488,6 +1490,7 @@ export type Database = {
           banco?: string | null
           bonificacoes_padrao?: Json
           cargo: string
+          carteira_reservista?: string | null
           categoria_cnh?: string | null
           cep?: string | null
           cidade?: string | null
@@ -1519,6 +1522,7 @@ export type Database = {
           id?: string
           motivo_rescisao?: string | null
           nacionalidade?: string | null
+          naturalidade?: string | null
           nome: string
           nome_mae?: string | null
           nome_pai?: string | null
@@ -1548,6 +1552,7 @@ export type Database = {
           banco?: string | null
           bonificacoes_padrao?: Json
           cargo?: string
+          carteira_reservista?: string | null
           categoria_cnh?: string | null
           cep?: string | null
           cidade?: string | null
@@ -1579,6 +1584,7 @@ export type Database = {
           id?: string
           motivo_rescisao?: string | null
           nacionalidade?: string | null
+          naturalidade?: string | null
           nome?: string
           nome_mae?: string | null
           nome_pai?: string | null

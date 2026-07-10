@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { BonificacoesPadraoEditor, type BonificacaoPadrao } from "@/components/rh/BonificacoesPadraoEditor";
 import { inserirFuncionarioComBonificacoes } from "@/lib/bonificacoesPadrao";
 import { CARGOS_PADRAO } from "@/lib/cargosPadrao";
+import { salarioBasePorCargo } from "@/lib/salariosBasePadrao";
 
 interface PreCadastroFormProps {
   open: boolean;
@@ -32,6 +33,7 @@ const emptyForm = {
   cnh: "", categoriaCnh: "", validadeCnh: "", nomeMae: "", nomePai: "", escolaridade: "",
   banco: "", agencia: "", conta: "", tipoConta: "", dependentes: 0,
   rne: "", dataEntradaPais: "", tipo_remuneracao: "mensal", escala: "5x2",
+  naturalidade: "", reservista: "",
 };
 
 type FormStep = "pessoal" | "documentos" | "endereco" | "trabalho" | "bancario" | "dependentes";
@@ -85,6 +87,16 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
   const { empresas, obras, obrasPorEmpresa } = useEmpresasObras();
 
   const update = (field: string, value: string | number) => setForm(prev => ({ ...prev, [field]: value }));
+
+  // Ao definir o cargo, sugere automaticamente o salário-base da convenção
+  // (somente se ainda não houver salário informado).
+  const updateCargo = (value: string) => {
+    setForm(prev => {
+      const base = salarioBasePorCargo(value);
+      const preencheSalario = base !== null && (!prev.salarioBase || Number(prev.salarioBase) === 0);
+      return { ...prev, cargo: value, salarioBase: preencheSalario ? base! : prev.salarioBase };
+    });
+  };
 
   const isEstrangeiro = form.nacionalidade !== "Brasileiro(a)" && form.nacionalidade !== "Brasileiro" && form.nacionalidade !== "" && form.nacionalidade !== "Brasileira";
   const needsDependentes = form.estadoCivil === "Casado(a)" || form.estadoCivil === "União Estável" || Number(form.dependentes) > 0;
@@ -168,6 +180,8 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
       dependentes: Number(form.dependentes) || 0,
       rne: form.rne || null,
       data_entrada_pais: form.dataEntradaPais || null,
+      naturalidade: form.naturalidade || null,
+      carteira_reservista: form.reservista || null,
       dependentes_json: dependentesList.length > 0 ? JSON.stringify(dependentesList) : "[]",
       bonificacoes_padrao: bonificacoesPadrao as any,
     });
@@ -238,6 +252,7 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
               <FieldInput label="Data de Nascimento" value={form.nascimento} onChange={v => update("nascimento", v)} type="date" required />
               <FieldSelect label="Estado Civil" value={form.estadoCivil} onChange={v => update("estadoCivil", v)} options={["Solteiro(a)", "Casado(a)", "Divorciado(a)", "Viúvo(a)", "União Estável"]} />
               <FieldSelect label="Nacionalidade" value={form.nacionalidade} onChange={v => update("nacionalidade", v)} options={["Brasileiro(a)", "Estrangeiro(a)"]} required />
+              <FieldInput label="Naturalidade" value={form.naturalidade} onChange={v => update("naturalidade", v)} placeholder="Cidade/UF de nascimento" />
               {isEstrangeiro && (
                 <>
                   <FieldInput label="RNE (Registro Nacional de Estrangeiro)" value={form.rne} onChange={v => update("rne", v)} required placeholder="Nº do RNE" />
@@ -256,6 +271,7 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
               <FieldInput label="CPF" value={form.cpf} onChange={v => update("cpf", v)} placeholder="000.000.000-00" required />
               <FieldInput label="RG" value={form.rg} onChange={v => update("rg", v)} required />
               <FieldInput label="PIS/PASEP" value={form.pis} onChange={v => update("pis", v)} required />
+              <FieldInput label="Carteira de Reservista" value={form.reservista} onChange={v => update("reservista", v)} placeholder="Nº do certificado militar" />
               <FieldInput label="CTPS" value={form.ctps} onChange={v => update("ctps", v)} required />
               <FieldInput label="Série CTPS" value={form.serieCtps} onChange={v => update("serieCtps", v)} />
               <FieldInput label="Título de Eleitor" value={form.tituloEleitor} onChange={v => update("tituloEleitor", v)} />
@@ -305,7 +321,7 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
                 <input
                   list="cargos-padrao-list"
                   value={form.cargo}
-                  onChange={e => update("cargo", e.target.value)}
+                  onChange={e => updateCargo(e.target.value)}
                   placeholder="Selecione ou digite..."
                   className="w-full rounded-lg border bg-card py-2 px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />

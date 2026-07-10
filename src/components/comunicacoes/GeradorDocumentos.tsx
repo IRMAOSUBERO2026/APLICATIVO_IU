@@ -42,17 +42,31 @@ interface DocumentoGerado {
 const TIPO_LABEL: Record<TipoDocumentoOficial, string> = {
   advertencia: "Advertência",
   suspensao: "Suspensão",
-  comunicado: "Comunicado",
+  comunicado: "Comunicado (Individual)",
+  comunicado_geral: "Comunicado Geral / Circular",
   recibo: "Recibo",
-  justificativa_falta: "Justificativa",
+  justificativa_falta: "Justificativa de Falta",
+  aviso_ferias: "Aviso de Férias",
+  convocacao: "Convocação",
+  mudanca_horario: "Alteração de Horário",
+  seguranca_trabalho: "Segurança do Trabalho",
+  elogio: "Elogio / Reconhecimento",
+  aviso_previo: "Aviso Prévio",
 };
 
 const PASTAS_DOC: Record<TipoDocumentoOficial, string> = {
   advertencia: "Advertências",
   suspensao: "Advertências",
   comunicado: "Comunicados",
+  comunicado_geral: "Comunicados",
   recibo: "Holerites",
   justificativa_falta: "Cartão Ponto",
+  aviso_ferias: "Comunicados",
+  convocacao: "Comunicados",
+  mudanca_horario: "Comunicados",
+  seguranca_trabalho: "Comunicados",
+  elogio: "Comunicados",
+  aviso_previo: "Comunicados",
 };
 
 export function GeradorDocumentos() {
@@ -64,6 +78,8 @@ export function GeradorDocumentos() {
   const [tipoDoc, setTipoDoc] = useState<TipoDocumentoOficial>("advertencia");
   const [contextoUsuario, setContextoUsuario] = useState("");
   const [reciboValor, setReciboValor] = useState<string>("");
+  const [dataDoc, setDataDoc] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [usarIA, setUsarIA] = useState(true);
 
   // Resultado
   const [textoGerado, setTextoGerado] = useState("");
@@ -163,27 +179,60 @@ export function GeradorDocumentos() {
   useEffect(() => { carregarHistorico(); }, [carregarHistorico]);
 
   // ---- Gerar texto ----
-  const handleGerar = () => {
-    if (!funcId) {
+  const isComunicadoGeral = tipoDoc === "comunicado_geral";
+
+  const handleGerar = async () => {
+    if (!funcId && !isComunicadoGeral) {
       toast({ title: "Selecione um funcionário", variant: "destructive" });
       return;
     }
     const func = funcionarios.find(f => f.id === funcId);
-    if (!func) return;
+    const nomeEmpresa = func?.empresa?.nome_fantasia || func?.empresa?.razao_social || funcionarios[0]?.empresa?.nome_fantasia || funcionarios[0]?.empresa?.razao_social || "Empresa";
 
     setGerando(true);
-    setTimeout(() => {
-      const docFinal = gerarTextoDocumentoOficial({
+
+    // Fallback local (template) usado quando a IA não estiver disponível.
+    const gerarLocal = () =>
+      gerarTextoDocumentoOficial({
         tipo: tipoDoc,
-        nomeFuncionario: func.nome,
-        cargoFuncionario: func.cargo,
-        nomeEmpresa: func.empresa?.nome_fantasia || func.empresa?.razao_social || "Empresa",
+        nomeFuncionario: func?.nome || "",
+        cargoFuncionario: func?.cargo || "",
+        nomeEmpresa,
         contexto: contextoUsuario,
+        data: dataDoc,
       });
-      setTextoGerado(docFinal);
+
+    try {
+      if (usarIA && contextoUsuario.trim().length >= 3) {
+        const { data, error } = await supabase.functions.invoke("gerar-documento-ia", {
+          body: {
+            tipo: tipoDoc,
+            ideia: contextoUsuario,
+            nomeFuncionario: func?.nome || "",
+            cargoFuncionario: func?.cargo || "",
+            nomeEmpresa,
+            data: dataDoc,
+          },
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        if (data?.texto) {
+          setTextoGerado(data.texto);
+          toast({ title: "Texto gerado com IA ✨", description: "Revise e ajuste antes de enviar." });
+          return;
+        }
+        setTextoGerado(gerarLocal());
+      } else {
+        setTextoGerado(gerarLocal());
+      }
+    } catch (err: any) {
+      setTextoGerado(gerarLocal());
+      toast({ title: "IA indisponível", description: "Gerado a partir do modelo padrão. " + (err?.message || ""), variant: "destructive" });
+    } finally {
       setGerando(false);
-    }, 900);
+    }
   };
+
 
   const formatFileName = (tipo: string, nome: string) => {
     const dataHoje = new Date().toISOString().slice(0, 10);
@@ -200,8 +249,11 @@ export function GeradorDocumentos() {
   const funcSelecionado = funcionarios.find(f => f.id === funcId);
 
   const buildBlob = async (): Promise<Blob | null> => {
-    if (!funcSelecionado) return null;
+    // Comunicado geral pode não ter funcionário específico selecionado.
+    if (!funcSelecionado && !isComunicadoGeral) return null;
+    const empresaPdf = funcSelecionado?.empresa || funcionarios[0]?.empresa || null;
     if (tipoDoc === "recibo") {
+      if (!funcSelecionado) return null;
       const valorNum = parseFloat((reciboValor || "0").replace(/\./g, "").replace(",", "."));
       if (!valorNum || valorNum <= 0) {
         toast({ title: "Informe o valor do recibo", variant: "destructive" });
@@ -219,7 +271,7 @@ export function GeradorDocumentos() {
         referencia: contextoUsuario || "Pagamento avulso",
       });
     }
-    return await gerarPdfA4(textoGerado, "doc.pdf", funcSelecionado.empresa);
+    return await gerarPdfA4(textoGerado, "doc.pdf", empresaPdf);
   };
 
   const handleDownload = async () => {
@@ -355,14 +407,27 @@ export function GeradorDocumentos() {
                 <Select value={tipoDoc} onValueChange={(v: TipoDocumentoOficial) => setTipoDoc(v)}>
                   <SelectTrigger className="bg-background"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="advertencia">Advertência Disciplinar</SelectItem>
-                    <SelectItem value="suspensao">Suspensão de Contrato</SelectItem>
-                    <SelectItem value="comunicado">Comunicado Formal</SelectItem>
-                    <SelectItem value="recibo">Recibo de Pagamento Avulso</SelectItem>
-                    <SelectItem value="justificativa_falta">Justificativa de Faltas</SelectItem>
+                    {(Object.keys(TIPO_LABEL) as TipoDocumentoOficial[]).map(k => (
+                      <SelectItem key={k} value={k}>{TIPO_LABEL[k]}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Data do Documento</Label>
+                <Input
+                  type="date"
+                  value={dataDoc}
+                  onChange={e => setDataDoc(e.target.value)}
+                  className="bg-background"
+                />
+              </div>
+
+              <label className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2 cursor-pointer">
+                <input type="checkbox" checked={usarIA} onChange={e => setUsarIA(e.target.checked)} className="rounded" />
+                <span className="text-xs font-medium flex items-center gap-1"><Bot className="h-3.5 w-3.5 text-primary" /> Desenvolver texto com IA a partir da minha ideia</span>
+              </label>
 
               {tipoDoc === "recibo" && (
                 <div className="space-y-1">
@@ -380,21 +445,22 @@ export function GeradorDocumentos() {
               )}
 
               <div className="space-y-1">
-                <Label className="text-xs font-semibold">{tipoDoc === "recibo" ? "Referência do pagamento" : "3. Contexto / Motivo"}</Label>
+                <Label className="text-xs font-semibold">{tipoDoc === "recibo" ? "Referência do pagamento" : usarIA ? "3. Descreva sua ideia (a IA desenvolve o texto)" : "3. Contexto / Motivo"}</Label>
                 <Textarea
-                  placeholder={tipoDoc === "recibo" ? "Ex: Adiantamento salarial referente à obra Terrace - novembro/2025" : "Ex: Miguel foi flagrado sem cinto de segurança em trabalho em altura na obra Terrace, mesmo após advertência verbal..."}
+                  placeholder={tipoDoc === "recibo" ? "Ex: Adiantamento salarial referente à obra Terrace - novembro/2025" : "Ex: quero avisar a equipe da obra Terrace que a partir de segunda o horário muda para 7h às 16h por causa do calor..."}
                   className="bg-background resize-none"
                   rows={5}
                   value={contextoUsuario}
                   onChange={e => setContextoUsuario(e.target.value)}
                 />
-                <p className="text-[10px] text-muted-foreground"><Info className="inline h-3 w-3 mr-1" />O sistema aplica automaticamente a fundamentação legal CLT.</p>
+                <p className="text-[10px] text-muted-foreground"><Info className="inline h-3 w-3 mr-1" />{usarIA ? "Escreva a ideia em linguagem simples — a IA transforma em documento oficial com a fundamentação adequada." : "O sistema aplica automaticamente a fundamentação legal CLT."}</p>
               </div>
 
-              <Button onClick={handleGerar} disabled={gerando || !funcId} className="w-full gap-2 mt-2">
+              <Button onClick={handleGerar} disabled={gerando || (!funcId && !isComunicadoGeral)} className="w-full gap-2 mt-2">
                 {gerando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bot className="h-4 w-4" />}
-                {gerando ? "Formatando..." : "Gerar Documento"}
+                {gerando ? "Gerando..." : usarIA ? "Gerar com IA" : "Gerar Documento"}
               </Button>
+
             </CardContent>
           </Card>
         </div>
