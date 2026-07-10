@@ -41,6 +41,24 @@ export default function SalariosBaseCargo() {
   const [salvando, setSalvando] = useState<string | null>(null);
   const [novoCargo, setNovoCargo] = useState("");
   const [novoValor, setNovoValor] = useState("");
+  const [aba, setAba] = useState<"valores" | "historico">("valores");
+  const [logs, setLogs] = useState<LogSalario[]>([]);
+  const [loadingLog, setLoadingLog] = useState(false);
+
+  const carregarLogs = useCallback(async () => {
+    setLoadingLog(true);
+    const { data } = await supabase
+      .from("salarios_base_cargo_log")
+      .select("id, cargo, acao, valor_anterior, valor_novo, usuario, created_at")
+      .order("created_at", { ascending: false })
+      .limit(500);
+    setLogs((data as LogSalario[]) ?? []);
+    setLoadingLog(false);
+  }, []);
+
+  useEffect(() => {
+    if (aba === "historico") carregarLogs();
+  }, [aba, carregarLogs]);
 
   const filtrada = useMemo(
     () =>
