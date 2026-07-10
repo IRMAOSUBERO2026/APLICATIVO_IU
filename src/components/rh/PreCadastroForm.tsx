@@ -85,6 +85,7 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
   const [bonificacoesPadrao, setBonificacoesPadrao] = useState<BonificacaoPadrao[]>([]);
   const photoRef = useRef<HTMLInputElement>(null);
   const { empresas, obras, obrasPorEmpresa } = useEmpresasObras();
+  const { salarioPorCargo } = useSalariosBase();
 
   const update = (field: string, value: string | number) => setForm(prev => ({ ...prev, [field]: value }));
 
@@ -92,7 +93,7 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
   // (somente se ainda não houver salário informado).
   const updateCargo = (value: string) => {
     setForm(prev => {
-      const base = salarioBasePorCargo(value);
+      const base = salarioPorCargo(value);
       const preencheSalario = base !== null && (!prev.salarioBase || Number(prev.salarioBase) === 0);
       return { ...prev, cargo: value, salarioBase: preencheSalario ? base! : prev.salarioBase };
     });
