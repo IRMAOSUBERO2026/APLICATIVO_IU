@@ -33,6 +33,7 @@ const emptyForm = {
   cnh: "", categoriaCnh: "", validadeCnh: "", nomeMae: "", nomePai: "", escolaridade: "",
   banco: "", agencia: "", conta: "", tipoConta: "", dependentes: 0,
   rne: "", dataEntradaPais: "", tipo_remuneracao: "mensal", escala: "5x2",
+  naturalidade: "", reservista: "",
 };
 
 type FormStep = "pessoal" | "documentos" | "endereco" | "trabalho" | "bancario" | "dependentes";
