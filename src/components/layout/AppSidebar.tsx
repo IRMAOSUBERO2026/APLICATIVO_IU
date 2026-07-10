@@ -63,6 +63,7 @@ const menuSections = [
     label: "RH & Pessoal",
     items: [
       { icon: Users, label: "RH / DP", path: "/rh" },
+      { icon: DollarSign, label: "Salário-Base por Função", path: "/rh/salarios-base" },
       { icon: Shield, label: "Segurança e NRs", path: "/rh/seguranca/painel" },
       { icon: Calculator, label: "Equipamentos de Ponto", path: "/ponto/equipamentos" },
       { icon: Upload, label: "Importar AFD", path: "/ponto/importar" },
