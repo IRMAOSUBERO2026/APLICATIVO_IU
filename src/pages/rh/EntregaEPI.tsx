@@ -590,7 +590,17 @@ export default function EntregaEPI() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label className="text-slate-400 font-black uppercase text-[9px] tracking-widest ml-1">📅 Data da Entrega</Label>
+                  <Input
+                    type="date"
+                    value={form.data_entrega}
+                    onChange={e => setForm({ ...form, data_entrega: e.target.value })}
+                    className="bg-white rounded-2xl h-14 shadow-sm border-slate-100 focus-visible:ring-amber-500"
+                  />
+                </div>
               </div>
+
 
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
                 {produtos.map(p => {
