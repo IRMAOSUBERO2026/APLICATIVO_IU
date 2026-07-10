@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { BonificacoesPadraoEditor, type BonificacaoPadrao } from "@/components/rh/BonificacoesPadraoEditor";
 import { inserirFuncionarioComBonificacoes } from "@/lib/bonificacoesPadrao";
 import { CARGOS_PADRAO } from "@/lib/cargosPadrao";
-import { salarioBasePorCargo } from "@/lib/salariosBasePadrao";
+import { useSalariosBase } from "@/hooks/useSalariosBase";
 
 interface PreCadastroFormProps {
   open: boolean;
