@@ -179,27 +179,60 @@ export function GeradorDocumentos() {
   useEffect(() => { carregarHistorico(); }, [carregarHistorico]);
 
   // ---- Gerar texto ----
-  const handleGerar = () => {
-    if (!funcId) {
+  const isComunicadoGeral = tipoDoc === "comunicado_geral";
+
+  const handleGerar = async () => {
+    if (!funcId && !isComunicadoGeral) {
       toast({ title: "Selecione um funcionário", variant: "destructive" });
       return;
     }
     const func = funcionarios.find(f => f.id === funcId);
-    if (!func) return;
+    const nomeEmpresa = func?.empresa?.nome_fantasia || func?.empresa?.razao_social || funcionarios[0]?.empresa?.nome_fantasia || funcionarios[0]?.empresa?.razao_social || "Empresa";
 
     setGerando(true);
-    setTimeout(() => {
-      const docFinal = gerarTextoDocumentoOficial({
+
+    // Fallback local (template) usado quando a IA não estiver disponível.
+    const gerarLocal = () =>
+      gerarTextoDocumentoOficial({
         tipo: tipoDoc,
-        nomeFuncionario: func.nome,
-        cargoFuncionario: func.cargo,
-        nomeEmpresa: func.empresa?.nome_fantasia || func.empresa?.razao_social || "Empresa",
+        nomeFuncionario: func?.nome || "",
+        cargoFuncionario: func?.cargo || "",
+        nomeEmpresa,
         contexto: contextoUsuario,
+        data: dataDoc,
       });
-      setTextoGerado(docFinal);
+
+    try {
+      if (usarIA && contextoUsuario.trim().length >= 3) {
+        const { data, error } = await supabase.functions.invoke("gerar-documento-ia", {
+          body: {
+            tipo: tipoDoc,
+            ideia: contextoUsuario,
+            nomeFuncionario: func?.nome || "",
+            cargoFuncionario: func?.cargo || "",
+            nomeEmpresa,
+            data: dataDoc,
+          },
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        if (data?.texto) {
+          setTextoGerado(data.texto);
+          toast({ title: "Texto gerado com IA ✨", description: "Revise e ajuste antes de enviar." });
+          return;
+        }
+        setTextoGerado(gerarLocal());
+      } else {
+        setTextoGerado(gerarLocal());
+      }
+    } catch (err: any) {
+      setTextoGerado(gerarLocal());
+      toast({ title: "IA indisponível", description: "Gerado a partir do modelo padrão. " + (err?.message || ""), variant: "destructive" });
+    } finally {
       setGerando(false);
-    }, 900);
+    }
   };
+
 
   const formatFileName = (tipo: string, nome: string) => {
     const dataHoje = new Date().toISOString().slice(0, 10);
