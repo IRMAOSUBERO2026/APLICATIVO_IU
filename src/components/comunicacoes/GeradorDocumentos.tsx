@@ -42,17 +42,31 @@ interface DocumentoGerado {
 const TIPO_LABEL: Record<TipoDocumentoOficial, string> = {
   advertencia: "Advertência",
   suspensao: "Suspensão",
-  comunicado: "Comunicado",
+  comunicado: "Comunicado (Individual)",
+  comunicado_geral: "Comunicado Geral / Circular",
   recibo: "Recibo",
-  justificativa_falta: "Justificativa",
+  justificativa_falta: "Justificativa de Falta",
+  aviso_ferias: "Aviso de Férias",
+  convocacao: "Convocação",
+  mudanca_horario: "Alteração de Horário",
+  seguranca_trabalho: "Segurança do Trabalho",
+  elogio: "Elogio / Reconhecimento",
+  aviso_previo: "Aviso Prévio",
 };
 
 const PASTAS_DOC: Record<TipoDocumentoOficial, string> = {
   advertencia: "Advertências",
   suspensao: "Advertências",
   comunicado: "Comunicados",
+  comunicado_geral: "Comunicados",
   recibo: "Holerites",
   justificativa_falta: "Cartão Ponto",
+  aviso_ferias: "Comunicados",
+  convocacao: "Comunicados",
+  mudanca_horario: "Comunicados",
+  seguranca_trabalho: "Comunicados",
+  elogio: "Comunicados",
+  aviso_previo: "Comunicados",
 };
 
 export function GeradorDocumentos() {
