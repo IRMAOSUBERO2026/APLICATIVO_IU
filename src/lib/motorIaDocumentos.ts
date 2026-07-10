@@ -143,6 +143,154 @@ ______________________________________________
 ${nomeEmpresa}
 Aprovador Responsável`;
       break;
+    case "comunicado_geral":
+      textoBase = `COMUNICADO GERAL / CIRCULAR INTERNA
+
+A todos os colaboradores da empresa ${nomeEmpresa}
+
+${contexto || "[Escreva aqui o teor do comunicado geral a ser divulgado no mural / grupos]"}
+
+Contamos com a colaboração e atenção de todos.
+
+${nomeEmpresa}
+Administração / Recursos Humanos
+${dataExtenso}`;
+      break;
+
+    case "aviso_ferias":
+      textoBase = `AVISO DE FÉRIAS
+
+À(o) Sr(a). ${nomeFuncionario}
+Cargo: ${cargoFuncionario}
+
+Nos termos do artigo 135 da CLT, comunicamos que suas férias serão concedidas conforme abaixo:
+
+${contexto || "Período aquisitivo: [__/__/____ a __/__/____]\nPeríodo de gozo: [__/__/____ a __/__/____]\nRetorno ao trabalho: [__/__/____]"}
+
+O pagamento correspondente será efetuado até 2 (dois) dias antes do início do período de gozo, conforme legislação vigente.
+
+${dataExtenso}
+
+______________________________________________
+${nomeEmpresa}
+Empregador
+
+______________________________________________
+${nomeFuncionario}
+Empregado (Ciente)`;
+      break;
+
+    case "convocacao":
+      textoBase = `CONVOCAÇÃO
+
+À(o) Sr(a). ${nomeFuncionario}
+Cargo: ${cargoFuncionario}
+
+A empresa ${nomeEmpresa} vem, por meio deste, CONVOCAR V.S.ª para:
+
+${contexto || "[Descreva o motivo da convocação — reunião, treinamento, retorno ao trabalho, hora extra — informando data, horário e local]"}
+
+Solicitamos o seu comparecimento e pontualidade.
+
+${dataExtenso}
+
+______________________________________________
+${nomeEmpresa}
+Empregador
+
+______________________________________________
+${nomeFuncionario}
+Ciente`;
+      break;
+
+    case "mudanca_horario":
+      textoBase = `COMUNICADO DE ALTERAÇÃO DE JORNADA / HORÁRIO
+
+À(o) Sr(a). ${nomeFuncionario}
+Cargo: ${cargoFuncionario}
+
+Comunicamos a alteração de sua jornada/horário de trabalho conforme detalhado abaixo:
+
+${contexto || "Novo horário: [__:__ às __:__]\nEscala: [___]\nVigência a partir de: [__/__/____]"}
+
+Permanecemos à disposição para eventuais esclarecimentos.
+
+${dataExtenso}
+
+______________________________________________
+${nomeEmpresa}
+Empregador
+
+______________________________________________
+${nomeFuncionario}
+Empregado (Ciente)`;
+      break;
+
+    case "seguranca_trabalho":
+      textoBase = `COMUNICADO DE SEGURANÇA DO TRABALHO
+
+À(o) Sr(a). ${nomeFuncionario}
+Cargo: ${cargoFuncionario}
+
+Em cumprimento às Normas Regulamentadoras (NR) e visando à integridade física dos colaboradores, a empresa ${nomeEmpresa} comunica:
+
+${contexto || "[Descreva a orientação de segurança — uso obrigatório de EPI, procedimento, DDS, advertência preventiva]"}
+
+O descumprimento das normas de segurança poderá ensejar medidas disciplinares. A segurança é responsabilidade de todos.
+
+${dataExtenso}
+
+______________________________________________
+${nomeEmpresa}
+SESMT / Empregador
+
+______________________________________________
+${nomeFuncionario}
+Empregado (Ciente)`;
+      break;
+
+    case "elogio":
+      textoBase = `CARTA DE ELOGIO E RECONHECIMENTO
+
+À(o) Sr(a). ${nomeFuncionario}
+Cargo: ${cargoFuncionario}
+
+A empresa ${nomeEmpresa} vem, por meio deste, expressar seu reconhecimento e agradecimento:
+
+${contexto || "[Descreva o motivo do elogio — desempenho, dedicação, conduta exemplar, resultado alcançado]"}
+
+Colaboradores como você fazem a diferença. Parabéns e continue assim!
+
+${dataExtenso}
+
+______________________________________________
+${nomeEmpresa}
+Administração`;
+      break;
+
+    case "aviso_previo":
+      textoBase = `AVISO PRÉVIO
+
+À(o) Sr(a). ${nomeFuncionario}
+Cargo: ${cargoFuncionario}
+
+Nos termos dos artigos 487 e seguintes da CLT, comunicamos o presente AVISO PRÉVIO:
+
+${contexto || "Modalidade: [ ] Trabalhado  [ ] Indenizado\nData de início do aviso: [__/__/____]\nData de desligamento: [__/__/____]\nMotivo: [___]"}
+
+Fica assegurado o cumprimento dos prazos e direitos legais correspondentes.
+
+${dataExtenso}
+
+______________________________________________
+${nomeEmpresa}
+Empregador
+
+______________________________________________
+${nomeFuncionario}
+Empregado (Ciente)`;
+      break;
+
     default:
       textoBase = "Tipo de documento não selecionado.";
   }
