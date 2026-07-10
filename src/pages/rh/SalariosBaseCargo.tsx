@@ -153,8 +153,75 @@ export default function SalariosBaseCargo() {
         </div>
       </div>
 
+      {/* Abas */}
+      <div className="flex gap-2 border-b">
+        <button
+          onClick={() => setAba("valores")}
+          className={`inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${aba === "valores" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+        >
+          <DollarSign className="h-4 w-4" /> Valores
+        </button>
+        <button
+          onClick={() => setAba("historico")}
+          className={`inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${aba === "historico" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+        >
+          <History className="h-4 w-4" /> Histórico
+        </button>
+      </div>
+
+      {aba === "historico" ? (
+        <div className="rounded-xl border bg-card">
+          <div className="flex items-center justify-between p-3 border-b">
+            <h2 className="text-sm font-semibold">Histórico de alterações</h2>
+            <button
+              onClick={carregarLogs}
+              className="inline-flex items-center gap-1 rounded-lg border bg-card px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted"
+            >
+              <RefreshCw className="h-3.5 w-3.5" /> Atualizar
+            </button>
+          </div>
+          <div className="divide-y">
+            {loadingLog && <p className="p-4 text-sm text-muted-foreground">Carregando...</p>}
+            {!loadingLog && logs.length === 0 && (
+              <p className="p-4 text-sm text-muted-foreground text-center">Nenhuma alteração registrada ainda.</p>
+            )}
+            {logs.map((l) => {
+              const cfg =
+                l.acao === "adicao"
+                  ? { Icon: PlusCircle, cor: "text-success", txt: "Adicionado" }
+                  : l.acao === "remocao"
+                    ? { Icon: MinusCircle, cor: "text-destructive", txt: "Removido" }
+                    : { Icon: Pencil, cor: "text-primary", txt: "Alterado" };
+              return (
+                <div key={l.id} className="flex items-start gap-3 p-3">
+                  <cfg.Icon className={`h-4 w-4 mt-0.5 shrink-0 ${cfg.cor}`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {cfg.txt} — {l.cargo}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {l.acao === "edicao" && l.valor_anterior != null
+                        ? `${brl(Number(l.valor_anterior))} → ${brl(Number(l.valor_novo ?? 0))}`
+                        : l.acao === "adicao"
+                          ? brl(Number(l.valor_novo ?? 0))
+                          : l.valor_anterior != null
+                            ? `Valor removido: ${brl(Number(l.valor_anterior))}`
+                            : "—"}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Por {l.usuario || "Usuário não identificado"} • {dataHora(l.created_at)}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+      <>
       {/* Adicionar */}
       <div className="rounded-xl border bg-card p-4 space-y-3">
+
         <h2 className="text-sm font-semibold">Adicionar cargo</h2>
         <div className="grid grid-cols-1 sm:grid-cols-[1fr,180px,auto] gap-2">
           <input
