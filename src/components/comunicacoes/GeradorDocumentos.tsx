@@ -442,21 +442,22 @@ export function GeradorDocumentos() {
               )}
 
               <div className="space-y-1">
-                <Label className="text-xs font-semibold">{tipoDoc === "recibo" ? "Referência do pagamento" : "3. Contexto / Motivo"}</Label>
+                <Label className="text-xs font-semibold">{tipoDoc === "recibo" ? "Referência do pagamento" : usarIA ? "3. Descreva sua ideia (a IA desenvolve o texto)" : "3. Contexto / Motivo"}</Label>
                 <Textarea
-                  placeholder={tipoDoc === "recibo" ? "Ex: Adiantamento salarial referente à obra Terrace - novembro/2025" : "Ex: Miguel foi flagrado sem cinto de segurança em trabalho em altura na obra Terrace, mesmo após advertência verbal..."}
+                  placeholder={tipoDoc === "recibo" ? "Ex: Adiantamento salarial referente à obra Terrace - novembro/2025" : "Ex: quero avisar a equipe da obra Terrace que a partir de segunda o horário muda para 7h às 16h por causa do calor..."}
                   className="bg-background resize-none"
                   rows={5}
                   value={contextoUsuario}
                   onChange={e => setContextoUsuario(e.target.value)}
                 />
-                <p className="text-[10px] text-muted-foreground"><Info className="inline h-3 w-3 mr-1" />O sistema aplica automaticamente a fundamentação legal CLT.</p>
+                <p className="text-[10px] text-muted-foreground"><Info className="inline h-3 w-3 mr-1" />{usarIA ? "Escreva a ideia em linguagem simples — a IA transforma em documento oficial com a fundamentação adequada." : "O sistema aplica automaticamente a fundamentação legal CLT."}</p>
               </div>
 
-              <Button onClick={handleGerar} disabled={gerando || !funcId} className="w-full gap-2 mt-2">
+              <Button onClick={handleGerar} disabled={gerando || (!funcId && !isComunicadoGeral)} className="w-full gap-2 mt-2">
                 {gerando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bot className="h-4 w-4" />}
-                {gerando ? "Formatando..." : "Gerar Documento"}
+                {gerando ? "Gerando..." : usarIA ? "Gerar com IA" : "Gerar Documento"}
               </Button>
+
             </CardContent>
           </Card>
         </div>
