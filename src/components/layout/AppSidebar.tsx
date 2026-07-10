@@ -30,6 +30,7 @@ import {
   Bell,
   Upload,
   ShieldAlert,
+  DollarSign,
 } from "lucide-react";
 import { verificarAlertas } from "@/utils/seguranca";
 import logoMark from "@/assets/logo-iu-mark.svg";
