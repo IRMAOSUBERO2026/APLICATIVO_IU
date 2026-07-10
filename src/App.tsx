@@ -44,6 +44,7 @@ import SegurancaTrabalho from "./pages/rh/SegurancaTrabalho";
 import SegurancaDashboard from "./pages/rh/SegurancaDashboard";
 import ImportacaoHistoricoASO from "./pages/rh/ImportacaoHistoricoASO";
 import FichaSegurancaFuncionario from "./pages/rh/FichaSegurancaFuncionario";
+import SalariosBaseCargo from "./pages/rh/SalariosBaseCargo";
 
 // 6. Documentos
 import DocumentacaoMensal from "./pages/documentos/DocumentacaoMensal";
