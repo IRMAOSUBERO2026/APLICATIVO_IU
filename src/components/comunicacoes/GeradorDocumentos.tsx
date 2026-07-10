@@ -404,14 +404,27 @@ export function GeradorDocumentos() {
                 <Select value={tipoDoc} onValueChange={(v: TipoDocumentoOficial) => setTipoDoc(v)}>
                   <SelectTrigger className="bg-background"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="advertencia">Advertência Disciplinar</SelectItem>
-                    <SelectItem value="suspensao">Suspensão de Contrato</SelectItem>
-                    <SelectItem value="comunicado">Comunicado Formal</SelectItem>
-                    <SelectItem value="recibo">Recibo de Pagamento Avulso</SelectItem>
-                    <SelectItem value="justificativa_falta">Justificativa de Faltas</SelectItem>
+                    {(Object.keys(TIPO_LABEL) as TipoDocumentoOficial[]).map(k => (
+                      <SelectItem key={k} value={k}>{TIPO_LABEL[k]}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Data do Documento</Label>
+                <Input
+                  type="date"
+                  value={dataDoc}
+                  onChange={e => setDataDoc(e.target.value)}
+                  className="bg-background"
+                />
+              </div>
+
+              <label className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2 cursor-pointer">
+                <input type="checkbox" checked={usarIA} onChange={e => setUsarIA(e.target.checked)} className="rounded" />
+                <span className="text-xs font-medium flex items-center gap-1"><Bot className="h-3.5 w-3.5 text-primary" /> Desenvolver texto com IA a partir da minha ideia</span>
+              </label>
 
               {tipoDoc === "recibo" && (
                 <div className="space-y-1">
