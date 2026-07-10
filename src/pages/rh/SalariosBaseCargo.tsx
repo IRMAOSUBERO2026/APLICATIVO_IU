@@ -80,6 +80,7 @@ export default function SalariosBaseCargo() {
       toast({ title: "Valor inválido", description: "Informe um valor numérico válido.", variant: "destructive" });
       return;
     }
+    const anterior = lista.find((r) => r.id === id)?.salario_base ?? null;
     setSalvando(id);
     const { error } = await supabase
       .from("salarios_base_cargo")
@@ -90,6 +91,7 @@ export default function SalariosBaseCargo() {
       toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
       return;
     }
+    await registrarLog({ cargo, acao: "edicao", valor_anterior: anterior !== null ? Number(anterior) : null, valor_novo: valor });
     toast({ title: "Salário atualizado", description: `${cargo}: ${brl(valor)}` });
     setEditValores((p) => {
       const n = { ...p };
@@ -117,6 +119,7 @@ export default function SalariosBaseCargo() {
       toast({ title: "Erro ao adicionar", description: error.message, variant: "destructive" });
       return;
     }
+    await registrarLog({ cargo, acao: "adicao", valor_anterior: null, valor_novo: valor });
     toast({ title: "Cargo adicionado", description: `${cargo}: ${brl(valor)}` });
     setNovoCargo("");
     setNovoValor("");
