@@ -130,6 +130,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/obras" element={<Obras />} />
             <Route path="/rh" element={<RH />} />
+            <Route path="/rh/salarios-base" element={<SalariosBaseCargo />} />
             <Route path="/rh/seguranca/painel" element={<SegurancaDashboard />} />
             <Route path="/rh/seguranca/importar" element={<ImportacaoHistoricoASO />} />
             <Route path="/rh/seguranca/funcionario/:funcionarioId" element={<FichaSegurancaFuncionario />} />
