@@ -1,12 +1,38 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useSalariosBase } from "@/hooks/useSalariosBase";
 import { CARGOS_PADRAO } from "@/lib/cargosPadrao";
-import { DollarSign, Plus, Save, Search, Trash2, RefreshCw } from "lucide-react";
+import { getUsuarioImpressao } from "@/lib/usuarioImpressao";
+import { DollarSign, Plus, Save, Search, Trash2, RefreshCw, History, PlusCircle, Pencil, MinusCircle } from "lucide-react";
 
 const brl = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+const dataHora = (iso: string) =>
+  new Date(iso).toLocaleString("pt-BR", {
+    day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+
+interface LogSalario {
+  id: string;
+  cargo: string;
+  acao: string;
+  valor_anterior: number | null;
+  valor_novo: number | null;
+  usuario: string | null;
+  created_at: string;
+}
+
+async function registrarLog(entrada: {
+  cargo: string;
+  acao: "adicao" | "edicao" | "remocao";
+  valor_anterior: number | null;
+  valor_novo: number | null;
+}) {
+  const usuario = getUsuarioImpressao().label || "Usuário não identificado";
+  await supabase.from("salarios_base_cargo_log").insert({ ...entrada, usuario });
+}
 
 export default function SalariosBaseCargo() {
   const { lista, loading, carregar } = useSalariosBase();
