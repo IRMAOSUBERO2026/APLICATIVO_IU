@@ -2,8 +2,15 @@ export type TipoDocumentoOficial =
   | "advertencia"
   | "suspensao"
   | "comunicado"
+  | "comunicado_geral"
   | "recibo"
-  | "justificativa_falta";
+  | "justificativa_falta"
+  | "aviso_ferias"
+  | "convocacao"
+  | "mudanca_horario"
+  | "seguranca_trabalho"
+  | "elogio"
+  | "aviso_previo";
 
 interface RequisicaoDocumento {
   tipo: TipoDocumentoOficial;
@@ -11,6 +18,7 @@ interface RequisicaoDocumento {
   cargoFuncionario: string;
   nomeEmpresa: string;
   contexto: string;
+  data?: string; // ISO yyyy-mm-dd — data do documento (opcional)
 }
 
 /**
@@ -19,7 +27,9 @@ interface RequisicaoDocumento {
  */
 export function gerarTextoDocumentoOficial(req: RequisicaoDocumento): string {
   const { tipo, nomeFuncionario, cargoFuncionario, nomeEmpresa, contexto } = req;
-  const dataExtenso = new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" }).format(new Date());
+  const dataExtenso = new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" }).format(
+    req.data ? new Date(req.data + "T12:00:00") : new Date()
+  );
 
   let textoBase = "";
 
