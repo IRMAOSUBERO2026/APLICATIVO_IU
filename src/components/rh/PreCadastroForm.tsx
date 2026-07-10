@@ -252,6 +252,7 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
               <FieldInput label="Data de Nascimento" value={form.nascimento} onChange={v => update("nascimento", v)} type="date" required />
               <FieldSelect label="Estado Civil" value={form.estadoCivil} onChange={v => update("estadoCivil", v)} options={["Solteiro(a)", "Casado(a)", "Divorciado(a)", "Viúvo(a)", "União Estável"]} />
               <FieldSelect label="Nacionalidade" value={form.nacionalidade} onChange={v => update("nacionalidade", v)} options={["Brasileiro(a)", "Estrangeiro(a)"]} required />
+              <FieldInput label="Naturalidade" value={form.naturalidade} onChange={v => update("naturalidade", v)} placeholder="Cidade/UF de nascimento" />
               {isEstrangeiro && (
                 <>
                   <FieldInput label="RNE (Registro Nacional de Estrangeiro)" value={form.rne} onChange={v => update("rne", v)} required placeholder="Nº do RNE" />
