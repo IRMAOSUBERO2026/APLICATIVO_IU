@@ -177,7 +177,7 @@ export default function EntregaEPI() {
         ca_numero: item.ca_numero || null,
         motivo: item.observacoes,
         observacoes: `Entrega via sistema - ${item.observacoes}`,
-        data_entrega: new Date().toISOString(),
+        data_entrega: form.data_entrega ? new Date(form.data_entrega + "T12:00:00").toISOString() : new Date().toISOString(),
         status: "ativo",
         confirmacao_tipo: "pendente",
       }));
