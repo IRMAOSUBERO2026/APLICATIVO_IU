@@ -271,6 +271,7 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
               <FieldInput label="CPF" value={form.cpf} onChange={v => update("cpf", v)} placeholder="000.000.000-00" required />
               <FieldInput label="RG" value={form.rg} onChange={v => update("rg", v)} required />
               <FieldInput label="PIS/PASEP" value={form.pis} onChange={v => update("pis", v)} required />
+              <FieldInput label="Carteira de Reservista" value={form.reservista} onChange={v => update("reservista", v)} placeholder="Nº do certificado militar" />
               <FieldInput label="CTPS" value={form.ctps} onChange={v => update("ctps", v)} required />
               <FieldInput label="Série CTPS" value={form.serieCtps} onChange={v => update("serieCtps", v)} />
               <FieldInput label="Título de Eleitor" value={form.tituloEleitor} onChange={v => update("tituloEleitor", v)} />
