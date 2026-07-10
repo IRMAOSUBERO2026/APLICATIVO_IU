@@ -310,6 +310,9 @@ export default function SalariosBaseCargo() {
           );
         })}
       </div>
+      </>
+      )}
     </div>
+
   );
 }
