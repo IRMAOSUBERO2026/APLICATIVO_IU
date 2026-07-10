@@ -88,6 +88,16 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
 
   const update = (field: string, value: string | number) => setForm(prev => ({ ...prev, [field]: value }));
 
+  // Ao definir o cargo, sugere automaticamente o salário-base da convenção
+  // (somente se ainda não houver salário informado).
+  const updateCargo = (value: string) => {
+    setForm(prev => {
+      const base = salarioBasePorCargo(value);
+      const preencheSalario = base !== null && (!prev.salarioBase || Number(prev.salarioBase) === 0);
+      return { ...prev, cargo: value, salarioBase: preencheSalario ? base! : prev.salarioBase };
+    });
+  };
+
   const isEstrangeiro = form.nacionalidade !== "Brasileiro(a)" && form.nacionalidade !== "Brasileiro" && form.nacionalidade !== "" && form.nacionalidade !== "Brasileira";
   const needsDependentes = form.estadoCivil === "Casado(a)" || form.estadoCivil === "União Estável" || Number(form.dependentes) > 0;
 
