@@ -321,7 +321,7 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
                 <input
                   list="cargos-padrao-list"
                   value={form.cargo}
-                  onChange={e => update("cargo", e.target.value)}
+                  onChange={e => updateCargo(e.target.value)}
                   placeholder="Selecione ou digite..."
                   className="w-full rounded-lg border bg-card py-2 px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
