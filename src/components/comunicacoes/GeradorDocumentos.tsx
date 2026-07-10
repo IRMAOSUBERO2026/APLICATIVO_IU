@@ -249,8 +249,11 @@ export function GeradorDocumentos() {
   const funcSelecionado = funcionarios.find(f => f.id === funcId);
 
   const buildBlob = async (): Promise<Blob | null> => {
-    if (!funcSelecionado) return null;
+    // Comunicado geral pode não ter funcionário específico selecionado.
+    if (!funcSelecionado && !isComunicadoGeral) return null;
+    const empresaPdf = funcSelecionado?.empresa || funcionarios[0]?.empresa || null;
     if (tipoDoc === "recibo") {
+      if (!funcSelecionado) return null;
       const valorNum = parseFloat((reciboValor || "0").replace(/\./g, "").replace(",", "."));
       if (!valorNum || valorNum <= 0) {
         toast({ title: "Informe o valor do recibo", variant: "destructive" });
@@ -268,7 +271,7 @@ export function GeradorDocumentos() {
         referencia: contextoUsuario || "Pagamento avulso",
       });
     }
-    return await gerarPdfA4(textoGerado, "doc.pdf", funcSelecionado.empresa);
+    return await gerarPdfA4(textoGerado, "doc.pdf", empresaPdf);
   };
 
   const handleDownload = async () => {
