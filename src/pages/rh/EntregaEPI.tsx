@@ -60,7 +60,7 @@ export default function EntregaEPI() {
   const [showNewDelivery, setShowNewDelivery] = useState(false);
 
   const [selectedItems, setSelectedItems] = useState<any[]>([]);
-  const [form, setForm] = useState({ funcionario_id: "", obra_id: "central" });
+  const [form, setForm] = useState({ funcionario_id: "", obra_id: "central", data_entrega: format(new Date(), "yyyy-MM-dd") });
 
   const [editingDelivery, setEditingDelivery] = useState<any>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
