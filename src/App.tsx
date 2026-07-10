@@ -44,6 +44,7 @@ import SegurancaTrabalho from "./pages/rh/SegurancaTrabalho";
 import SegurancaDashboard from "./pages/rh/SegurancaDashboard";
 import ImportacaoHistoricoASO from "./pages/rh/ImportacaoHistoricoASO";
 import FichaSegurancaFuncionario from "./pages/rh/FichaSegurancaFuncionario";
+import SalariosBaseCargo from "./pages/rh/SalariosBaseCargo";
 
 // 6. Documentos
 import DocumentacaoMensal from "./pages/documentos/DocumentacaoMensal";
@@ -129,6 +130,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/obras" element={<Obras />} />
             <Route path="/rh" element={<RH />} />
+            <Route path="/rh/salarios-base" element={<SalariosBaseCargo />} />
             <Route path="/rh/seguranca/painel" element={<SegurancaDashboard />} />
             <Route path="/rh/seguranca/importar" element={<ImportacaoHistoricoASO />} />
             <Route path="/rh/seguranca/funcionario/:funcionarioId" element={<FichaSegurancaFuncionario />} />

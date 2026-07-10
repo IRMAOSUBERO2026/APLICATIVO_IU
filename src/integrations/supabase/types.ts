@@ -2512,6 +2512,30 @@ export type Database = {
         }
         Relationships: []
       }
+      salarios_base_cargo: {
+        Row: {
+          cargo: string
+          created_at: string
+          id: string
+          salario_base: number
+          updated_at: string
+        }
+        Insert: {
+          cargo: string
+          created_at?: string
+          id?: string
+          salario_base?: number
+          updated_at?: string
+        }
+        Update: {
+          cargo?: string
+          created_at?: string
+          id?: string
+          salario_base?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       seguranca_contratos_assessoria: {
         Row: {
           created_at: string
