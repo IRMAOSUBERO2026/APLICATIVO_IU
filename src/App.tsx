@@ -71,6 +71,7 @@ import ConsultaRelatorioRHiD from "./pages/ponto/ConsultaRelatorioRHiD";
 
 // 9. Portal do Colaborador
 import LoginPortal from "./pages/portal/LoginPortal";
+import Auth from "./pages/auth/Auth";
 import PortalColaborador from "./pages/portal/PortalColaborador";
 import MeuPonto from "./pages/portal/MeuPonto";
 import Justificativas from "./pages/portal/Justificativas";
