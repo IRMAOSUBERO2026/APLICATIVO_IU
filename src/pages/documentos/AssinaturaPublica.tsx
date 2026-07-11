@@ -48,48 +48,24 @@ export default function AssinaturaPublica() {
   }, [token]);
 
   const loadAssinatura = async () => {
-    const { data: assinatura, error } = await supabase
-      .from("assinaturas_digitais")
-      .select("*")
-      .eq("token_acesso", token!)
-      .single();
-
-    if (error || !assinatura) { setStep("not_found"); return; }
-
-    // Load funcionario and empresa
-    const [funcRes, empRes] = await Promise.all([
-      supabase.from("funcionarios").select("nome, cpf, foto_url").eq("id", assinatura.funcionario_id).single(),
-      supabase.from("empresas").select("razao_social, nome_fantasia, logo_url").eq("id", assinatura.empresa_id).single(),
-    ]);
-
+    const { data: resp, error } = await supabase.functions.invoke("assinatura-publica", {
+      body: { action: "get", token },
+    });
+    if (error || !resp || (resp as any).error || !(resp as any).assinatura) {
+      setStep("not_found");
+      return;
+    }
+    const { assinatura, funcionario, empresa, state } = resp as any;
     const fullData: AssinaturaData = {
       ...assinatura,
       status: assinatura.status as AssinaturaStatus,
-      funcionario: funcRes.data || undefined,
-      empresa: empRes.data || undefined,
+      funcionario: funcionario || undefined,
+      empresa: empresa || undefined,
     };
     setData(fullData);
 
-    // Check expiration
-    if (new Date(assinatura.token_expiracao) < new Date()) {
-      await supabase.from("assinaturas_digitais").update({ status: "expirado" }).eq("id", assinatura.id);
-      setStep("expired");
-      return;
-    }
-
-    if (assinatura.status === "assinado" || assinatura.status === "recusado") {
-      setStep("already");
-      return;
-    }
-
-    // Mark as visualizado
-    if (assinatura.status === "pendente") {
-      await supabase.from("assinaturas_digitais").update({
-        status: "visualizado",
-        data_visualizacao: new Date().toISOString(),
-      }).eq("id", assinatura.id);
-    }
-
+    if (state === "expired") { setStep("expired"); return; }
+    if (state === "already") { setStep("already"); return; }
     setStep("cpf");
   };
 
@@ -100,10 +76,16 @@ export default function AssinaturaPublica() {
     );
   };
 
-  const verifyCPF = () => {
+  const verifyCPF = async () => {
     const cleanInput = cpfInput.replace(/\D/g, "");
-    const cleanStored = data?.funcionario?.cpf?.replace(/\D/g, "") || "";
-    if (cleanInput === cleanStored && cleanInput.length === 11) {
+    if (cleanInput.length !== 11) {
+      toast({ title: "CPF inválido", description: "Informe os 11 dígitos do CPF.", variant: "destructive" });
+      return;
+    }
+    const { data: resp } = await supabase.functions.invoke("assinatura-publica", {
+      body: { action: "confirm-cpf", token, cpf: cleanInput },
+    });
+    if ((resp as any)?.ok) {
       setStep("selfie");
     } else {
       toast({ title: "CPF não confere", description: "O CPF informado não corresponde ao cadastro.", variant: "destructive" });
@@ -122,18 +104,20 @@ export default function AssinaturaPublica() {
   const submitSelfie = async () => {
     if (!selfieFile || !data) return;
     setProcessing(true);
-    const path = `assinaturas/${data.id}/selfie_${Date.now()}.jpg`;
-    const { error: uploadErr } = await supabase.storage.from("documentos").upload(path, selfieFile, { upsert: true });
-    if (uploadErr) {
-      toast({ title: "Erro no upload", description: uploadErr.message, variant: "destructive" });
+    const dataUrl: string = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result as string);
+      r.onerror = reject;
+      r.readAsDataURL(selfieFile);
+    });
+    const { data: resp, error } = await supabase.functions.invoke("assinatura-publica", {
+      body: { action: "selfie", token, dataUrl },
+    });
+    if (error || (resp as any)?.error) {
+      toast({ title: "Erro no upload", description: (resp as any)?.error || error?.message, variant: "destructive" });
       setProcessing(false);
       return;
     }
-    const { data: urlData } = supabase.storage.from("documentos").getPublicUrl(path);
-    await supabase.from("assinaturas_digitais").update({
-      selfie_url: urlData.publicUrl,
-      cpf_confirmado: true,
-    }).eq("id", data.id);
     setProcessing(false);
     setStep("review");
   };
@@ -141,12 +125,9 @@ export default function AssinaturaPublica() {
   const assinar = async () => {
     if (!data) return;
     setProcessing(true);
-    await supabase.from("assinaturas_digitais").update({
-      status: "assinado",
-      data_assinatura: new Date().toISOString(),
-      ip_assinatura: "browser",
-      user_agent: navigator.userAgent,
-    }).eq("id", data.id);
+    await supabase.functions.invoke("assinatura-publica", {
+      body: { action: "sign", token, userAgent: navigator.userAgent },
+    });
     setProcessing(false);
     setStep("success");
   };
@@ -154,14 +135,13 @@ export default function AssinaturaPublica() {
   const recusar = async () => {
     if (!data) return;
     setProcessing(true);
-    await supabase.from("assinaturas_digitais").update({
-      status: "recusado",
-      motivo_recusa: motivoRecusa || "Recusado pelo funcionário",
-      data_assinatura: new Date().toISOString(),
-    }).eq("id", data.id);
+    await supabase.functions.invoke("assinatura-publica", {
+      body: { action: "refuse", token, motivo: motivoRecusa || "Recusado pelo funcionário" },
+    });
     setProcessing(false);
     setStep("refused");
   };
+
 
   const tipoLabel: Record<string, string> = {
     ficha_epi: "Ficha de EPI",

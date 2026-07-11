@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Link } from "react-router-dom";
 
 export default function LoginPortal() {
   const [cpf, setCpf] = useState("");
@@ -19,77 +20,37 @@ export default function LoginPortal() {
     setLoading(true);
 
     try {
-      // Remove any formatting from CPF
       const cleanCpf = cpf.replace(/[^\d]/g, "");
-      
-      if (cleanCpf.length !== 11) {
-        throw new Error("CPF inválido. Deve conter 11 dígitos.");
-      }
+      if (cleanCpf.length !== 11) throw new Error("CPF inválido. Deve conter 11 dígitos.");
+      if (pin.length < 4) throw new Error("O PIN deve ter no mínimo 4 dígitos.");
 
-      if (pin.length < 4) {
-        throw new Error("O PIN deve ter no mínimo 4 dígitos.");
-      }
-
-      // Busca o funcionário pelo CPF. O banco pode armazenar com ou sem máscara,
-      // então buscamos por ambos os formatos.
-      const maskedCpf = cleanCpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-      const { data: funcData, error: funcError } = await supabase
-        .from("funcionarios")
-        .select("id, nome, cargo")
-        .or(`cpf.eq.${cleanCpf},cpf.eq.${maskedCpf}`)
-        .maybeSingle();
-
-      if (funcError || !funcData) {
-        throw new Error("Funcionário não encontrado com este CPF.");
-      }
-
-      // Verifica o PIN na tabela de credenciais.
-      // A coluna "perfil_acesso" pode não existir em todos os bancos, então
-      // buscamos primeiro com ela e, se houver erro de coluna, refazemos sem ela.
-      let credData: { pin?: string; perfil_acesso?: string } | null = null;
-
-      const comPerfil = await supabase
-        .from("portal_credentials")
-        .select("pin, perfil_acesso")
-        .eq("funcionario_id", funcData.id)
-        .maybeSingle();
-
-      if (comPerfil.error) {
-        // Provável ausência da coluna perfil_acesso (PostgREST 42703) — refaz só com o PIN.
-        const semPerfil = await supabase
-          .from("portal_credentials")
-          .select("pin")
-          .eq("funcionario_id", funcData.id)
-          .maybeSingle();
-        credData = semPerfil.data as any;
-      } else {
-        credData = comPerfil.data as any;
-      }
-
-      if (!credData || credData.pin !== pin) {
-        throw new Error("PIN incorreto ou não configurado.");
-      }
-
-      // Define o perfil de acesso.
-      // 1) Cargos de direção/administração têm acesso Master a todo o sistema.
-      // 2) Caso contrário, usa o perfil liberado pelo RH (ex.: "diario").
-      // 3) Padrão: colaborador (apenas portal).
-      const cargo = (funcData.cargo || "").toLowerCase();
-      const isMaster = /(diretor|administrador|admin|master|gestor|s[oó]cio|propriet)/.test(cargo);
-      const perfilSalvo = (credData.perfil_acesso || "colaborador").toLowerCase();
-      const perfil = isMaster ? "admin" : perfilSalvo === "diario" ? "diario" : "colaborador";
-
-      // Login bem sucedido - simulamos a sessão salvando o ID do funcionário
-      localStorage.setItem("portal_user_id", funcData.id);
-      localStorage.setItem("portal_user_nome", funcData.nome);
-      localStorage.setItem("portal_perfil_acesso", perfil);
-
-      toast({
-        title: "Login realizado com sucesso!",
-        description: `Bem-vindo, ${funcData.nome}.`,
+      // Validação e provisionamento são feitos no servidor (service role),
+      // que retorna as credenciais de sessão para autenticar no Supabase Auth.
+      const { data, error } = await supabase.functions.invoke("portal-login", {
+        body: { cpf: cleanCpf, pin },
       });
 
-      // Direciona conforme o perfil.
+      if (error || !data || (data as any).error) {
+        throw new Error((data as any)?.error || "Não foi possível entrar. Verifique CPF e PIN.");
+      }
+
+      const { email, password, funcionario_id, nome, perfil } = data as {
+        email: string;
+        password: string;
+        funcionario_id: string;
+        nome: string;
+        perfil: string;
+      };
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) throw new Error("Falha ao iniciar a sessão. Tente novamente.");
+
+      localStorage.setItem("portal_user_id", funcionario_id);
+      localStorage.setItem("portal_user_nome", nome);
+      localStorage.setItem("portal_perfil_acesso", perfil);
+
+      toast({ title: "Login realizado com sucesso!", description: `Bem-vindo, ${nome}.` });
+
       const destino = perfil === "admin" ? "/" : perfil === "diario" ? "/diario-obra-mobile" : "/portal";
       navigate(destino);
     } catch (error: any) {
@@ -106,8 +67,6 @@ export default function LoginPortal() {
   const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, "");
     if (value.length > 11) value = value.slice(0, 11);
-    
-    // Formata CPF: 000.000.000-00
     if (value.length > 9) {
       value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
     } else if (value.length > 6) {
@@ -115,7 +74,6 @@ export default function LoginPortal() {
     } else if (value.length > 3) {
       value = value.replace(/(\d{3})(\d{1,3})/, "$1.$2");
     }
-    
     setCpf(value);
   };
 
@@ -161,18 +119,23 @@ export default function LoginPortal() {
                 maxLength={6}
               />
             </div>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               className="w-full py-6 text-lg font-semibold shadow-md hover:shadow-lg transition-all"
               disabled={loading}
             >
               {loading ? "Entrando..." : "Entrar"}
             </Button>
           </form>
-          
+
           <div className="mt-8 text-center text-sm text-gray-500">
             <p>Primeiro acesso ou esqueceu o PIN?</p>
             <p className="font-medium mt-1">Procure o setor de RH/DP da sua obra.</p>
+            <p className="mt-4">
+              <Link to="/auth" className="text-primary font-medium hover:underline">
+                Acesso administrativo (e-mail e senha)
+              </Link>
+            </p>
           </div>
         </CardContent>
       </Card>

@@ -71,6 +71,7 @@ import ConsultaRelatorioRHiD from "./pages/ponto/ConsultaRelatorioRHiD";
 
 // 9. Portal do Colaborador
 import LoginPortal from "./pages/portal/LoginPortal";
+import Auth from "./pages/auth/Auth";
 import PortalColaborador from "./pages/portal/PortalColaborador";
 import MeuPonto from "./pages/portal/MeuPonto";
 import Justificativas from "./pages/portal/Justificativas";
@@ -101,6 +102,7 @@ const App = () => (
         <Routes>
           {/* ===== Rotas públicas (sem login) ===== */}
           <Route path="/login-portal" element={<LoginPortal />} />
+          <Route path="/auth" element={<Auth />} />
           <Route path="/assinar" element={<AssinaturaPublica />} />
           {/* Portal público de assinatura digital de EPI */}
           <Route path="/portal/epi/assinar/:token" element={<AssinaturaEPI />} />
