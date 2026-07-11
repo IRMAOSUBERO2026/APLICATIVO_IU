@@ -37,19 +37,22 @@ serve(async (req) => {
       })
     }
 
-    // Check role from profiles
-    const { data: profile } = await supabaseAdmin
-      .from('profiles')
+    // Authorize via user_roles (staff only: admin/gestor)
+    const { data: roles } = await supabaseAdmin
+      .from('user_roles')
       .select('role')
-      .eq('id', user.id)
-      .single()
+      .eq('user_id', user.id)
 
-    if (!profile || (profile.role !== 'admin' && profile.role !== 'rh')) {
+    const roleList = (roles || []).map((r: any) => r.role)
+    const isAllowed = roleList.includes('admin') || roleList.includes('gestor')
+
+    if (!isAllowed) {
       return new Response(JSON.stringify({ error: 'Forbidden' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 403,
       })
     }
+
 
     if (!cpf || !pin || !funcionarioId) {
        return new Response(JSON.stringify({ error: 'Missing required fields' }), {
