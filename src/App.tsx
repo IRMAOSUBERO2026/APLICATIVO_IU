@@ -102,6 +102,7 @@ const App = () => (
         <Routes>
           {/* ===== Rotas públicas (sem login) ===== */}
           <Route path="/login-portal" element={<LoginPortal />} />
+          <Route path="/auth" element={<Auth />} />
           <Route path="/assinar" element={<AssinaturaPublica />} />
           {/* Portal público de assinatura digital de EPI */}
           <Route path="/portal/epi/assinar/:token" element={<AssinaturaEPI />} />
