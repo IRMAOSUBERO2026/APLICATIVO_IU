@@ -139,14 +139,14 @@ export async function salvarFuncionarioComBonificacoes(
   funcionarioId: string,
   updateData: Record<string, unknown>,
 ) {
-  return runWithMissingColumnFallback(updateData, (data) =>
-    supabase.from("funcionarios").update(data as any).eq("id", funcionarioId),
+  return runWithMissingColumnFallback(updateData, async (data) =>
+    await supabase.from("funcionarios").update(data as any).eq("id", funcionarioId),
   );
 }
 
 export async function inserirFuncionarioComBonificacoes(insertData: Record<string, unknown>) {
-  return runWithMissingColumnFallback(insertData, (data) =>
-    supabase.from("funcionarios").insert(data as any),
+  return runWithMissingColumnFallback(insertData, async (data) =>
+    await supabase.from("funcionarios").insert(data as any),
   );
 }
 
