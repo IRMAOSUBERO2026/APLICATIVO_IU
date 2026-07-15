@@ -84,25 +84,70 @@ function isMissingBonificacoesColumnError(error: unknown): boolean {
   return (err?.code === "PGRST204" || err?.code === "42703") && /bonificacoes_padrao|schema cache/i.test(err.message || "");
 }
 
+/**
+ * Extrai o nome da coluna faltante de erros PostgREST do tipo
+ * "Could not find the 'X' column of 'funcionarios' in the schema cache"
+ * ou "column funcionarios.X does not exist".
+ */
+function extractMissingColumn(error: unknown): string | null {
+  const err = error as { code?: string; message?: string } | null;
+  if (!err) return null;
+  const msg = err.message || "";
+  const codeOk = err.code === "PGRST204" || err.code === "42703";
+  if (!codeOk && !/schema cache|does not exist/i.test(msg)) return null;
+
+  const m1 = msg.match(/'([a-zA-Z0-9_]+)'\s+column/);
+  if (m1?.[1]) return m1[1];
+  const m2 = msg.match(/column\s+["']?[a-zA-Z0-9_.]*\.?([a-zA-Z0-9_]+)["']?\s+does not exist/i);
+  if (m2?.[1]) return m2[1];
+  return null;
+}
+
+/**
+ * Sanitiza o payload removendo colunas que o PostgREST reclamar de "schema cache".
+ * Faz até 6 tentativas removendo uma coluna faltante a cada retry.
+ * Se `bonificacoes_padrao` for a coluna faltante, aplica o fallback histórico
+ * de codificar o bloco em `observacoes` para não perder o dado.
+ */
+async function runWithMissingColumnFallback(
+  payload: Record<string, unknown>,
+  runner: (data: Record<string, unknown>) => Promise<any>,
+) {
+  let current = { ...payload };
+  let last = await runner(current);
+
+  for (let i = 0; i < 6; i++) {
+    const missing = extractMissingColumn(last.error);
+    if (!missing || !(missing in current)) return last;
+
+    if (missing === "bonificacoes_padrao") {
+      const { bonificacoes_padrao, observacoes, ...rest } = current;
+      current = {
+        ...rest,
+        observacoes: encodeBonificacoesInObservacoes(observacoes, bonificacoes_padrao),
+      };
+    } else {
+      const { [missing]: _dropped, ...rest } = current;
+      current = rest;
+    }
+    last = await runner(current);
+  }
+  return last;
+}
+
 export async function salvarFuncionarioComBonificacoes(
   funcionarioId: string,
   updateData: Record<string, unknown>,
 ) {
-  const firstAttempt = await supabase.from("funcionarios").update(updateData as any).eq("id", funcionarioId);
-  if (!isMissingBonificacoesColumnError(firstAttempt.error)) return firstAttempt;
-
-  const { bonificacoes_padrao, observacoes, ...fallbackData } = updateData;
-  fallbackData.observacoes = encodeBonificacoesInObservacoes(observacoes, bonificacoes_padrao);
-  return supabase.from("funcionarios").update(fallbackData as any).eq("id", funcionarioId);
+  return runWithMissingColumnFallback(updateData, (data) =>
+    supabase.from("funcionarios").update(data as any).eq("id", funcionarioId),
+  );
 }
 
 export async function inserirFuncionarioComBonificacoes(insertData: Record<string, unknown>) {
-  const firstAttempt = await supabase.from("funcionarios").insert(insertData as any);
-  if (!isMissingBonificacoesColumnError(firstAttempt.error)) return firstAttempt;
-
-  const { bonificacoes_padrao, observacoes, ...fallbackData } = insertData;
-  fallbackData.observacoes = encodeBonificacoesInObservacoes(observacoes, bonificacoes_padrao);
-  return supabase.from("funcionarios").insert(fallbackData as any);
+  return runWithMissingColumnFallback(insertData, (data) =>
+    supabase.from("funcionarios").insert(data as any),
+  );
 }
 
 export async function buscarFuncionariosFolha(obraId: string) {
