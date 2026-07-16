@@ -180,17 +180,29 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
       nome_pai: form.nomePai,
       escolaridade: form.escolaridade,
       data_nascimento: form.nascimento || null,
-      dependentes: Number(form.dependentes) || 0,
+      dependentes: Number(form.dependentes) || depsClean.length || 0,
       rne: form.rne || null,
       data_entrada_pais: form.dataEntradaPais || null,
       naturalidade: form.naturalidade || null,
       carteira_reservista: form.reservista || null,
-      dependentes_json: dependentesList.length > 0 ? JSON.stringify(dependentesList) : "[]",
+      dependentes_json: depsClean,
       bonificacoes_padrao: bonificacoesPadrao as any,
     });
 
     if (error) {
-      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
+      const msg = error.message || "Erro desconhecido ao salvar.";
+      let hint = msg;
+      if (/duplicate key|already exists|unique/i.test(msg)) {
+        hint = "Já existe um funcionário com este CPF/registro. Verifique os dados.";
+      } else if (/violates row-level security|permission denied|not authorized/i.test(msg)) {
+        hint = "Sem permissão para salvar. Faça login novamente como administrador.";
+      } else if (/violates not-null|null value in column/i.test(msg)) {
+        const m = msg.match(/column "?([a-zA-Z0-9_]+)"?/);
+        hint = m ? `Campo obrigatório vazio: ${m[1]}.` : "Existe um campo obrigatório vazio.";
+      } else if (/invalid input syntax|invalid date/i.test(msg)) {
+        hint = "Formato inválido em uma data ou número. Revise os campos.";
+      }
+      toast({ title: "Erro ao salvar", description: hint, variant: "destructive" });
       return;
     }
 
