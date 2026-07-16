@@ -87,6 +87,17 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
   const { empresas, obras, obrasPorEmpresa } = useEmpresasObras();
   const { salarioPorCargo } = useSalariosBase();
 
+  // Reseta o estado toda vez que o diálogo é aberto para evitar dados residuais
+  // de uma sessão anterior (que causavam falhas silenciosas no insert).
+  useEffect(() => {
+    if (open) {
+      setForm(emptyForm);
+      setDependentesList([]);
+      setBonificacoesPadrao([]);
+      setStep("pessoal");
+    }
+  }, [open]);
+
   const update = (field: string, value: string | number) => setForm(prev => ({ ...prev, [field]: value }));
 
   // Ao definir o cargo, sugere automaticamente o salário-base da convenção
