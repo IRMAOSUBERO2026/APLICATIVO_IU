@@ -87,6 +87,17 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
   const { empresas, obras, obrasPorEmpresa } = useEmpresasObras();
   const { salarioPorCargo } = useSalariosBase();
 
+  // Reseta o estado toda vez que o diálogo é aberto para evitar dados residuais
+  // de uma sessão anterior (que causavam falhas silenciosas no insert).
+  useEffect(() => {
+    if (open) {
+      setForm(emptyForm);
+      setDependentesList([]);
+      setBonificacoesPadrao([]);
+      setStep("pessoal");
+    }
+  }, [open]);
+
   const update = (field: string, value: string | number) => setForm(prev => ({ ...prev, [field]: value }));
 
   // Ao definir o cargo, sugere automaticamente o salário-base da convenção
@@ -139,6 +150,8 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
       return;
     }
 
+    // Higieniza dependentes: remove linhas totalmente vazias
+    const depsClean = dependentesList.filter(d => d && (d.nome?.trim() || d.cpf?.trim() || d.dataNascimento));
     const { error } = await inserirFuncionarioComBonificacoes({
       nome: form.nome,
       cpf: form.cpf,
@@ -178,17 +191,29 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
       nome_pai: form.nomePai,
       escolaridade: form.escolaridade,
       data_nascimento: form.nascimento || null,
-      dependentes: Number(form.dependentes) || 0,
+      dependentes: Number(form.dependentes) || depsClean.length || 0,
       rne: form.rne || null,
       data_entrada_pais: form.dataEntradaPais || null,
       naturalidade: form.naturalidade || null,
       carteira_reservista: form.reservista || null,
-      dependentes_json: dependentesList.length > 0 ? JSON.stringify(dependentesList) : "[]",
+      dependentes_json: depsClean,
       bonificacoes_padrao: bonificacoesPadrao as any,
     });
 
     if (error) {
-      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
+      const msg = error.message || "Erro desconhecido ao salvar.";
+      let hint = msg;
+      if (/duplicate key|already exists|unique/i.test(msg)) {
+        hint = "Já existe um funcionário com este CPF/registro. Verifique os dados.";
+      } else if (/violates row-level security|permission denied|not authorized/i.test(msg)) {
+        hint = "Sem permissão para salvar. Faça login novamente como administrador.";
+      } else if (/violates not-null|null value in column/i.test(msg)) {
+        const m = msg.match(/column "?([a-zA-Z0-9_]+)"?/);
+        hint = m ? `Campo obrigatório vazio: ${m[1]}.` : "Existe um campo obrigatório vazio.";
+      } else if (/invalid input syntax|invalid date/i.test(msg)) {
+        hint = "Formato inválido em uma data ou número. Revise os campos.";
+      }
+      toast({ title: "Erro ao salvar", description: hint, variant: "destructive" });
       return;
     }
 
