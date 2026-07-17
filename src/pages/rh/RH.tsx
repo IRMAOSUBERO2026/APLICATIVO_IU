@@ -13,6 +13,7 @@ import { GestaoPinsModule } from "@/components/rh/GestaoPinsModule";
 import { TransferirFuncionario } from "@/components/rh/TransferirFuncionario";
 import { EditFuncionarioForm } from "@/components/rh/EditFuncionarioForm";
 import { MonitorAtividadesRH } from "@/components/rh/MonitorAtividadesRH";
+import { MovimentacaoMesPanel } from "@/components/rh/MovimentacaoMesPanel";
 import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 import { supabase } from "@/integrations/supabase/client";
 import { differenceInDays, parseISO, format, addDays } from "date-fns";
@@ -26,7 +27,7 @@ import { VirtualGridList } from "@/components/shared/VirtualGridList";
 const RH_GRID = "70px minmax(180px,1.6fr) 110px 140px 130px 130px 100px 130px 140px 110px 110px 170px";
 const RH_MIN_WIDTH = 1560;
 
-type TabKey = "lista" | "exames_tab" | "exames_modulo" | "gestao_pins" | "monitor";
+type TabKey = "lista" | "exames_tab" | "exames_modulo" | "gestao_pins" | "monitor" | "movimentacao";
 
 const STATUS_OPTIONS = [
   { value: "ativo", label: "Ativo" },
@@ -484,6 +485,9 @@ export default function RH() {
           <button onClick={() => setTab("gestao_pins")} className={`min-w-max flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${tab === "gestao_pins" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
             Acessos ao Portal
           </button>
+          <button onClick={() => setTab("movimentacao")} className={`min-w-max flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${tab === "movimentacao" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+            Contratações / Demissões
+          </button>
           <button onClick={() => setTab("monitor")} className={`min-w-max flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${tab === "monitor" ? "bg-card shadow-sm text-success" : "text-muted-foreground hover:text-foreground"}`}>
             Monitor / Mural
           </button>
@@ -491,6 +495,8 @@ export default function RH() {
 
         {tab === "monitor" ? (
           <MonitorAtividadesRH />
+        ) : tab === "movimentacao" ? (
+          <MovimentacaoMesPanel />
         ) : tab === "gestao_pins" ? (
           <GestaoPinsModule />
         ) : tab === "exames_modulo" ? (

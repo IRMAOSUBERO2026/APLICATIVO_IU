@@ -146,7 +146,7 @@ export async function salvarFuncionarioComBonificacoes(
 
 export async function inserirFuncionarioComBonificacoes(insertData: Record<string, unknown>) {
   return runWithMissingColumnFallback(insertData, async (data) =>
-    await supabase.from("funcionarios").insert(data as any),
+    await supabase.from("funcionarios").insert(data as any).select("id").single(),
   );
 }
 
