@@ -217,13 +217,36 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
       return;
     }
 
+    // Cria automaticamente as solicitações admissionais: ASO + NR-6, NR-12, NR-18, NR-35
+    const novoFuncId = (inserted as any)?.id;
+    let examesCriados = 0;
+    if (novoFuncId) {
+      const dataSol = form.admissao || new Date().toISOString().slice(0, 10);
+      const tiposIniciais = ["ASO Admissional", "NR-6", "NR-12", "NR-18", "NR-35"];
+      const rows = tiposIniciais.map((tipo) => ({
+        funcionario_id: novoFuncId,
+        empresa_id: form.empresa_id,
+        tipo_exame: tipo,
+        status: "pendente",
+        valor: 0,
+        data_solicitacao: dataSol,
+      }));
+      const { error: exErr } = await supabase.from("solicitacoes_exame").insert(rows as any);
+      if (!exErr) examesCriados = rows.length;
+    }
+
     onSave({});
     setForm(emptyForm);
     setDependentesList([]);
     setBonificacoesPadrao([]);
     setStep("pessoal");
     onOpenChange(false);
-    toast({ title: "Pré-cadastro salvo", description: `${form.nome} foi cadastrado com sucesso.` });
+    toast({
+      title: "Pré-cadastro salvo",
+      description: examesCriados
+        ? `${form.nome} cadastrado. ${examesCriados} solicitações (ASO + 4 NRs) criadas automaticamente em Gestão de Exames.`
+        : `${form.nome} foi cadastrado com sucesso.`,
+    });
   };
 
   const currentIdx = steps.findIndex(s => s.key === step);
