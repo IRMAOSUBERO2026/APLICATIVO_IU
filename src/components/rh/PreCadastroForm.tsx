@@ -152,7 +152,7 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
 
     // Higieniza dependentes: remove linhas totalmente vazias
     const depsClean = dependentesList.filter(d => d && (d.nome?.trim() || d.cpf?.trim() || d.dataNascimento));
-    const { error } = await inserirFuncionarioComBonificacoes({
+    const { data: inserted, error } = await inserirFuncionarioComBonificacoes({
       nome: form.nome,
       cpf: form.cpf,
       cargo: form.cargo,
