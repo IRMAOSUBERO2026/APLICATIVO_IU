@@ -485,6 +485,9 @@ export default function RH() {
           <button onClick={() => setTab("gestao_pins")} className={`min-w-max flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${tab === "gestao_pins" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
             Acessos ao Portal
           </button>
+          <button onClick={() => setTab("movimentacao")} className={`min-w-max flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${tab === "movimentacao" ? "bg-card shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+            Contratações / Demissões
+          </button>
           <button onClick={() => setTab("monitor")} className={`min-w-max flex-1 rounded-md px-4 py-2 text-sm font-medium transition-colors ${tab === "monitor" ? "bg-card shadow-sm text-success" : "text-muted-foreground hover:text-foreground"}`}>
             Monitor / Mural
           </button>
@@ -492,6 +495,8 @@ export default function RH() {
 
         {tab === "monitor" ? (
           <MonitorAtividadesRH />
+        ) : tab === "movimentacao" ? (
+          <MovimentacaoMesPanel />
         ) : tab === "gestao_pins" ? (
           <GestaoPinsModule />
         ) : tab === "exames_modulo" ? (
