@@ -13,6 +13,7 @@ import { GestaoPinsModule } from "@/components/rh/GestaoPinsModule";
 import { TransferirFuncionario } from "@/components/rh/TransferirFuncionario";
 import { EditFuncionarioForm } from "@/components/rh/EditFuncionarioForm";
 import { MonitorAtividadesRH } from "@/components/rh/MonitorAtividadesRH";
+import { MovimentacaoMesPanel } from "@/components/rh/MovimentacaoMesPanel";
 import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 import { supabase } from "@/integrations/supabase/client";
 import { differenceInDays, parseISO, format, addDays } from "date-fns";
