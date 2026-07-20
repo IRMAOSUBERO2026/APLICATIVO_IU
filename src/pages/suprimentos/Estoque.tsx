@@ -377,6 +377,41 @@ export default function Estoque() {
             <DialogFooter><Button onClick={saveMovimentacao} className="w-full">Confirmar Registro</Button></DialogFooter>
          </DialogContent>
       </Dialog>
+
+      {/* MODAL AJUSTE DE SALDO (MASTER) */}
+      <Dialog open={showAjuste} onOpenChange={setShowAjuste}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ajustar Saldo (Master)</DialogTitle>
+            <DialogDescription>
+              Correção manual do saldo. Uma movimentação de ajuste será registrada no extrato.
+            </DialogDescription>
+          </DialogHeader>
+          {ajusteProduto && (
+            <div className="space-y-4 py-2">
+              <div className="p-3 bg-slate-50 rounded-lg">
+                <p className="text-xs text-slate-500 uppercase font-bold">Material</p>
+                <p className="font-bold text-slate-800">{ajusteProduto.descricao}</p>
+                <p className="text-xs text-slate-500 mt-1">Saldo atual: <span className="font-black text-slate-700">{ajusteProduto.saldo} {ajusteProduto.unidade}</span></p>
+              </div>
+              <div className="space-y-1">
+                <Label>Novo Saldo</Label>
+                <Input type="number" value={ajusteNovoSaldo} onChange={e => setAjusteNovoSaldo(Number(e.target.value))} />
+              </div>
+              <div className="space-y-1">
+                <Label>Motivo do ajuste</Label>
+                <Input placeholder="Ex: Inventário físico, correção de contagem..." value={ajusteMotivo} onChange={e => setAjusteMotivo(e.target.value)} />
+              </div>
+              {Number(ajusteNovoSaldo) !== Number(ajusteProduto.saldo) && (
+                <div className={`p-2 rounded text-xs font-bold ${Number(ajusteNovoSaldo) > Number(ajusteProduto.saldo) ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
+                  {Number(ajusteNovoSaldo) > Number(ajusteProduto.saldo) ? "Entrada" : "Saída"} de {Math.abs(Number(ajusteNovoSaldo) - Number(ajusteProduto.saldo))} {ajusteProduto.unidade} será registrada.
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter><Button onClick={saveAjuste} className="w-full">Confirmar Ajuste</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
