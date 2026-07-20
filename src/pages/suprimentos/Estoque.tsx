@@ -253,7 +253,12 @@ export default function Estoque() {
                         </td>
                         <td className="px-5 py-4 text-right font-bold text-slate-300">{p.estoque_minimo}</td>
                         <td className="px-5 py-4 text-center">
-                           <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { setEditingProduto(p); setShowEditProduto(true); }}><Edit size={14} /></Button>
+                           <div className="flex items-center justify-center gap-1">
+                             <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { setEditingProduto(p); setShowEditProduto(true); }}><Edit size={14} /></Button>
+                             {isMaster && (
+                               <Button size="icon" variant="ghost" className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50" title="Ajustar saldo (Master)" onClick={() => openAjuste(p)}><Sliders size={14} /></Button>
+                             )}
+                           </div>
                         </td>
                       </tr>
                     ))}
