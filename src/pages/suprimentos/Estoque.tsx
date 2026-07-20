@@ -2,10 +2,11 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { 
   Package, Plus, ArrowDown, Search, AlertTriangle, 
   Edit, Trash2, CheckCircle2, ShoppingCart,
-  History, LayoutDashboard
+  History, LayoutDashboard, Sliders
 } from "lucide-react";
 import { format } from "date-fns";
 import { ScrollableTable } from "@/components/shared/ScrollableTable";
@@ -24,6 +25,8 @@ type TabKey = "produtos" | "movimentacoes" | "alertas";
 type SortKey = "descricao" | "codigo" | "saldo";
 
 export default function Estoque() {
+  const { role } = useAuth();
+  const isMaster = role === "admin";
   const [tab, setTab] = useState<TabKey>("produtos");
   const [produtos, setProdutos] = useState<any[]>([]);
   const [movimentacoes, setMovimentacoes] = useState<any[]>([]);
@@ -34,6 +37,10 @@ export default function Estoque() {
   const [showNewProduto, setShowNewProduto] = useState(false);
   const [showEditProduto, setShowEditProduto] = useState(false);
   const [showNewMov, setShowNewMov] = useState(false);
+  const [showAjuste, setShowAjuste] = useState(false);
+  const [ajusteProduto, setAjusteProduto] = useState<any>(null);
+  const [ajusteNovoSaldo, setAjusteNovoSaldo] = useState<number>(0);
+  const [ajusteMotivo, setAjusteMotivo] = useState("");
 
   const [np, setNp] = useState({ descricao: "", codigo: "", categoria: "Material", unidade: "un", estoque_minimo: 0, ncm: "", ca_numero: "", preco_unitario: 0 });
   const [editingProduto, setEditingProduto] = useState<any>(null);
@@ -151,6 +158,33 @@ export default function Estoque() {
     setShowNewMov(false); loadData();
   };
 
+  const openAjuste = (p: any) => {
+    setAjusteProduto(p);
+    setAjusteNovoSaldo(p.saldo);
+    setAjusteMotivo("");
+    setShowAjuste(true);
+  };
+
+  const saveAjuste = async () => {
+    if (!ajusteProduto) return;
+    const novo = Number(ajusteNovoSaldo);
+    if (Number.isNaN(novo)) { toast({ title: "Saldo inválido", variant: "destructive" }); return; }
+    const diff = novo - Number(ajusteProduto.saldo);
+    if (diff === 0) { toast({ title: "Saldo já está neste valor" }); return; }
+    const tipo = diff > 0 ? "entrada" : "saida";
+    const { error } = await supabase.from("movimentacoes_estoque").insert({
+      produto_id: ajusteProduto.id,
+      tipo,
+      quantidade: Math.abs(diff),
+      observacoes: `Ajuste manual (master): ${ajusteMotivo || "sem motivo informado"}`,
+      data_movimentacao: new Date().toISOString(),
+    });
+    if (error) { toast({ title: "Erro ao ajustar", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Saldo ajustado!", description: `${ajusteProduto.descricao}: ${ajusteProduto.saldo} → ${novo}` });
+    setShowAjuste(false);
+    loadData();
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6 p-4">
@@ -219,7 +253,12 @@ export default function Estoque() {
                         </td>
                         <td className="px-5 py-4 text-right font-bold text-slate-300">{p.estoque_minimo}</td>
                         <td className="px-5 py-4 text-center">
-                           <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { setEditingProduto(p); setShowEditProduto(true); }}><Edit size={14} /></Button>
+                           <div className="flex items-center justify-center gap-1">
+                             <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { setEditingProduto(p); setShowEditProduto(true); }}><Edit size={14} /></Button>
+                             {isMaster && (
+                               <Button size="icon" variant="ghost" className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50" title="Ajustar saldo (Master)" onClick={() => openAjuste(p)}><Sliders size={14} /></Button>
+                             )}
+                           </div>
                         </td>
                       </tr>
                     ))}
@@ -337,6 +376,41 @@ export default function Estoque() {
             </div>
             <DialogFooter><Button onClick={saveMovimentacao} className="w-full">Confirmar Registro</Button></DialogFooter>
          </DialogContent>
+      </Dialog>
+
+      {/* MODAL AJUSTE DE SALDO (MASTER) */}
+      <Dialog open={showAjuste} onOpenChange={setShowAjuste}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ajustar Saldo (Master)</DialogTitle>
+            <DialogDescription>
+              Correção manual do saldo. Uma movimentação de ajuste será registrada no extrato.
+            </DialogDescription>
+          </DialogHeader>
+          {ajusteProduto && (
+            <div className="space-y-4 py-2">
+              <div className="p-3 bg-slate-50 rounded-lg">
+                <p className="text-xs text-slate-500 uppercase font-bold">Material</p>
+                <p className="font-bold text-slate-800">{ajusteProduto.descricao}</p>
+                <p className="text-xs text-slate-500 mt-1">Saldo atual: <span className="font-black text-slate-700">{ajusteProduto.saldo} {ajusteProduto.unidade}</span></p>
+              </div>
+              <div className="space-y-1">
+                <Label>Novo Saldo</Label>
+                <Input type="number" value={ajusteNovoSaldo} onChange={e => setAjusteNovoSaldo(Number(e.target.value))} />
+              </div>
+              <div className="space-y-1">
+                <Label>Motivo do ajuste</Label>
+                <Input placeholder="Ex: Inventário físico, correção de contagem..." value={ajusteMotivo} onChange={e => setAjusteMotivo(e.target.value)} />
+              </div>
+              {Number(ajusteNovoSaldo) !== Number(ajusteProduto.saldo) && (
+                <div className={`p-2 rounded text-xs font-bold ${Number(ajusteNovoSaldo) > Number(ajusteProduto.saldo) ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
+                  {Number(ajusteNovoSaldo) > Number(ajusteProduto.saldo) ? "Entrada" : "Saída"} de {Math.abs(Number(ajusteNovoSaldo) - Number(ajusteProduto.saldo))} {ajusteProduto.unidade} será registrada.
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter><Button onClick={saveAjuste} className="w-full">Confirmar Ajuste</Button></DialogFooter>
+        </DialogContent>
       </Dialog>
     </AppLayout>
   );
