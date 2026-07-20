@@ -158,6 +158,37 @@ export default function Estoque() {
     setShowNewMov(false); loadData();
   };
 
+  const openAjuste = (p: any) => {
+    setAjusteProduto(p);
+    setAjusteNovoSaldo(p.saldo);
+    setAjusteMotivo("");
+    setShowAjuste(true);
+  };
+
+  const saveAjuste = async () => {
+    if (!ajusteProduto) return;
+    const novo = Number(ajusteNovoSaldo);
+    if (Number.isNaN(novo)) { toast({ title: "Saldo inválido", variant: "destructive" }); return; }
+    const diff = novo - Number(ajusteProduto.saldo);
+    if (diff === 0) { toast({ title: "Saldo já está neste valor" }); return; }
+    const tipo = diff > 0 ? "entrada" : "saida";
+    const { error } = await supabase.from("movimentacoes_estoque").insert({
+      produto_id: ajusteProduto.id,
+      tipo,
+      quantidade: Math.abs(diff),
+      observacoes: `Ajuste manual (master): ${ajusteMotivo || "sem motivo informado"}`,
+      data_movimentacao: new Date().toISOString(),
+    });
+    if (error) { toast({ title: "Erro ao ajustar", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Saldo ajustado!", description: `${ajusteProduto.descricao}: ${ajusteProduto.saldo} → ${novo}` });
+    setShowAjuste(false);
+    loadData();
+  };
+    if (error) { toast({ title: "Erro", variant: "destructive" }); return; }
+    toast({ title: "Registrado!" });
+    setShowNewMov(false); loadData();
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6 p-4">
