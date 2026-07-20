@@ -2,10 +2,11 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { 
   Package, Plus, ArrowDown, Search, AlertTriangle, 
   Edit, Trash2, CheckCircle2, ShoppingCart,
-  History, LayoutDashboard
+  History, LayoutDashboard, Sliders
 } from "lucide-react";
 import { format } from "date-fns";
 import { ScrollableTable } from "@/components/shared/ScrollableTable";
