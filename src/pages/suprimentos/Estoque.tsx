@@ -184,10 +184,6 @@ export default function Estoque() {
     setShowAjuste(false);
     loadData();
   };
-    if (error) { toast({ title: "Erro", variant: "destructive" }); return; }
-    toast({ title: "Registrado!" });
-    setShowNewMov(false); loadData();
-  };
 
   return (
     <AppLayout>
