@@ -25,6 +25,8 @@ type TabKey = "produtos" | "movimentacoes" | "alertas";
 type SortKey = "descricao" | "codigo" | "saldo";
 
 export default function Estoque() {
+  const { role } = useAuth();
+  const isMaster = role === "admin";
   const [tab, setTab] = useState<TabKey>("produtos");
   const [produtos, setProdutos] = useState<any[]>([]);
   const [movimentacoes, setMovimentacoes] = useState<any[]>([]);
@@ -35,6 +37,10 @@ export default function Estoque() {
   const [showNewProduto, setShowNewProduto] = useState(false);
   const [showEditProduto, setShowEditProduto] = useState(false);
   const [showNewMov, setShowNewMov] = useState(false);
+  const [showAjuste, setShowAjuste] = useState(false);
+  const [ajusteProduto, setAjusteProduto] = useState<any>(null);
+  const [ajusteNovoSaldo, setAjusteNovoSaldo] = useState<number>(0);
+  const [ajusteMotivo, setAjusteMotivo] = useState("");
 
   const [np, setNp] = useState({ descricao: "", codigo: "", categoria: "Material", unidade: "un", estoque_minimo: 0, ncm: "", ca_numero: "", preco_unitario: 0 });
   const [editingProduto, setEditingProduto] = useState<any>(null);
