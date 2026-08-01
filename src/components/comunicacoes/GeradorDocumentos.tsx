@@ -496,12 +496,20 @@ export function GeradorDocumentos() {
                   </SelectContent>
                 </Select>
                 <Input
+                  ref={tituloRef}
                   value={titulo}
                   onChange={e => setTitulo(e.target.value)}
                   placeholder="Ou digite um título personalizado"
                   className="bg-background text-xs"
                 />
+                <ChipsVariaveis target="titulo" />
+                {temVariaveis(titulo) && (
+                  <p className="text-[10px] text-muted-foreground">
+                    Prévia: <span className="font-medium text-foreground">{aplicarVariaveis(titulo, ctxPreview)}</span>
+                  </p>
+                )}
               </div>
+
 
               <div className="space-y-1">
                 <Label className="text-xs font-semibold">Tom da Redação</Label>
