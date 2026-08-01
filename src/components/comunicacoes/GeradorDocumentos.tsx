@@ -74,18 +74,25 @@ export function GeradorDocumentos() {
     async function load() {
       const { data } = await supabase
         .from("funcionarios")
-        .select("id, nome, cargo, telefone, email, cpf, rg, empresa_id")
+        .select("id, nome, cargo, telefone, email, cpf, rg, numero_registro, data_admissao, obra_id, empresa_id")
         .eq("status", "ativo")
         .order("nome");
 
       if (data) {
         const empresaIds = [...new Set(data.filter(f => f.empresa_id).map(f => f.empresa_id))];
-        const { data: empresasm } = await supabase
-          .from("empresas")
-          .select("id, razao_social, nome_fantasia, cnpj, endereco, cidade, uf, cep, telefone, email, logo_url, cor_primaria, cor_secundaria")
-          .in("id", empresaIds);
+        const obraIds = [...new Set(data.map(f => (f as any).obra_id).filter(Boolean))];
+        const [{ data: empresasm }, { data: obrasm }] = await Promise.all([
+          supabase
+            .from("empresas")
+            .select("id, razao_social, nome_fantasia, cnpj, endereco, cidade, uf, cep, telefone, email, logo_url, cor_primaria, cor_secundaria")
+            .in("id", empresaIds),
+          obraIds.length
+            ? supabase.from("obras").select("id, nome, codigo").in("id", obraIds)
+            : Promise.resolve({ data: [] as any[] }),
+        ]);
 
         const empMap = new Map(empresasm?.map(e => [e.id, e]) || []);
+        const obraMap = new Map((obrasm || []).map((o: any) => [o.id, o.codigo ? `${o.codigo} — ${o.nome}` : o.nome]));
 
         const fFormatado: FuncionarioSimplificado[] = data.map(f => ({
           id: f.id,
@@ -95,11 +102,15 @@ export function GeradorDocumentos() {
           email: f.email,
           cpf: (f as any).cpf || null,
           rg: (f as any).rg || null,
+          matricula: (f as any).numero_registro || null,
+          admissao: (f as any).data_admissao || null,
+          obraNome: (f as any).obra_id ? obraMap.get((f as any).obra_id) || null : null,
           empresa_id: f.empresa_id,
           empresa: f.empresa_id ? (empMap.get(f.empresa_id) as EmpresaPdf) || null : null,
         }));
         setFuncionarios(fFormatado);
       }
+
       setLoadingConfig(false);
     }
     load();
