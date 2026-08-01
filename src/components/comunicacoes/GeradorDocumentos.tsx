@@ -12,6 +12,8 @@ import { gerarTextoDocumentoOficial, TipoDocumentoOficial, TIPO_DOCUMENTO_LABEL,
 import { gerarPdfA4, downloadBlob, imprimirBlob, EmpresaPdf } from "@/lib/gerarPdfOficial";
 import { gerarReciboPdf } from "@/lib/gerarReciboPdf";
 import { Input } from "@/components/ui/input";
+import { VARIAVEIS_DOCUMENTO, aplicarVariaveis, inserirVariavel, resolverVariaveis, temVariaveis, type ContextoVariaveis } from "@/lib/variaveisDocumento";
+
 
 interface FuncionarioSimplificado {
   id: string;
