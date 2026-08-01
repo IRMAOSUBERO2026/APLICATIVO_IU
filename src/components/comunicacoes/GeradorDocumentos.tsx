@@ -21,9 +21,13 @@ interface FuncionarioSimplificado {
   email: string | null;
   cpf: string | null;
   rg: string | null;
+  matricula: string | null;
+  admissao: string | null;
+  obraNome: string | null;
   empresa_id: string | null;
   empresa: EmpresaPdf | null;
 }
+
 
 interface DocumentoGerado {
   funcionarioId: string;
