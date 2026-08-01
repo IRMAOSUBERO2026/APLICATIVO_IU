@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { FileText, Download, Send, Save, Bot, Loader2, Info, Printer, Mail, FolderOpen, RefreshCw } from "lucide-react";
@@ -12,6 +12,8 @@ import { gerarTextoDocumentoOficial, TipoDocumentoOficial, TIPO_DOCUMENTO_LABEL,
 import { gerarPdfA4, downloadBlob, imprimirBlob, EmpresaPdf } from "@/lib/gerarPdfOficial";
 import { gerarReciboPdf } from "@/lib/gerarReciboPdf";
 import { Input } from "@/components/ui/input";
+import { VARIAVEIS_DOCUMENTO, aplicarVariaveis, inserirVariavel, resolverVariaveis, temVariaveis, type ContextoVariaveis } from "@/lib/variaveisDocumento";
+
 
 interface FuncionarioSimplificado {
   id: string;
@@ -21,9 +23,13 @@ interface FuncionarioSimplificado {
   email: string | null;
   cpf: string | null;
   rg: string | null;
+  matricula: string | null;
+  admissao: string | null;
+  obraNome: string | null;
   empresa_id: string | null;
   empresa: EmpresaPdf | null;
 }
+
 
 interface DocumentoGerado {
   funcionarioId: string;
@@ -55,6 +61,9 @@ export function GeradorDocumentos() {
   const [usarIA, setUsarIA] = useState(true);
   const [titulo, setTitulo] = useState<string>(TITULOS_SUGERIDOS["advertencia"][0]);
   const [tom, setTom] = useState<string>("formal");
+  const tituloRef = useRef<HTMLInputElement>(null);
+  const ideiaRef = useRef<HTMLTextAreaElement>(null);
+
 
   // Resultado
   const [textoGerado, setTextoGerado] = useState("");
@@ -70,18 +79,25 @@ export function GeradorDocumentos() {
     async function load() {
       const { data } = await supabase
         .from("funcionarios")
-        .select("id, nome, cargo, telefone, email, cpf, rg, empresa_id")
+        .select("id, nome, cargo, telefone, email, cpf, rg, numero_registro, data_admissao, obra_id, empresa_id")
         .eq("status", "ativo")
         .order("nome");
 
       if (data) {
         const empresaIds = [...new Set(data.filter(f => f.empresa_id).map(f => f.empresa_id))];
-        const { data: empresasm } = await supabase
-          .from("empresas")
-          .select("id, razao_social, nome_fantasia, cnpj, endereco, cidade, uf, cep, telefone, email, logo_url, cor_primaria, cor_secundaria")
-          .in("id", empresaIds);
+        const obraIds = [...new Set(data.map(f => (f as any).obra_id).filter(Boolean))];
+        const [{ data: empresasm }, { data: obrasm }] = await Promise.all([
+          supabase
+            .from("empresas")
+            .select("id, razao_social, nome_fantasia, cnpj, endereco, cidade, uf, cep, telefone, email, logo_url, cor_primaria, cor_secundaria")
+            .in("id", empresaIds),
+          obraIds.length
+            ? supabase.from("obras").select("id, nome, codigo").in("id", obraIds)
+            : Promise.resolve({ data: [] as any[] }),
+        ]);
 
         const empMap = new Map(empresasm?.map(e => [e.id, e]) || []);
+        const obraMap = new Map((obrasm || []).map((o: any) => [o.id, o.codigo ? `${o.codigo} — ${o.nome}` : o.nome]));
 
         const fFormatado: FuncionarioSimplificado[] = data.map(f => ({
           id: f.id,
@@ -91,11 +107,15 @@ export function GeradorDocumentos() {
           email: f.email,
           cpf: (f as any).cpf || null,
           rg: (f as any).rg || null,
+          matricula: (f as any).numero_registro || null,
+          admissao: (f as any).data_admissao || null,
+          obraNome: (f as any).obra_id ? obraMap.get((f as any).obra_id) || null : null,
           empresa_id: f.empresa_id,
           empresa: f.empresa_id ? (empMap.get(f.empresa_id) as EmpresaPdf) || null : null,
         }));
         setFuncionarios(fFormatado);
       }
+
       setLoadingConfig(false);
     }
     load();
@@ -170,38 +190,60 @@ export function GeradorDocumentos() {
     const func = funcionarios.find(f => f.id === funcId);
     const nomeEmpresa = func?.empresa?.nome_fantasia || func?.empresa?.razao_social || funcionarios[0]?.empresa?.nome_fantasia || funcionarios[0]?.empresa?.razao_social || "Empresa";
 
+    // Resolve as variáveis dinâmicas ({{nome}}, {{cargo}}, {{obra}}, {{data}}...)
+    const ctxVars: ContextoVariaveis = {
+      nome: func?.nome,
+      cargo: func?.cargo,
+      cpf: func?.cpf,
+      rg: func?.rg,
+      matricula: func?.matricula,
+      admissao: func?.admissao,
+      empresa: nomeEmpresa,
+      cnpj: func?.empresa?.cnpj || funcionarios[0]?.empresa?.cnpj || null,
+      obra: func?.obraNome,
+      data: dataDoc,
+    };
+    const tituloFinal = aplicarVariaveis(titulo, ctxVars);
+    const contextoFinal = aplicarVariaveis(contextoUsuario, ctxVars);
+
     setGerando(true);
 
     // Fallback local (template) usado quando a IA não estiver disponível.
     const gerarLocal = () =>
-      gerarTextoDocumentoOficial({
-        tipo: tipoDoc,
-        nomeFuncionario: func?.nome || "",
-        cargoFuncionario: func?.cargo || "",
-        nomeEmpresa,
-        contexto: contextoUsuario,
-        data: dataDoc,
-        titulo,
-      });
+      aplicarVariaveis(
+        gerarTextoDocumentoOficial({
+          tipo: tipoDoc,
+          nomeFuncionario: func?.nome || "",
+          cargoFuncionario: func?.cargo || "",
+          nomeEmpresa,
+          contexto: contextoFinal,
+          data: dataDoc,
+          titulo: tituloFinal,
+        }),
+        ctxVars
+      );
 
     try {
-      if (usarIA && contextoUsuario.trim().length >= 3) {
+      if (usarIA && contextoFinal.trim().length >= 3) {
         const { data, error } = await supabase.functions.invoke("gerar-documento-ia", {
           body: {
             tipo: tipoDoc,
-            ideia: contextoUsuario,
-            titulo,
+            ideia: contextoFinal,
+            titulo: tituloFinal,
             tom,
             nomeFuncionario: func?.nome || "",
             cargoFuncionario: func?.cargo || "",
             nomeEmpresa,
+            obra: func?.obraNome || "",
+            matriculaFuncionario: func?.matricula || "",
+            admissaoFuncionario: func?.admissao || "",
             data: dataDoc,
           },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
         if (data?.texto) {
-          setTextoGerado(data.texto);
+          setTextoGerado(aplicarVariaveis(data.texto, ctxVars));
           toast({ title: "Texto gerado com IA ✨", description: "Revise e ajuste antes de enviar." });
           return;
         }
@@ -216,6 +258,7 @@ export function GeradorDocumentos() {
       setGerando(false);
     }
   };
+
 
 
   const formatFileName = (tipo: string, nome: string) => {
@@ -350,7 +393,51 @@ export function GeradorDocumentos() {
     window.location.href = `mailto:${dest}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
   };
 
+  // ---- Variáveis dinâmicas ----
+  const ctxPreview: ContextoVariaveis = {
+    nome: funcSelecionado?.nome,
+    cargo: funcSelecionado?.cargo,
+    cpf: funcSelecionado?.cpf,
+    rg: funcSelecionado?.rg,
+    matricula: funcSelecionado?.matricula,
+    admissao: funcSelecionado?.admissao,
+    empresa: funcSelecionado?.empresa?.nome_fantasia || funcSelecionado?.empresa?.razao_social || funcionarios[0]?.empresa?.nome_fantasia || funcionarios[0]?.empresa?.razao_social,
+    cnpj: funcSelecionado?.empresa?.cnpj || funcionarios[0]?.empresa?.cnpj,
+    obra: funcSelecionado?.obraNome,
+    data: dataDoc,
+  };
+  const valoresVars = resolverVariaveis(ctxPreview);
+
+  const ChipsVariaveis = ({ target }: { target: "titulo" | "ideia" }) => (
+    <div className="flex flex-wrap gap-1 pt-1">
+      {VARIAVEIS_DOCUMENTO.map(v => (
+        <button
+          key={v.chave}
+          type="button"
+          title={`${v.label}${valoresVars[v.chave] ? ` — atual: ${valoresVars[v.chave]}` : " — sem valor no cadastro"}`}
+          onClick={() => {
+            if (target === "titulo") {
+              const el = tituloRef.current;
+              const r = inserirVariavel(titulo, v.chave, el?.selectionStart ?? null);
+              setTitulo(r.texto);
+              requestAnimationFrame(() => { el?.focus(); el?.setSelectionRange(r.cursor, r.cursor); });
+            } else {
+              const el = ideiaRef.current;
+              const r = inserirVariavel(contextoUsuario, v.chave, el?.selectionStart ?? null);
+              setContextoUsuario(r.texto);
+              requestAnimationFrame(() => { el?.focus(); el?.setSelectionRange(r.cursor, r.cursor); });
+            }
+          }}
+          className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary transition-colors hover:bg-primary/20"
+        >
+          {`{{${v.chave}}}`}
+        </button>
+      ))}
+    </div>
+  );
+
   if (loadingConfig) {
+
     return <div className="p-8 text-center text-muted-foreground"><Loader2 className="animate-spin h-6 w-6 mx-auto mb-2" /> Carregando motor...</div>;
   }
 
@@ -409,12 +496,20 @@ export function GeradorDocumentos() {
                   </SelectContent>
                 </Select>
                 <Input
+                  ref={tituloRef}
                   value={titulo}
                   onChange={e => setTitulo(e.target.value)}
                   placeholder="Ou digite um título personalizado"
                   className="bg-background text-xs"
                 />
+                <ChipsVariaveis target="titulo" />
+                {temVariaveis(titulo) && (
+                  <p className="text-[10px] text-muted-foreground">
+                    Prévia: <span className="font-medium text-foreground">{aplicarVariaveis(titulo, ctxPreview)}</span>
+                  </p>
+                )}
               </div>
+
 
               <div className="space-y-1">
                 <Label className="text-xs font-semibold">Tom da Redação</Label>
@@ -461,14 +556,22 @@ export function GeradorDocumentos() {
               <div className="space-y-1">
                 <Label className="text-xs font-semibold">{tipoDoc === "recibo" ? "Referência do pagamento" : usarIA ? "3. Descreva sua ideia (a IA desenvolve o texto)" : "3. Contexto / Motivo"}</Label>
                 <Textarea
-                  placeholder={tipoDoc === "recibo" ? "Ex: Adiantamento salarial referente à obra Terrace - novembro/2025" : "Ex: quero avisar a equipe da obra Terrace que a partir de segunda o horário muda para 7h às 16h por causa do calor..."}
+                  ref={ideiaRef}
+                  placeholder={tipoDoc === "recibo" ? "Ex: Adiantamento salarial referente à obra Terrace - novembro/2025" : "Ex: comunicar {{nome}} ({{cargo}}) que na {{obra}} o horário muda a partir de {{data}}..."}
                   className="bg-background resize-none"
                   rows={5}
                   value={contextoUsuario}
                   onChange={e => setContextoUsuario(e.target.value)}
                 />
-                <p className="text-[10px] text-muted-foreground"><Info className="inline h-3 w-3 mr-1" />{usarIA ? "Escreva a ideia em linguagem simples — a IA transforma em documento oficial com a fundamentação adequada." : "O sistema aplica automaticamente a fundamentação legal CLT."}</p>
+                <ChipsVariaveis target="ideia" />
+                {temVariaveis(contextoUsuario) && (
+                  <p className="rounded-md bg-muted/40 p-2 text-[10px] leading-relaxed text-muted-foreground">
+                    Prévia com dados reais: <span className="text-foreground">{aplicarVariaveis(contextoUsuario, ctxPreview)}</span>
+                  </p>
+                )}
+                <p className="text-[10px] text-muted-foreground"><Info className="inline h-3 w-3 mr-1" />{usarIA ? "Escreva a ideia em linguagem simples e use as variáveis acima — elas são substituídas pelos dados do colaborador antes de gerar." : "O sistema aplica automaticamente a fundamentação legal CLT e substitui as variáveis."}</p>
               </div>
+
 
               <Button onClick={handleGerar} disabled={gerando || (!funcId && !isComunicadoGeral)} className="w-full gap-2 mt-2">
                 {gerando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bot className="h-4 w-4" />}

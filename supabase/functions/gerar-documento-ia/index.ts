@@ -84,11 +84,15 @@ Deno.serve(async (req) => {
       ideia = "",
       nomeFuncionario = "",
       cargoFuncionario = "",
+      matriculaFuncionario = "",
+      admissaoFuncionario = "",
+      obra = "",
       nomeEmpresa = "Empresa",
       data = "",
       titulo = "",
       tom = "formal",
     } = body ?? {};
+
 
     if (!ideia || typeof ideia !== "string" || ideia.trim().length < 3) {
       return new Response(JSON.stringify({ error: "Descreva a ideia do documento." }), {
@@ -128,6 +132,9 @@ Tom de escrita: ${TOM_INSTRUCOES[tom] || TOM_INSTRUCOES.formal}
 Empresa emitente: ${nomeEmpresa}
 ${nomeFuncionario ? `Colaborador destinatário: ${nomeFuncionario}` : "Destinatário: comunicado geral, a todos os colaboradores"}
 ${cargoFuncionario ? `Cargo/função: ${cargoFuncionario}` : ""}
+${matriculaFuncionario ? `Nº de registro/matrícula: ${matriculaFuncionario}` : ""}
+${admissaoFuncionario ? `Data de admissão: ${admissaoFuncionario}` : ""}
+${obra ? `Obra/setor de alocação: ${obra}` : ""}
 Data do documento: ${dataFmt}
 
 Ideia / contexto informado pelo gestor (linguagem informal):
