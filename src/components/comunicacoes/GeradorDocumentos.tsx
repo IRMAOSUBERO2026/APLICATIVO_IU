@@ -13,6 +13,8 @@ import { gerarPdfA4, downloadBlob, imprimirBlob, EmpresaPdf } from "@/lib/gerarP
 import { gerarReciboPdf } from "@/lib/gerarReciboPdf";
 import { Input } from "@/components/ui/input";
 import { VARIAVEIS_DOCUMENTO, aplicarVariaveis, inserirVariavel, resolverVariaveis, temVariaveis, type ContextoVariaveis } from "@/lib/variaveisDocumento";
+import { BIBLIOTECA_MODELOS, CATEGORIAS_MODELO, modelosPorCategoria, type CategoriaModelo, type ModeloComunicacao } from "@/lib/bibliotecaModelos";
+
 
 
 interface FuncionarioSimplificado {
@@ -61,7 +63,10 @@ export function GeradorDocumentos() {
   const [usarIA, setUsarIA] = useState(true);
   const [titulo, setTitulo] = useState<string>(TITULOS_SUGERIDOS["advertencia"][0]);
   const [tom, setTom] = useState<string>("formal");
+  const [categoriaModelo, setCategoriaModelo] = useState<CategoriaModelo>("rh");
+  const [modeloId, setModeloId] = useState<string>("");
   const tituloRef = useRef<HTMLInputElement>(null);
+
   const ideiaRef = useRef<HTMLTextAreaElement>(null);
 
 
@@ -181,6 +186,16 @@ export function GeradorDocumentos() {
     setTipoDoc(v);
     setTitulo(TITULOS_SUGERIDOS[v]?.[0] || TIPO_LABEL[v]);
   };
+
+  const aplicarModelo = (m: ModeloComunicacao) => {
+    setTipoDoc(m.tipo);
+    setTitulo(m.titulo);
+    setContextoUsuario(m.ideia);
+    if (m.tom) setTom(m.tom);
+    setModeloId(m.id);
+    toast({ title: "Modelo aplicado", description: `${m.nome} — revise as variáveis e gere o texto.` });
+  };
+
 
   const handleGerar = async () => {
     if (!funcId && !isComunicadoGeral) {
@@ -452,6 +467,44 @@ export function GeradorDocumentos() {
                 <Bot className="h-5 w-5 text-primary" />
                 <h3 className="font-semibold text-primary">Motor de Documentos Oficiais</h3>
               </div>
+
+              {/* Biblioteca de modelos por categoria */}
+              <div className="space-y-2 rounded-lg border border-primary/20 bg-background p-3">
+                <div className="flex items-center gap-2">
+                  <FolderOpen className="h-4 w-4 text-primary" />
+                  <Label className="text-xs font-semibold">Biblioteca de Modelos ({BIBLIOTECA_MODELOS.length})</Label>
+                </div>
+                <Select value={categoriaModelo} onValueChange={(v: CategoriaModelo) => { setCategoriaModelo(v); setModeloId(""); }}>
+                  <SelectTrigger className="bg-background h-9 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {CATEGORIAS_MODELO.map(c => (
+                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[10px] text-muted-foreground">
+                  {CATEGORIAS_MODELO.find(c => c.value === categoriaModelo)?.descricao}
+                </p>
+                <div className="max-h-[190px] space-y-1 overflow-y-auto pr-1">
+                  {modelosPorCategoria(categoriaModelo).map(m => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => aplicarModelo(m)}
+                      className={`w-full rounded-md border px-2.5 py-2 text-left transition-colors ${
+                        modeloId === m.id ? "border-primary bg-primary/10" : "border-border hover:bg-muted"
+                      }`}
+                    >
+                      <p className="text-xs font-medium">{m.nome}</p>
+                      <p className="text-[10px] text-muted-foreground line-clamp-1">{m.titulo}</p>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Ao aplicar um modelo, título, ideia e tom são preenchidos com variáveis dinâmicas prontas para edição.
+                </p>
+              </div>
+
 
               <div className="space-y-1">
                 <Label className="text-xs font-semibold">1. Funcionário</Label>
