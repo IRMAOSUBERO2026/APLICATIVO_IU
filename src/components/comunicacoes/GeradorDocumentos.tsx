@@ -468,6 +468,44 @@ export function GeradorDocumentos() {
                 <h3 className="font-semibold text-primary">Motor de Documentos Oficiais</h3>
               </div>
 
+              {/* Biblioteca de modelos por categoria */}
+              <div className="space-y-2 rounded-lg border border-primary/20 bg-background p-3">
+                <div className="flex items-center gap-2">
+                  <FolderOpen className="h-4 w-4 text-primary" />
+                  <Label className="text-xs font-semibold">Biblioteca de Modelos ({BIBLIOTECA_MODELOS.length})</Label>
+                </div>
+                <Select value={categoriaModelo} onValueChange={(v: CategoriaModelo) => { setCategoriaModelo(v); setModeloId(""); }}>
+                  <SelectTrigger className="bg-background h-9 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {CATEGORIAS_MODELO.map(c => (
+                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[10px] text-muted-foreground">
+                  {CATEGORIAS_MODELO.find(c => c.value === categoriaModelo)?.descricao}
+                </p>
+                <div className="max-h-[190px] space-y-1 overflow-y-auto pr-1">
+                  {modelosPorCategoria(categoriaModelo).map(m => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => aplicarModelo(m)}
+                      className={`w-full rounded-md border px-2.5 py-2 text-left transition-colors ${
+                        modeloId === m.id ? "border-primary bg-primary/10" : "border-border hover:bg-muted"
+                      }`}
+                    >
+                      <p className="text-xs font-medium">{m.nome}</p>
+                      <p className="text-[10px] text-muted-foreground line-clamp-1">{m.titulo}</p>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Ao aplicar um modelo, título, ideia e tom são preenchidos com variáveis dinâmicas prontas para edição.
+                </p>
+              </div>
+
+
               <div className="space-y-1">
                 <Label className="text-xs font-semibold">1. Funcionário</Label>
                 <Select value={funcId} onValueChange={setFuncId}>
