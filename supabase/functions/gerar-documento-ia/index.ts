@@ -132,6 +132,9 @@ Tom de escrita: ${TOM_INSTRUCOES[tom] || TOM_INSTRUCOES.formal}
 Empresa emitente: ${nomeEmpresa}
 ${nomeFuncionario ? `Colaborador destinatário: ${nomeFuncionario}` : "Destinatário: comunicado geral, a todos os colaboradores"}
 ${cargoFuncionario ? `Cargo/função: ${cargoFuncionario}` : ""}
+${matriculaFuncionario ? `Nº de registro/matrícula: ${matriculaFuncionario}` : ""}
+${admissaoFuncionario ? `Data de admissão: ${admissaoFuncionario}` : ""}
+${obra ? `Obra/setor de alocação: ${obra}` : ""}
 Data do documento: ${dataFmt}
 
 Ideia / contexto informado pelo gestor (linguagem informal):
