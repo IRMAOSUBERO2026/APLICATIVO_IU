@@ -84,11 +84,15 @@ Deno.serve(async (req) => {
       ideia = "",
       nomeFuncionario = "",
       cargoFuncionario = "",
+      matriculaFuncionario = "",
+      admissaoFuncionario = "",
+      obra = "",
       nomeEmpresa = "Empresa",
       data = "",
       titulo = "",
       tom = "formal",
     } = body ?? {};
+
 
     if (!ideia || typeof ideia !== "string" || ideia.trim().length < 3) {
       return new Response(JSON.stringify({ error: "Descreva a ideia do documento." }), {
