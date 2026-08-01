@@ -185,38 +185,60 @@ export function GeradorDocumentos() {
     const func = funcionarios.find(f => f.id === funcId);
     const nomeEmpresa = func?.empresa?.nome_fantasia || func?.empresa?.razao_social || funcionarios[0]?.empresa?.nome_fantasia || funcionarios[0]?.empresa?.razao_social || "Empresa";
 
+    // Resolve as variáveis dinâmicas ({{nome}}, {{cargo}}, {{obra}}, {{data}}...)
+    const ctxVars: ContextoVariaveis = {
+      nome: func?.nome,
+      cargo: func?.cargo,
+      cpf: func?.cpf,
+      rg: func?.rg,
+      matricula: func?.matricula,
+      admissao: func?.admissao,
+      empresa: nomeEmpresa,
+      cnpj: func?.empresa?.cnpj || funcionarios[0]?.empresa?.cnpj || null,
+      obra: func?.obraNome,
+      data: dataDoc,
+    };
+    const tituloFinal = aplicarVariaveis(titulo, ctxVars);
+    const contextoFinal = aplicarVariaveis(contextoUsuario, ctxVars);
+
     setGerando(true);
 
     // Fallback local (template) usado quando a IA não estiver disponível.
     const gerarLocal = () =>
-      gerarTextoDocumentoOficial({
-        tipo: tipoDoc,
-        nomeFuncionario: func?.nome || "",
-        cargoFuncionario: func?.cargo || "",
-        nomeEmpresa,
-        contexto: contextoUsuario,
-        data: dataDoc,
-        titulo,
-      });
+      aplicarVariaveis(
+        gerarTextoDocumentoOficial({
+          tipo: tipoDoc,
+          nomeFuncionario: func?.nome || "",
+          cargoFuncionario: func?.cargo || "",
+          nomeEmpresa,
+          contexto: contextoFinal,
+          data: dataDoc,
+          titulo: tituloFinal,
+        }),
+        ctxVars
+      );
 
     try {
-      if (usarIA && contextoUsuario.trim().length >= 3) {
+      if (usarIA && contextoFinal.trim().length >= 3) {
         const { data, error } = await supabase.functions.invoke("gerar-documento-ia", {
           body: {
             tipo: tipoDoc,
-            ideia: contextoUsuario,
-            titulo,
+            ideia: contextoFinal,
+            titulo: tituloFinal,
             tom,
             nomeFuncionario: func?.nome || "",
             cargoFuncionario: func?.cargo || "",
             nomeEmpresa,
+            obra: func?.obraNome || "",
+            matriculaFuncionario: func?.matricula || "",
+            admissaoFuncionario: func?.admissao || "",
             data: dataDoc,
           },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
         if (data?.texto) {
-          setTextoGerado(data.texto);
+          setTextoGerado(aplicarVariaveis(data.texto, ctxVars));
           toast({ title: "Texto gerado com IA ✨", description: "Revise e ajuste antes de enviar." });
           return;
         }
@@ -231,6 +253,7 @@ export function GeradorDocumentos() {
       setGerando(false);
     }
   };
+
 
 
   const formatFileName = (tipo: string, nome: string) => {
