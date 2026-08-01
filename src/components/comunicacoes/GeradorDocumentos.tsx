@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { gerarTextoDocumentoOficial, TipoDocumentoOficial } from "@/lib/motorIaDocumentos";
+import { gerarTextoDocumentoOficial, TipoDocumentoOficial, TIPO_DOCUMENTO_LABEL, TIPO_DOCUMENTO_PASTA, TITULOS_SUGERIDOS, TONS_DOCUMENTO } from "@/lib/motorIaDocumentos";
 import { gerarPdfA4, downloadBlob, imprimirBlob, EmpresaPdf } from "@/lib/gerarPdfOficial";
 import { gerarReciboPdf } from "@/lib/gerarReciboPdf";
 import { Input } from "@/components/ui/input";
@@ -39,35 +39,8 @@ interface DocumentoGerado {
   empresa: EmpresaPdf | null;
 }
 
-const TIPO_LABEL: Record<TipoDocumentoOficial, string> = {
-  advertencia: "Advertência",
-  suspensao: "Suspensão",
-  comunicado: "Comunicado (Individual)",
-  comunicado_geral: "Comunicado Geral / Circular",
-  recibo: "Recibo",
-  justificativa_falta: "Justificativa de Falta",
-  aviso_ferias: "Aviso de Férias",
-  convocacao: "Convocação",
-  mudanca_horario: "Alteração de Horário",
-  seguranca_trabalho: "Segurança do Trabalho",
-  elogio: "Elogio / Reconhecimento",
-  aviso_previo: "Aviso Prévio",
-};
-
-const PASTAS_DOC: Record<TipoDocumentoOficial, string> = {
-  advertencia: "Advertências",
-  suspensao: "Advertências",
-  comunicado: "Comunicados",
-  comunicado_geral: "Comunicados",
-  recibo: "Holerites",
-  justificativa_falta: "Cartão Ponto",
-  aviso_ferias: "Comunicados",
-  convocacao: "Comunicados",
-  mudanca_horario: "Comunicados",
-  seguranca_trabalho: "Comunicados",
-  elogio: "Comunicados",
-  aviso_previo: "Comunicados",
-};
+const TIPO_LABEL = TIPO_DOCUMENTO_LABEL;
+const PASTAS_DOC = TIPO_DOCUMENTO_PASTA;
 
 export function GeradorDocumentos() {
   const [funcionarios, setFuncionarios] = useState<FuncionarioSimplificado[]>([]);
@@ -80,6 +53,8 @@ export function GeradorDocumentos() {
   const [reciboValor, setReciboValor] = useState<string>("");
   const [dataDoc, setDataDoc] = useState<string>(new Date().toISOString().slice(0, 10));
   const [usarIA, setUsarIA] = useState(true);
+  const [titulo, setTitulo] = useState<string>(TITULOS_SUGERIDOS["advertencia"][0]);
+  const [tom, setTom] = useState<string>("formal");
 
   // Resultado
   const [textoGerado, setTextoGerado] = useState("");
@@ -181,6 +156,12 @@ export function GeradorDocumentos() {
   // ---- Gerar texto ----
   const isComunicadoGeral = tipoDoc === "comunicado_geral";
 
+  // Ao trocar o tipo, sugere automaticamente o primeiro modelo de título do tipo.
+  const handleTipoChange = (v: TipoDocumentoOficial) => {
+    setTipoDoc(v);
+    setTitulo(TITULOS_SUGERIDOS[v]?.[0] || TIPO_LABEL[v]);
+  };
+
   const handleGerar = async () => {
     if (!funcId && !isComunicadoGeral) {
       toast({ title: "Selecione um funcionário", variant: "destructive" });
@@ -200,6 +181,7 @@ export function GeradorDocumentos() {
         nomeEmpresa,
         contexto: contextoUsuario,
         data: dataDoc,
+        titulo,
       });
 
     try {
@@ -208,6 +190,8 @@ export function GeradorDocumentos() {
           body: {
             tipo: tipoDoc,
             ideia: contextoUsuario,
+            titulo,
+            tom,
             nomeFuncionario: func?.nome || "",
             cargoFuncionario: func?.cargo || "",
             nomeEmpresa,
@@ -404,11 +388,41 @@ export function GeradorDocumentos() {
 
               <div className="space-y-1">
                 <Label className="text-xs font-semibold">2. Tipo de Documento</Label>
-                <Select value={tipoDoc} onValueChange={(v: TipoDocumentoOficial) => setTipoDoc(v)}>
+                <Select value={tipoDoc} onValueChange={(v: TipoDocumentoOficial) => handleTipoChange(v)}>
                   <SelectTrigger className="bg-background"><SelectValue /></SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-[300px]">
                     {(Object.keys(TIPO_LABEL) as TipoDocumentoOficial[]).map(k => (
                       <SelectItem key={k} value={k}>{TIPO_LABEL[k]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Modelo de Título / Assunto</Label>
+                <Select value={titulo} onValueChange={setTitulo}>
+                  <SelectTrigger className="bg-background"><SelectValue placeholder="Escolha um modelo de título" /></SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    {(TITULOS_SUGERIDOS[tipoDoc] || []).map(t => (
+                      <SelectItem key={t} value={t}>{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  value={titulo}
+                  onChange={e => setTitulo(e.target.value)}
+                  placeholder="Ou digite um título personalizado"
+                  className="bg-background text-xs"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Tom da Redação</Label>
+                <Select value={tom} onValueChange={setTom}>
+                  <SelectTrigger className="bg-background"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {TONS_DOCUMENTO.map(t => (
+                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

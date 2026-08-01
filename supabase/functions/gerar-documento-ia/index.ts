@@ -143,7 +143,6 @@ Desenvolva agora o documento oficial completo, técnico e estruturado conforme a
       },
       body: JSON.stringify({
         model: "google/gemini-3.6-flash",
-        reasoning_effort: "none",
         messages: [
           { role: "system", content: system },
           { role: "user", content: user },
