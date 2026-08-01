@@ -390,7 +390,51 @@ export function GeradorDocumentos() {
     window.location.href = `mailto:${dest}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
   };
 
+  // ---- Variáveis dinâmicas ----
+  const ctxPreview: ContextoVariaveis = {
+    nome: funcSelecionado?.nome,
+    cargo: funcSelecionado?.cargo,
+    cpf: funcSelecionado?.cpf,
+    rg: funcSelecionado?.rg,
+    matricula: funcSelecionado?.matricula,
+    admissao: funcSelecionado?.admissao,
+    empresa: funcSelecionado?.empresa?.nome_fantasia || funcSelecionado?.empresa?.razao_social || funcionarios[0]?.empresa?.nome_fantasia || funcionarios[0]?.empresa?.razao_social,
+    cnpj: funcSelecionado?.empresa?.cnpj || funcionarios[0]?.empresa?.cnpj,
+    obra: funcSelecionado?.obraNome,
+    data: dataDoc,
+  };
+  const valoresVars = resolverVariaveis(ctxPreview);
+
+  const ChipsVariaveis = ({ target }: { target: "titulo" | "ideia" }) => (
+    <div className="flex flex-wrap gap-1 pt-1">
+      {VARIAVEIS_DOCUMENTO.map(v => (
+        <button
+          key={v.chave}
+          type="button"
+          title={`${v.label}${valoresVars[v.chave] ? ` — atual: ${valoresVars[v.chave]}` : " — sem valor no cadastro"}`}
+          onClick={() => {
+            if (target === "titulo") {
+              const el = tituloRef.current;
+              const r = inserirVariavel(titulo, v.chave, el?.selectionStart ?? null);
+              setTitulo(r.texto);
+              requestAnimationFrame(() => { el?.focus(); el?.setSelectionRange(r.cursor, r.cursor); });
+            } else {
+              const el = ideiaRef.current;
+              const r = inserirVariavel(contextoUsuario, v.chave, el?.selectionStart ?? null);
+              setContextoUsuario(r.texto);
+              requestAnimationFrame(() => { el?.focus(); el?.setSelectionRange(r.cursor, r.cursor); });
+            }
+          }}
+          className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary transition-colors hover:bg-primary/20"
+        >
+          {`{{${v.chave}}}`}
+        </button>
+      ))}
+    </div>
+  );
+
   if (loadingConfig) {
+
     return <div className="p-8 text-center text-muted-foreground"><Loader2 className="animate-spin h-6 w-6 mx-auto mb-2" /> Carregando motor...</div>;
   }
 
