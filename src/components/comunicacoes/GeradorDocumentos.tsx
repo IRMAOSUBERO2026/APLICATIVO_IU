@@ -182,6 +182,16 @@ export function GeradorDocumentos() {
     setTitulo(TITULOS_SUGERIDOS[v]?.[0] || TIPO_LABEL[v]);
   };
 
+  const aplicarModelo = (m: ModeloComunicacao) => {
+    setTipoDoc(m.tipo);
+    setTitulo(m.titulo);
+    setContextoUsuario(m.ideia);
+    if (m.tom) setTom(m.tom);
+    setModeloId(m.id);
+    toast({ title: "Modelo aplicado", description: `${m.nome} — revise as variáveis e gere o texto.` });
+  };
+
+
   const handleGerar = async () => {
     if (!funcId && !isComunicadoGeral) {
       toast({ title: "Selecione um funcionário", variant: "destructive" });
