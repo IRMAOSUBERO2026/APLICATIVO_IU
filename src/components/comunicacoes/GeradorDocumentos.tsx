@@ -61,6 +61,9 @@ export function GeradorDocumentos() {
   const [usarIA, setUsarIA] = useState(true);
   const [titulo, setTitulo] = useState<string>(TITULOS_SUGERIDOS["advertencia"][0]);
   const [tom, setTom] = useState<string>("formal");
+  const tituloRef = useRef<HTMLInputElement>(null);
+  const ideiaRef = useRef<HTMLTextAreaElement>(null);
+
 
   // Resultado
   const [textoGerado, setTextoGerado] = useState("");
