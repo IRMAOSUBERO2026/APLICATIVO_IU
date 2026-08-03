@@ -519,6 +519,36 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
           )}
         </div>
       </DialogContent>
+
+      <Dialog open={!!recontratacao} onOpenChange={(o) => !o && setRecontratacao(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-warning" /> Ex-funcionário encontrado
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <p>
+              <strong>{recontratacao?.nome}</strong> já possui cadastro com este CPF
+              (status atual: <strong>{recontratacao?.status}</strong>).
+            </p>
+            <p className="text-muted-foreground">
+              Deseja registrar a <strong>recontratação</strong>? O cadastro existente será
+              atualizado com os novos dados, reativado como <strong>ativo</strong> e as
+              solicitações admissionais (ASO + 4 NRs) serão criadas automaticamente.
+              O histórico anterior (ponto, EPIs, folhas) é preservado.
+            </p>
+          </div>
+          <div className="flex justify-end gap-2 pt-4 border-t mt-2">
+            <button onClick={() => setRecontratacao(null)}
+              className="rounded-lg border bg-card px-4 py-2 text-sm font-medium hover:bg-muted transition-colors">Cancelar</button>
+            <button onClick={confirmarRecontratacao} disabled={salvandoRecontratacao}
+              className="inline-flex items-center gap-2 rounded-lg bg-success px-4 py-2 text-sm font-medium text-success-foreground hover:bg-success/90 transition-colors disabled:opacity-50">
+              <Save className="h-4 w-4" /> {salvandoRecontratacao ? "Recontratando..." : "Confirmar recontratação"}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
