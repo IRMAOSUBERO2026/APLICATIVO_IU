@@ -24,35 +24,49 @@ export default function LoginPortal() {
       if (cleanCpf.length !== 11) throw new Error("CPF inválido. Deve conter 11 dígitos.");
       if (pin.length < 4) throw new Error("O PIN deve ter no mínimo 4 dígitos.");
 
-      // Validação e provisionamento são feitos no servidor (service role),
-      // que retorna as credenciais de sessão para autenticar no Supabase Auth.
-      const { data, error } = await supabase.functions.invoke("portal-login", {
-        body: { cpf: cleanCpf, pin },
-      });
+      const maskedCpf = cleanCpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
 
-      if (error || !data || (data as any).error) {
-        throw new Error((data as any)?.error || "Não foi possível entrar. Verifique CPF e PIN.");
+      const { data: func, error: funcError } = await supabase
+        .from("funcionarios")
+        .select("id, nome, cargo")
+        .or(`cpf.eq.${cleanCpf},cpf.eq.${maskedCpf}`)
+        .maybeSingle();
+
+      if (funcError) throw new Error("Não foi possível validar o CPF. Tente novamente.");
+      if (!func) throw new Error("Funcionário não encontrado com este CPF.");
+
+      const { data: cred } = await supabase
+        .from("portal_credentials")
+        .select("*")
+        .eq("funcionario_id", (func as any).id)
+        .maybeSingle();
+
+      if (!cred || String((cred as any).pin ?? "") !== pin.trim()) {
+        throw new Error("PIN incorreto ou não configurado. Procure o RH.");
       }
 
-      const { email, password, funcionario_id, nome, perfil } = data as {
-        email: string;
-        password: string;
-        funcionario_id: string;
-        nome: string;
-        perfil: string;
-      };
+      const cargo = String((func as any).cargo || "").toLowerCase();
+      const isMaster = /(diretor|administrador|admin|master|gestor|s[oó]cio|propriet)/.test(cargo);
+      const perfilSalvo = String((cred as any).perfil_acesso || "colaborador").toLowerCase();
+      const perfil = isMaster ? "admin" : perfilSalvo === "diario" ? "diario" : "colaborador";
+      const nome = (func as any).nome as string;
 
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-      if (signInError) throw new Error("Falha ao iniciar a sessão. Tente novamente.");
-
-      localStorage.setItem("portal_user_id", funcionario_id);
+      localStorage.setItem("portal_user_id", (func as any).id);
       localStorage.setItem("portal_user_nome", nome);
       localStorage.setItem("portal_perfil_acesso", perfil);
+
+      // registra último acesso (não bloqueia o login se falhar)
+      supabase
+        .from("portal_credentials")
+        .update({ ultimo_acesso: new Date().toISOString() })
+        .eq("funcionario_id", (func as any).id)
+        .then(() => {}, () => {});
 
       toast({ title: "Login realizado com sucesso!", description: `Bem-vindo, ${nome}.` });
 
       const destino = perfil === "admin" ? "/" : perfil === "diario" ? "/diario-obra-mobile" : "/portal";
       navigate(destino);
+
     } catch (error: any) {
       toast({
         title: "Erro no login",
