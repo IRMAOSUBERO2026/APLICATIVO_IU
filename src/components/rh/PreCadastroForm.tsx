@@ -6,7 +6,7 @@ import { useEmpresasObras } from "@/hooks/useEmpresasObras";
 import { EmpresaSelect, ObraSelect } from "@/components/shared/EmpresaObraSelects";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BonificacoesPadraoEditor, type BonificacaoPadrao } from "@/components/rh/BonificacoesPadraoEditor";
-import { inserirFuncionarioComBonificacoes } from "@/lib/bonificacoesPadrao";
+import { inserirFuncionarioComBonificacoes, salvarFuncionarioComBonificacoes } from "@/lib/bonificacoesPadrao";
 import { supabase } from "@/integrations/supabase/client";
 import { CARGOS_PADRAO } from "@/lib/cargosPadrao";
 import { useSalariosBase } from "@/hooks/useSalariosBase";
