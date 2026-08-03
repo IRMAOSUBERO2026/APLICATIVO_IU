@@ -6,7 +6,7 @@ import { useEmpresasObras } from "@/hooks/useEmpresasObras";
 import { EmpresaSelect, ObraSelect } from "@/components/shared/EmpresaObraSelects";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BonificacoesPadraoEditor, type BonificacaoPadrao } from "@/components/rh/BonificacoesPadraoEditor";
-import { inserirFuncionarioComBonificacoes } from "@/lib/bonificacoesPadrao";
+import { inserirFuncionarioComBonificacoes, salvarFuncionarioComBonificacoes } from "@/lib/bonificacoesPadrao";
 import { supabase } from "@/integrations/supabase/client";
 import { CARGOS_PADRAO } from "@/lib/cargosPadrao";
 import { useSalariosBase } from "@/hooks/useSalariosBase";
@@ -84,6 +84,8 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
   const [step, setStep] = useState<FormStep>("pessoal");
   const [dependentesList, setDependentesList] = useState<Dependente[]>([]);
   const [bonificacoesPadrao, setBonificacoesPadrao] = useState<BonificacaoPadrao[]>([]);
+  const [recontratacao, setRecontratacao] = useState<{ id: string; nome: string; status: string } | null>(null);
+  const [salvandoRecontratacao, setSalvandoRecontratacao] = useState(false);
   const photoRef = useRef<HTMLInputElement>(null);
   const { empresas, obras, obrasPorEmpresa } = useEmpresasObras();
   const { salarioPorCargo } = useSalariosBase();
@@ -131,29 +133,9 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
     setDependentesList(prev => prev.map((d, i) => i === idx ? { ...d, [field]: value } : d));
   };
 
-  const handleSave = async () => {
-    if (!form.nome || !form.cpf || !form.cargo) {
-      toast({ title: "Campos obrigatórios", description: "Nome, CPF e Cargo são obrigatórios.", variant: "destructive" });
-      return;
-    }
-    if (form.pis && !/^\d{11}$/.test(form.pis.replace(/\D/g, ""))) {
-      toast({ title: "PIS Inválido", description: "O PIS deve conter exatamente 11 dígitos numéricos.", variant: "destructive" });
-      return;
-    }
-    if (!form.empresa_id) {
-      toast({ title: "Campos obrigatórios", description: "Selecione a empresa (CNPJ).", variant: "destructive" });
-      setStep("trabalho");
-      return;
-    }
-    if (isEstrangeiro && !form.rne) {
-      toast({ title: "Campo obrigatório", description: "RNE é obrigatório para estrangeiros.", variant: "destructive" });
-      setStep("documentos");
-      return;
-    }
-
-    // Higieniza dependentes: remove linhas totalmente vazias
+  const buildPayload = () => {
     const depsClean = dependentesList.filter(d => d && (d.nome?.trim() || d.cpf?.trim() || d.dataNascimento));
-    const { data: inserted, error } = await inserirFuncionarioComBonificacoes({
+    return {
       nome: form.nome,
       cpf: form.cpf,
       cargo: form.cargo,
@@ -199,56 +181,125 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
       carteira_reservista: form.reservista || null,
       dependentes_json: depsClean,
       bonificacoes_padrao: bonificacoesPadrao as any,
-    });
+    };
+  };
 
-    if (error) {
-      const msg = error.message || "Erro desconhecido ao salvar.";
-      let hint = msg;
-      if (/duplicate key|already exists|unique/i.test(msg)) {
-        hint = "Já existe um funcionário com este CPF/registro. Verifique os dados.";
-      } else if (/violates row-level security|permission denied|not authorized/i.test(msg)) {
-        hint = "Sem permissão para salvar. Faça login novamente como administrador.";
-      } else if (/violates not-null|null value in column/i.test(msg)) {
-        const m = msg.match(/column "?([a-zA-Z0-9_]+)"?/);
-        hint = m ? `Campo obrigatório vazio: ${m[1]}.` : "Existe um campo obrigatório vazio.";
-      } else if (/invalid input syntax|invalid date/i.test(msg)) {
-        hint = "Formato inválido em uma data ou número. Revise os campos.";
-      }
-      toast({ title: "Erro ao salvar", description: hint, variant: "destructive" });
-      return;
+  const traduzErro = (msg: string) => {
+    if (/duplicate key|already exists|unique/i.test(msg)) {
+      return "Já existe um funcionário com este CPF/registro. Verifique os dados.";
     }
-
-    // Cria automaticamente as solicitações admissionais: ASO + NR-6, NR-12, NR-18, NR-35
-    const novoFuncId = (inserted as any)?.id;
-    let examesCriados = 0;
-    if (novoFuncId) {
-      const dataSol = form.admissao || new Date().toISOString().slice(0, 10);
-      const tiposIniciais = ["ASO Admissional", "NR-6", "NR-12", "NR-18", "NR-35"];
-      const rows = tiposIniciais.map((tipo) => ({
-        funcionario_id: novoFuncId,
-        empresa_id: form.empresa_id,
-        tipo_exame: tipo,
-        status: "pendente",
-        valor: 0,
-        data_solicitacao: dataSol,
-      }));
-      const { error: exErr } = await supabase.from("solicitacoes_exame").insert(rows as any);
-      if (!exErr) examesCriados = rows.length;
+    if (/violates row-level security|permission denied|not authorized/i.test(msg)) {
+      return "Sem permissão para salvar. Faça login novamente como administrador.";
     }
+    if (/violates not-null|null value in column/i.test(msg)) {
+      const m = msg.match(/column "?([a-zA-Z0-9_]+)"?/);
+      return m ? `Campo obrigatório vazio: ${m[1]}.` : "Existe um campo obrigatório vazio.";
+    }
+    if (/invalid input syntax|invalid date/i.test(msg)) {
+      return "Formato inválido em uma data ou número. Revise os campos.";
+    }
+    return msg;
+  };
 
+  const criarExamesAdmissionais = async (funcId: string) => {
+    const dataSol = form.admissao || new Date().toISOString().slice(0, 10);
+    const tiposIniciais = ["ASO Admissional", "NR-6", "NR-12", "NR-18", "NR-35"];
+    const rows = tiposIniciais.map((tipo) => ({
+      funcionario_id: funcId,
+      empresa_id: form.empresa_id,
+      tipo_exame: tipo,
+      status: "pendente",
+      valor: 0,
+      data_solicitacao: dataSol,
+    }));
+    const { error: exErr } = await supabase.from("solicitacoes_exame").insert(rows as any);
+    return exErr ? 0 : rows.length;
+  };
+
+  const finalizar = (nome: string, examesCriados: number, recontratado: boolean) => {
     onSave({});
     setForm(emptyForm);
     setDependentesList([]);
     setBonificacoesPadrao([]);
     setStep("pessoal");
+    setRecontratacao(null);
     onOpenChange(false);
     toast({
-      title: "Pré-cadastro salvo",
-      description: examesCriados
-        ? `${form.nome} cadastrado. ${examesCriados} solicitações (ASO + 4 NRs) criadas automaticamente em Gestão de Exames.`
-        : `${form.nome} foi cadastrado com sucesso.`,
+      title: recontratado ? "Recontratação registrada" : "Pré-cadastro salvo",
+      description: `${nome} ${recontratado ? "foi reativado no sistema" : "foi cadastrado com sucesso"}.${examesCriados ? ` ${examesCriados} solicitações (ASO + 4 NRs) criadas automaticamente em Gestão de Exames.` : ""}`,
     });
   };
+
+  const handleSave = async () => {
+    if (!form.nome || !form.cpf || !form.cargo) {
+      toast({ title: "Campos obrigatórios", description: "Nome, CPF e Cargo são obrigatórios.", variant: "destructive" });
+      return;
+    }
+    if (form.pis && !/^\d{11}$/.test(form.pis.replace(/\D/g, ""))) {
+      toast({ title: "PIS Inválido", description: "O PIS deve conter exatamente 11 dígitos numéricos.", variant: "destructive" });
+      return;
+    }
+    if (!form.empresa_id) {
+      toast({ title: "Campos obrigatórios", description: "Selecione a empresa (CNPJ).", variant: "destructive" });
+      setStep("trabalho");
+      return;
+    }
+    if (isEstrangeiro && !form.rne) {
+      toast({ title: "Campo obrigatório", description: "RNE é obrigatório para estrangeiros.", variant: "destructive" });
+      setStep("documentos");
+      return;
+    }
+
+    // Verifica se o CPF já existe (ex-funcionário → oferece recontratação)
+    const cpfDigits = form.cpf.replace(/\D/g, "");
+    if (cpfDigits.length >= 11) {
+      const { data: existentes } = await supabase
+        .from("funcionarios")
+        .select("id, nome, status, cpf, data_admissao")
+        .limit(5000);
+      const achado = (existentes || []).find((f: any) => (f.cpf || "").replace(/\D/g, "") === cpfDigits);
+      if (achado) {
+        const st = (achado.status || "").toLowerCase();
+        const ativo = st === "ativo" || st === "experiencia" || st === "ferias" || st === "afastado";
+        if (ativo) {
+          toast({
+            title: "Funcionário já ativo",
+            description: `${achado.nome} já está cadastrado com este CPF (status: ${achado.status}). Use o módulo RH para editar o cadastro.`,
+            variant: "destructive",
+          });
+          return;
+        }
+        setRecontratacao({ id: achado.id, nome: achado.nome, status: achado.status || "desligado" });
+        return;
+      }
+    }
+
+    const { data: inserted, error } = await inserirFuncionarioComBonificacoes(buildPayload());
+
+    if (error) {
+      toast({ title: "Erro ao salvar", description: traduzErro(error.message || "Erro desconhecido ao salvar."), variant: "destructive" });
+      return;
+    }
+
+    const novoFuncId = (inserted as any)?.id;
+    const examesCriados = novoFuncId ? await criarExamesAdmissionais(novoFuncId) : 0;
+    finalizar(form.nome, examesCriados, false);
+  };
+
+  const confirmarRecontratacao = async () => {
+    if (!recontratacao) return;
+    setSalvandoRecontratacao(true);
+    const payload = buildPayload();
+    const { error } = await salvarFuncionarioComBonificacoes(recontratacao.id, payload as any);
+    setSalvandoRecontratacao(false);
+    if (error) {
+      toast({ title: "Erro ao recontratar", description: traduzErro(error.message || "Erro desconhecido."), variant: "destructive" });
+      return;
+    }
+    const examesCriados = await criarExamesAdmissionais(recontratacao.id);
+    finalizar(form.nome, examesCriados, true);
+  };
+
 
   const currentIdx = steps.findIndex(s => s.key === step);
 
@@ -468,6 +519,36 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
           )}
         </div>
       </DialogContent>
+
+      <Dialog open={!!recontratacao} onOpenChange={(o) => !o && setRecontratacao(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-warning" /> Ex-funcionário encontrado
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            <p>
+              <strong>{recontratacao?.nome}</strong> já possui cadastro com este CPF
+              (status atual: <strong>{recontratacao?.status}</strong>).
+            </p>
+            <p className="text-muted-foreground">
+              Deseja registrar a <strong>recontratação</strong>? O cadastro existente será
+              atualizado com os novos dados, reativado como <strong>ativo</strong> e as
+              solicitações admissionais (ASO + 4 NRs) serão criadas automaticamente.
+              O histórico anterior (ponto, EPIs, folhas) é preservado.
+            </p>
+          </div>
+          <div className="flex justify-end gap-2 pt-4 border-t mt-2">
+            <button onClick={() => setRecontratacao(null)}
+              className="rounded-lg border bg-card px-4 py-2 text-sm font-medium hover:bg-muted transition-colors">Cancelar</button>
+            <button onClick={confirmarRecontratacao} disabled={salvandoRecontratacao}
+              className="inline-flex items-center gap-2 rounded-lg bg-success px-4 py-2 text-sm font-medium text-success-foreground hover:bg-success/90 transition-colors disabled:opacity-50">
+              <Save className="h-4 w-4" /> {salvandoRecontratacao ? "Recontratando..." : "Confirmar recontratação"}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
