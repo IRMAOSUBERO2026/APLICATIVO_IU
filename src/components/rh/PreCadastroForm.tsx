@@ -84,6 +84,8 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
   const [step, setStep] = useState<FormStep>("pessoal");
   const [dependentesList, setDependentesList] = useState<Dependente[]>([]);
   const [bonificacoesPadrao, setBonificacoesPadrao] = useState<BonificacaoPadrao[]>([]);
+  const [recontratacao, setRecontratacao] = useState<{ id: string; nome: string; status: string } | null>(null);
+  const [salvandoRecontratacao, setSalvandoRecontratacao] = useState(false);
   const photoRef = useRef<HTMLInputElement>(null);
   const { empresas, obras, obrasPorEmpresa } = useEmpresasObras();
   const { salarioPorCargo } = useSalariosBase();
