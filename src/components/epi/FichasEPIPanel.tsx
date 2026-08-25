@@ -493,14 +493,24 @@ export default function FichasEPIPanel({ refreshKey = 0 }: FichasEPIPanelProps) 
                             Assinatura Digital
                           </button>
                           <button
-                            onClick={() => handlePdfFisico(r)}
+                            onClick={() => handlePdfFisico(r, "assinado")}
                             disabled={isBusy || r.total_entregas === 0}
-                            className="inline-flex items-center gap-1 rounded-md border bg-card px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
-                            title="Baixar PDF para assinatura física (com coluna de rubrica)"
+                            className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                            title="PDF com rubrica e assinatura eletrônica automática em TODOS os itens (após aprovação master)"
                           >
                             {isBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileDown className="h-3 w-3" />}
-                            PDF Físico
+                            PDF Assinado
                           </button>
+                          <button
+                            onClick={() => handlePdfFisico(r, "branco")}
+                            disabled={isBusy || r.total_entregas === 0}
+                            className="inline-flex items-center gap-1 rounded-md border bg-card px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+                            title="PDF sem rubricas — imprimir e colher assinatura manual"
+                          >
+                            {isBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <FileDown className="h-3 w-3" />}
+                            PDF em Branco
+                          </button>
+
                         </div>
                       </td>
                     </tr>
