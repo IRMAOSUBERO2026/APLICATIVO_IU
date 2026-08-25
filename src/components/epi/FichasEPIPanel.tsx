@@ -406,7 +406,7 @@ export default function FichasEPIPanel({ refreshKey = 0 }: FichasEPIPanelProps) 
                 <th className="px-4 py-3 text-center font-medium text-muted-foreground">Entregas</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Última entrega</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Última assinatura</th>
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground sticky right-0 z-10 bg-muted">Ações</th>
+                <th className="px-4 py-3 text-right font-medium text-muted-foreground md:sticky md:right-0 md:z-10 md:bg-muted">Ações</th>
 
               </tr>
             </thead>
@@ -454,7 +454,7 @@ export default function FichasEPIPanel({ refreshKey = 0 }: FichasEPIPanelProps) 
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 sticky right-0 z-10 bg-card shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.15)]">
+                      <td className="px-4 py-3 md:sticky md:right-0 md:z-10 md:bg-card shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.15)]">
 
                         <div className="flex items-center justify-end gap-2">
                           <label
