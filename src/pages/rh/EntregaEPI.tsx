@@ -460,7 +460,7 @@ export default function EntregaEPI() {
 
             <ScrollableTable>
               <div className="rounded-3xl border border-slate-100 bg-white overflow-hidden shadow-sm">
-                <table className="w-full text-sm">
+                <table className="w-full min-w-[1100px] text-sm">
                   <thead className="bg-slate-50 border-b border-slate-100">
                     <tr>
                       <th className="px-4 py-4 text-left text-[10px] uppercase font-black text-slate-400 tracking-widest">📅 Data</th>
