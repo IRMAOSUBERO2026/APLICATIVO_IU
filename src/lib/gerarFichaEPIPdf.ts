@@ -410,7 +410,14 @@ function drawComprovacao(doc: jsPDF, y: number, entrega: any, fotoDataUrl: strin
 }
 
 // ---------- Main ----------
-export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string): Promise<Blob> {
+export type ModoFichaEPI = "auto" | "assinado" | "branco";
+
+export async function gerarFichaEPIPdf(
+  funcionarioId: string,
+  empresaId: string,
+  opts: { modo?: ModoFichaEPI } = {}
+): Promise<Blob> {
+  const modo: ModoFichaEPI = opts.modo || "auto";
   const { data: func } = await supabase.from("funcionarios").select("*").eq("id", funcionarioId).single();
   const { data: empresa } = await supabase.from("empresas").select("*").eq("id", empresaId).single();
   if (!func || !empresa) throw new Error("Dados base não localizados.");
@@ -427,15 +434,32 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
     .order("data_entrega", { ascending: true });
 
   // Cada item é considerado "atestado" quando possui confirmação registrada no sistema.
-  const atestados: boolean[] = (entregas || []).map((e: any) => {
+  const atestadosBase: boolean[] = (entregas || []).map((e: any) => {
     const tipo = (e.confirmacao_tipo || "").trim().toLowerCase();
     return !!tipo && tipo !== "pendente";
   });
+  // modo "assinado": rubrica em TODOS os itens (após aprovação master)
+  // modo "branco": nenhuma rubrica — folha para coleta manual
+  const atestados: boolean[] =
+    modo === "assinado" ? atestadosBase.map(() => true)
+    : modo === "branco" ? atestadosBase.map(() => false)
+    : atestadosBase;
   const temAlgumAtestado = atestados.some(Boolean);
 
   // Assinatura/rubrica automática (Portal ou carimbo padrão com nome + CPF)
-  const assinatura = await carregarAssinaturaFuncionario(funcionarioId, func.nome || "", func.cpf || null);
-  const sigImg = assinatura.assinaturaDataUrl;
+  const assinatura = modo === "branco"
+    ? { assinaturaDataUrl: null as string | null, origem: "carimbo" as const }
+    : await carregarAssinaturaFuncionario(funcionarioId, func.nome || "", func.cpf || null);
+  const sigImg = assinatura.assinaturaDataUrl && assinatura.assinaturaDataUrl.length > 100
+    ? assinatura.assinaturaDataUrl
+    : null;
+  // Rubrica curta (iniciais) usada como fallback textual quando não há imagem utilizável
+  const rubricaTexto = (func.nome || "")
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((p: string) => p[0])
+    .join(".")
+    .toUpperCase();
 
   // Comprovação fotográfica: usa a entrega mais recente com foto de confirmação
   const comComprovante = (entregas || [])
@@ -524,11 +548,14 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
       }
     },
     didDrawCell: (data) => {
-      // Desenha a rubrica APENAS nos itens atestados no sistema.
+      // Desenha a rubrica nos itens atestados (ou em todos, no modo "assinado").
       // Itens não atestados ficam em branco para coleta manual da assinatura.
-      if (data.section === "body" && data.column.index === 6 && sigImg && atestados[data.row.index]) {
+      if (data.section !== "body" || data.column.index !== 6) return;
+      if (!atestados[data.row.index]) return;
+      const cell = data.cell;
+      let desenhou = false;
+      if (sigImg) {
         try {
-          const cell = data.cell;
           const maxW = cell.width - 3;
           const maxH = cell.height - 1.5;
           let w = maxW;
@@ -537,7 +564,17 @@ export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string)
           const cx = cell.x + (cell.width - w) / 2;
           const cy = cell.y + (cell.height - h) / 2;
           doc.addImage(sigImg, "PNG", cx, cy, w, h, undefined, "FAST");
-        } catch { /* ignore */ }
+          desenhou = true;
+        } catch { desenhou = false; }
+      }
+      if (!desenhou && rubricaTexto) {
+        // Fallback textual: rubrica em itálico dentro da célula
+        doc.setFont("helvetica", "bolditalic");
+        doc.setFontSize(7);
+        doc.setTextColor(C_GREEN[0], C_GREEN[1], C_GREEN[2]);
+        doc.text(rubricaTexto, cell.x + cell.width / 2, cell.y + cell.height / 2 + 1, { align: "center" });
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(C_TEXT[0], C_TEXT[1], C_TEXT[2]);
       }
     },
     didDrawPage: (data) => {

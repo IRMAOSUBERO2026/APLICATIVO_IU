@@ -460,7 +460,7 @@ export default function EntregaEPI() {
 
             <ScrollableTable>
               <div className="rounded-3xl border border-slate-100 bg-white overflow-hidden shadow-sm">
-                <table className="w-full text-sm">
+                <table className="w-full min-w-[1100px] text-sm">
                   <thead className="bg-slate-50 border-b border-slate-100">
                     <tr>
                       <th className="px-4 py-4 text-left text-[10px] uppercase font-black text-slate-400 tracking-widest">📅 Data</th>
@@ -470,7 +470,7 @@ export default function EntregaEPI() {
                       <th className="px-4 py-4 text-left text-[10px] uppercase font-black text-slate-400 tracking-widest">📍 Obra</th>
                       <th className="px-4 py-4 text-center text-[10px] uppercase font-black text-slate-400 tracking-widest">Status</th>
                       <th className="px-4 py-4 text-center text-[10px] uppercase font-black text-slate-400 tracking-widest">Confirmação</th>
-                      <th className="px-4 py-4 text-right text-[10px] uppercase font-black text-slate-400 tracking-widest">Ações</th>
+                      <th className="px-4 py-4 text-right text-[10px] uppercase font-black text-slate-400 tracking-widest md:sticky md:right-0 md:z-10 md:bg-slate-50">Ações</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -501,8 +501,9 @@ export default function EntregaEPI() {
                         <td className="px-4 py-4 text-center">
                           <ConfirmacaoBadge tipo={e.confirmacao_tipo || "pendente"} />
                         </td>
-                        <td className="px-4 py-4">
-                          <div className="flex items-center justify-end gap-1">
+                        <td className="px-4 py-4 md:sticky md:right-0 md:z-10 md:bg-white md:shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.12)] group-hover:md:bg-slate-50">
+                          <div className="flex items-center justify-end gap-1 flex-nowrap">
+
                             {/* Botão 1: Assinatura Digital */}
                             {(e.status || "ativo") === "ativo" && (
                               <button
