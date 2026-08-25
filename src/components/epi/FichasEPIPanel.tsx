@@ -399,14 +399,15 @@ export default function FichasEPIPanel({ refreshKey = 0 }: FichasEPIPanelProps) 
 
       <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[900px] text-sm">
             <thead>
               <tr className="border-b bg-muted/50">
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Funcionário</th>
                 <th className="px-4 py-3 text-center font-medium text-muted-foreground">Entregas</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Última entrega</th>
                 <th className="px-4 py-3 text-left font-medium text-muted-foreground">Última assinatura</th>
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Ações</th>
+                <th className="px-4 py-3 text-right font-medium text-muted-foreground sticky right-0 z-10 bg-muted">Ações</th>
+
               </tr>
             </thead>
             <tbody>
