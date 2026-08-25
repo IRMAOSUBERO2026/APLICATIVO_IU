@@ -548,11 +548,14 @@ export async function gerarFichaEPIPdf(
       }
     },
     didDrawCell: (data) => {
-      // Desenha a rubrica APENAS nos itens atestados no sistema.
+      // Desenha a rubrica nos itens atestados (ou em todos, no modo "assinado").
       // Itens não atestados ficam em branco para coleta manual da assinatura.
-      if (data.section === "body" && data.column.index === 6 && sigImg && atestados[data.row.index]) {
+      if (data.section !== "body" || data.column.index !== 6) return;
+      if (!atestados[data.row.index]) return;
+      const cell = data.cell;
+      let desenhou = false;
+      if (sigImg) {
         try {
-          const cell = data.cell;
           const maxW = cell.width - 3;
           const maxH = cell.height - 1.5;
           let w = maxW;
@@ -561,7 +564,17 @@ export async function gerarFichaEPIPdf(
           const cx = cell.x + (cell.width - w) / 2;
           const cy = cell.y + (cell.height - h) / 2;
           doc.addImage(sigImg, "PNG", cx, cy, w, h, undefined, "FAST");
-        } catch { /* ignore */ }
+          desenhou = true;
+        } catch { desenhou = false; }
+      }
+      if (!desenhou && rubricaTexto) {
+        // Fallback textual: rubrica em itálico dentro da célula
+        doc.setFont("helvetica", "bolditalic");
+        doc.setFontSize(7);
+        doc.setTextColor(C_GREEN[0], C_GREEN[1], C_GREEN[2]);
+        doc.text(rubricaTexto, cell.x + cell.width / 2, cell.y + cell.height / 2 + 1, { align: "center" });
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(C_TEXT[0], C_TEXT[1], C_TEXT[2]);
       }
     },
     didDrawPage: (data) => {
