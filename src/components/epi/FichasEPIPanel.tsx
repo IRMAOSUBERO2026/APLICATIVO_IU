@@ -189,29 +189,38 @@ export default function FichasEPIPanel({ refreshKey = 0 }: FichasEPIPanelProps) 
     }
   }
 
-  async function handlePdfFisico(r: FuncRow) {
+  async function handlePdfFisico(r: FuncRow, modo: "auto" | "assinado" | "branco" = "auto") {
     if (r.total_entregas === 0) {
       toast({ title: "Sem entregas registradas", description: "Registre ao menos uma entrega de EPI antes de gerar a ficha.", variant: "destructive" });
       return;
     }
     setBusy(r.id);
     try {
-      const blob = await gerarFichaEPIPdf(r.id, r.empresa_id);
+      const blob = await gerarFichaEPIPdf(r.id, r.empresa_id, { modo });
       const url = URL.createObjectURL(blob);
+      const sufixo = modo === "assinado" ? "Assinada" : modo === "branco" ? "Em_Branco" : "Ficha";
       const a = document.createElement("a");
       a.href = url;
-      a.download = `Ficha_EPI_${r.nome.replace(/\s+/g, "_")}_${format(new Date(), "yyyyMMdd")}.pdf`;
+      a.download = `Ficha_EPI_${sufixo}_${r.nome.replace(/\s+/g, "_")}_${format(new Date(), "yyyyMMdd")}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      toast({ title: "PDF gerado!", description: "Imprima e colha a rubrica do funcionário em cada item." });
+      toast({
+        title: "PDF gerado!",
+        description: modo === "assinado"
+          ? "Todos os itens saíram com rubrica e assinatura eletrônica do colaborador."
+          : modo === "branco"
+            ? "Documento sem rubricas — imprima para colher a assinatura manualmente."
+            : "Itens atestados saíram com rubrica; os demais ficaram em branco.",
+      });
     } catch (e: any) {
       toast({ title: "Erro ao gerar PDF", description: e.message, variant: "destructive" });
     } finally {
       setBusy(null);
     }
   }
+
 
   async function handleFotoConfirmacao(r: FuncRow, file: File) {
     if (r.total_entregas === 0) {
