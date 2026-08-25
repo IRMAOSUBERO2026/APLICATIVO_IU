@@ -501,8 +501,9 @@ export default function EntregaEPI() {
                         <td className="px-4 py-4 text-center">
                           <ConfirmacaoBadge tipo={e.confirmacao_tipo || "pendente"} />
                         </td>
-                        <td className="px-4 py-4">
-                          <div className="flex items-center justify-end gap-1">
+                        <td className="px-4 py-4 md:sticky md:right-0 md:z-10 md:bg-white md:shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.12)] group-hover:md:bg-slate-50">
+                          <div className="flex items-center justify-end gap-1 flex-nowrap">
+
                             {/* Botão 1: Assinatura Digital */}
                             {(e.status || "ativo") === "ativo" && (
                               <button
