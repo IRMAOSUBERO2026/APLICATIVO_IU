@@ -410,7 +410,14 @@ function drawComprovacao(doc: jsPDF, y: number, entrega: any, fotoDataUrl: strin
 }
 
 // ---------- Main ----------
-export async function gerarFichaEPIPdf(funcionarioId: string, empresaId: string): Promise<Blob> {
+export type ModoFichaEPI = "auto" | "assinado" | "branco";
+
+export async function gerarFichaEPIPdf(
+  funcionarioId: string,
+  empresaId: string,
+  opts: { modo?: ModoFichaEPI } = {}
+): Promise<Blob> {
+  const modo: ModoFichaEPI = opts.modo || "auto";
   const { data: func } = await supabase.from("funcionarios").select("*").eq("id", funcionarioId).single();
   const { data: empresa } = await supabase.from("empresas").select("*").eq("id", empresaId).single();
   if (!func || !empresa) throw new Error("Dados base não localizados.");
