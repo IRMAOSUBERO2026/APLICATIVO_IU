@@ -470,7 +470,7 @@ export default function EntregaEPI() {
                       <th className="px-4 py-4 text-left text-[10px] uppercase font-black text-slate-400 tracking-widest">📍 Obra</th>
                       <th className="px-4 py-4 text-center text-[10px] uppercase font-black text-slate-400 tracking-widest">Status</th>
                       <th className="px-4 py-4 text-center text-[10px] uppercase font-black text-slate-400 tracking-widest">Confirmação</th>
-                      <th className="px-4 py-4 text-right text-[10px] uppercase font-black text-slate-400 tracking-widest">Ações</th>
+                      <th className="px-4 py-4 text-right text-[10px] uppercase font-black text-slate-400 tracking-widest md:sticky md:right-0 md:z-10 md:bg-slate-50">Ações</th>
                     </tr>
                   </thead>
                   <tbody>
