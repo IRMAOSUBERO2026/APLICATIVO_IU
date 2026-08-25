@@ -453,7 +453,8 @@ export default function FichasEPIPanel({ refreshKey = 0 }: FichasEPIPanelProps) 
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 sticky right-0 z-10 bg-card shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.15)]">
+
                         <div className="flex items-center justify-end gap-2">
                           <label
                             className={`inline-flex items-center gap-1 rounded-md border bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-100 cursor-pointer ${r.total_entregas === 0 ? 'opacity-40 cursor-not-allowed' : ''}`}
