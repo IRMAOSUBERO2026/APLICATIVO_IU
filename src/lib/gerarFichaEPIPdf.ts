@@ -434,15 +434,32 @@ export async function gerarFichaEPIPdf(
     .order("data_entrega", { ascending: true });
 
   // Cada item é considerado "atestado" quando possui confirmação registrada no sistema.
-  const atestados: boolean[] = (entregas || []).map((e: any) => {
+  const atestadosBase: boolean[] = (entregas || []).map((e: any) => {
     const tipo = (e.confirmacao_tipo || "").trim().toLowerCase();
     return !!tipo && tipo !== "pendente";
   });
+  // modo "assinado": rubrica em TODOS os itens (após aprovação master)
+  // modo "branco": nenhuma rubrica — folha para coleta manual
+  const atestados: boolean[] =
+    modo === "assinado" ? atestadosBase.map(() => true)
+    : modo === "branco" ? atestadosBase.map(() => false)
+    : atestadosBase;
   const temAlgumAtestado = atestados.some(Boolean);
 
   // Assinatura/rubrica automática (Portal ou carimbo padrão com nome + CPF)
-  const assinatura = await carregarAssinaturaFuncionario(funcionarioId, func.nome || "", func.cpf || null);
-  const sigImg = assinatura.assinaturaDataUrl;
+  const assinatura = modo === "branco"
+    ? { assinaturaDataUrl: null as string | null, origem: "carimbo" as const }
+    : await carregarAssinaturaFuncionario(funcionarioId, func.nome || "", func.cpf || null);
+  const sigImg = assinatura.assinaturaDataUrl && assinatura.assinaturaDataUrl.length > 100
+    ? assinatura.assinaturaDataUrl
+    : null;
+  // Rubrica curta (iniciais) usada como fallback textual quando não há imagem utilizável
+  const rubricaTexto = (func.nome || "")
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((p: string) => p[0])
+    .join(".")
+    .toUpperCase();
 
   // Comprovação fotográfica: usa a entrega mais recente com foto de confirmação
   const comComprovante = (entregas || [])
