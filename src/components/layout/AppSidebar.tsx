@@ -34,6 +34,8 @@ import {
 } from "lucide-react";
 import { verificarAlertas } from "@/utils/seguranca";
 import logoMark from "@/assets/logo-iu-mark.svg";
+import { getPortalUser } from "@/lib/portalAuth";
+import { podeAcessarRota } from "@/lib/permissoes";
 
 const menuSections = [
   {
@@ -150,7 +152,7 @@ export function AppSidebar({ onClose }: AppSidebarProps) {
       </div>
 
       <nav className="flex-1 px-0 py-6 space-y-6">
-        {menuSections.map((section) => (
+        {secoesVisiveis.map((section) => (
           <div key={section.label}>
             <p className="mb-2 px-6 text-[10px] font-medium uppercase tracking-[0.15em] text-[#888888]">
               {section.label}
