@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
+import { parsePermissoes, rotaInicial } from "@/lib/permissoes";
 
 export default function LoginPortal() {
   const [cpf, setCpf] = useState("");
