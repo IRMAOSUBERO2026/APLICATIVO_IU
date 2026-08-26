@@ -1,5 +1,6 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { getPortalUser } from "@/lib/portalAuth";
+import { podeAcessarRota, rotaInicial } from "@/lib/permissoes";
 
 /**
  * Exige que o usuário esteja logado no portal (qualquer perfil).
@@ -11,23 +12,25 @@ export function RequirePortal() {
 }
 
 /**
- * Exige perfil Admin/Diretoria para acessar os módulos completos do ERP.
- * Colaboradores são redirecionados ao portal; o perfil "diário" vai direto ao lançamento de campo.
+ * Guarda dos módulos do ERP: admin acessa tudo; os demais somente os módulos
+ * liberados no painel "Controle de Acesso".
  */
 export function RequireAdmin() {
   const user = getPortalUser();
+  const location = useLocation();
   if (!user) return <Navigate to="/login-portal" replace />;
-  if (user.perfil === "admin") return <Outlet />;
-  if (user.perfil === "diario") return <Navigate to="/diario-obra-mobile" replace />;
-  return <Navigate to="/portal" replace />;
+  if (podeAcessarRota(location.pathname, user.perfil, user.permissoes)) return <Outlet />;
+  const destino = rotaInicial(user.perfil, user.permissoes);
+  return <Navigate to={destino === location.pathname ? "/portal" : destino} replace />;
 }
 
 /**
- * Exige perfil Admin ou liberação de "Diário de Obra".
+ * Exige permissão para o módulo de Diário de Obra (campo).
  */
 export function RequireDiario() {
   const user = getPortalUser();
+  const location = useLocation();
   if (!user) return <Navigate to="/login-portal" replace />;
-  if (user.perfil === "admin" || user.perfil === "diario") return <Outlet />;
+  if (podeAcessarRota(location.pathname, user.perfil, user.permissoes)) return <Outlet />;
   return <Navigate to="/portal" replace />;
 }
