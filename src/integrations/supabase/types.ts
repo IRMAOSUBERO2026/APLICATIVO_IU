@@ -2416,6 +2416,7 @@ export type Database = {
           funcionario_id: string
           id: string
           perfil_acesso: string
+          permissoes: Json
           pin: string | null
           pin_configurado: boolean
           ultimo_acesso: string | null
@@ -2426,6 +2427,7 @@ export type Database = {
           funcionario_id: string
           id?: string
           perfil_acesso?: string
+          permissoes?: Json
           pin?: string | null
           pin_configurado?: boolean
           ultimo_acesso?: string | null
@@ -2436,6 +2438,7 @@ export type Database = {
           funcionario_id?: string
           id?: string
           perfil_acesso?: string
+          permissoes?: Json
           pin?: string | null
           pin_configurado?: boolean
           ultimo_acesso?: string | null
