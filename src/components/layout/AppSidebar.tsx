@@ -34,6 +34,8 @@ import {
 } from "lucide-react";
 import { verificarAlertas } from "@/utils/seguranca";
 import logoMark from "@/assets/logo-iu-mark.svg";
+import { getPortalUser } from "@/lib/portalAuth";
+import { podeAcessarRota } from "@/lib/permissoes";
 
 const menuSections = [
   {
@@ -110,6 +112,7 @@ interface AppSidebarProps {
 export function AppSidebar({ onClose }: AppSidebarProps) {
   const location = useLocation();
   const [alertasSeguranca, setAlertasSeguranca] = useState(0);
+  const user = getPortalUser();
 
   useEffect(() => {
     // Carrega o badge de alertas de segurança
@@ -117,6 +120,19 @@ export function AppSidebar({ onClose }: AppSidebarProps) {
       setAlertasSeguranca(res.vencidos + res.a_vencer_7);
     });
   }, [location.pathname]);
+
+  // Mostra apenas os módulos liberados para o perfil logado
+  const secoesVisiveis = menuSections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter(
+        (item) =>
+          item.path === "/portal" ||
+          podeAcessarRota(item.path, user?.perfil ?? "colaborador", user?.permissoes ?? [])
+      ),
+    }))
+    .filter((section) => section.items.length > 0);
+
 
   return (
     <div className="flex h-full flex-col overflow-y-auto scrollbar-saas bg-[#0D0D0D] w-[240px]">
@@ -136,7 +152,7 @@ export function AppSidebar({ onClose }: AppSidebarProps) {
       </div>
 
       <nav className="flex-1 px-0 py-6 space-y-6">
-        {menuSections.map((section) => (
+        {secoesVisiveis.map((section) => (
           <div key={section.label}>
             <p className="mb-2 px-6 text-[10px] font-medium uppercase tracking-[0.15em] text-[#888888]">
               {section.label}

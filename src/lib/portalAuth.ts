@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { parsePermissoes, type ModuloKey } from "./permissoes";
 
 export type PortalPerfil = "admin" | "diario" | "colaborador";
 
@@ -6,6 +7,8 @@ export interface PortalUser {
   id: string;
   nome: string;
   perfil: PortalPerfil;
+  /** Módulos do ERP liberados para este colaborador (ignorado quando perfil = admin). */
+  permissoes: ModuloKey[];
 }
 
 /**
@@ -18,13 +21,17 @@ export function getPortalUser(): PortalUser | null {
   const nome = localStorage.getItem("portal_user_nome") || "";
   const perfil = (localStorage.getItem("portal_perfil_acesso") || "colaborador") as PortalPerfil;
   if (!id) return null;
-  return { id, nome, perfil };
+  const permissoes = parsePermissoes(localStorage.getItem("portal_permissoes"));
+  // Compatibilidade com sessões antigas (perfil "diario" sem lista de permissões)
+  if (perfil === "diario" && permissoes.length === 0) permissoes.push("diario_obra");
+  return { id, nome, perfil, permissoes };
 }
 
 export function portalLogout() {
   localStorage.removeItem("portal_user_id");
   localStorage.removeItem("portal_user_nome");
   localStorage.removeItem("portal_perfil_acesso");
+  localStorage.removeItem("portal_permissoes");
 }
 
 /** Hook reativo (atualiza quando o storage muda em outra aba). */

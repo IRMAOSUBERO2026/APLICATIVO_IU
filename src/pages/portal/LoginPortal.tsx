@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
+import { parsePermissoes, rotaInicial } from "@/lib/permissoes";
 
 export default function LoginPortal() {
   const [cpf, setCpf] = useState("");
@@ -48,12 +49,15 @@ export default function LoginPortal() {
       const cargo = String((func as any).cargo || "").toLowerCase();
       const isMaster = /(diretor|administrador|admin|master|gestor|s[oó]cio|propriet)/.test(cargo);
       const perfilSalvo = String((cred as any).perfil_acesso || "colaborador").toLowerCase();
-      const perfil = isMaster ? "admin" : perfilSalvo === "diario" ? "diario" : "colaborador";
+      const perfil = isMaster || perfilSalvo === "admin" ? "admin" : perfilSalvo === "diario" ? "diario" : "colaborador";
       const nome = (func as any).nome as string;
+      const permissoes = parsePermissoes((cred as any).permissoes);
+      if (perfil === "diario" && permissoes.length === 0) permissoes.push("diario_obra");
 
       localStorage.setItem("portal_user_id", (func as any).id);
       localStorage.setItem("portal_user_nome", nome);
       localStorage.setItem("portal_perfil_acesso", perfil);
+      localStorage.setItem("portal_permissoes", JSON.stringify(permissoes));
 
       // registra último acesso (não bloqueia o login se falhar)
       supabase
@@ -64,8 +68,8 @@ export default function LoginPortal() {
 
       toast({ title: "Login realizado com sucesso!", description: `Bem-vindo, ${nome}.` });
 
-      const destino = perfil === "admin" ? "/" : perfil === "diario" ? "/diario-obra-mobile" : "/portal";
-      navigate(destino);
+      navigate(rotaInicial(perfil, permissoes));
+
 
     } catch (error: any) {
       toast({
