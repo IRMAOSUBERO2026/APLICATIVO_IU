@@ -110,6 +110,7 @@ interface AppSidebarProps {
 export function AppSidebar({ onClose }: AppSidebarProps) {
   const location = useLocation();
   const [alertasSeguranca, setAlertasSeguranca] = useState(0);
+  const user = getPortalUser();
 
   useEffect(() => {
     // Carrega o badge de alertas de segurança
@@ -117,6 +118,19 @@ export function AppSidebar({ onClose }: AppSidebarProps) {
       setAlertasSeguranca(res.vencidos + res.a_vencer_7);
     });
   }, [location.pathname]);
+
+  // Mostra apenas os módulos liberados para o perfil logado
+  const secoesVisiveis = menuSections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter(
+        (item) =>
+          item.path === "/portal" ||
+          podeAcessarRota(item.path, user?.perfil ?? "colaborador", user?.permissoes ?? [])
+      ),
+    }))
+    .filter((section) => section.items.length > 0);
+
 
   return (
     <div className="flex h-full flex-col overflow-y-auto scrollbar-saas bg-[#0D0D0D] w-[240px]">
