@@ -16,9 +16,10 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-    const admin = createClient(supabaseUrl, serviceKey, {
+    const cloudUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const cloudServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+
+    const admin = createClient(cloudUrl, cloudServiceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
@@ -43,7 +44,7 @@ serve(async (req) => {
     // 2. Validate PIN
     const { data: cred } = await admin
       .from("portal_credentials")
-      .select("pin, perfil_acesso")
+      .select("pin")
       .eq("funcionario_id", func.id)
       .maybeSingle();
 
@@ -54,7 +55,12 @@ serve(async (req) => {
     // 3. Determine access profile
     const cargo = (func.cargo || "").toLowerCase();
     const isMaster = /(diretor|administrador|admin|master|gestor|s[oó]cio|propriet)/.test(cargo);
-    const perfilSalvo = (cred.perfil_acesso || "colaborador").toLowerCase();
+    const { data: accessConfig } = await admin
+      .from("portal_credentials")
+      .select("perfil_acesso, permissoes")
+      .eq("funcionario_id", func.id)
+      .maybeSingle();
+    const perfilSalvo = String(accessConfig?.perfil_acesso || "colaborador").toLowerCase();
     const perfil = isMaster ? "admin" : perfilSalvo === "diario" ? "diario" : "colaborador";
 
     const email = `${cleanCpf}@irmaosubero.com`;
@@ -113,6 +119,7 @@ serve(async (req) => {
       funcionario_id: func.id,
       nome: func.nome,
       perfil,
+      permissoes: accessConfig?.permissoes || [],
       role: appRole,
     });
   } catch (e) {
