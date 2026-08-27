@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { cloudClient } from "@/integrations/supabase/cloudClient";
 import { Link } from "react-router-dom";
 import { parsePermissoes, rotaInicial } from "@/lib/permissoes";
 
@@ -25,36 +26,26 @@ export default function LoginPortal() {
       if (cleanCpf.length !== 11) throw new Error("CPF inválido. Deve conter 11 dígitos.");
       if (pin.length < 4) throw new Error("O PIN deve ter no mínimo 4 dígitos.");
 
-      const maskedCpf = cleanCpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+      const { data: loginData, error: loginError } = await cloudClient.functions.invoke("portal-login", {
+        body: { cpf: cleanCpf, pin: pin.trim() },
+      });
+      if (loginError) throw new Error("Não foi possível validar o acesso. Tente novamente.");
+      if (!loginData || loginData.error) throw new Error(loginData?.error || "Acesso não autorizado.");
 
-      const { data: func, error: funcError } = await supabase
-        .from("funcionarios")
-        .select("id, nome, cargo")
-        .or(`cpf.eq.${cleanCpf},cpf.eq.${maskedCpf}`)
-        .maybeSingle();
+      const { error: sessionError } = await cloudClient.auth.signInWithPassword({
+        email: loginData.email,
+        password: loginData.password,
+      });
+      if (sessionError) throw new Error("Não foi possível iniciar a sessão administrativa.");
 
-      if (funcError) throw new Error("Não foi possível validar o CPF. Tente novamente.");
-      if (!func) throw new Error("Funcionário não encontrado com este CPF.");
-
-      const { data: cred } = await supabase
-        .from("portal_credentials")
-        .select("*")
-        .eq("funcionario_id", (func as any).id)
-        .maybeSingle();
-
-      if (!cred || String((cred as any).pin ?? "") !== pin.trim()) {
-        throw new Error("PIN incorreto ou não configurado. Procure o RH.");
-      }
-
-      const cargo = String((func as any).cargo || "").toLowerCase();
-      const isMaster = /(diretor|administrador|admin|master|gestor|s[oó]cio|propriet)/.test(cargo);
-      const perfilSalvo = String((cred as any).perfil_acesso || "colaborador").toLowerCase();
-      const perfil = isMaster || perfilSalvo === "admin" ? "admin" : perfilSalvo === "diario" ? "diario" : "colaborador";
-      const nome = (func as any).nome as string;
-      const permissoes = parsePermissoes((cred as any).permissoes);
+      const perfil = loginData.perfil === "admin" || loginData.perfil === "diario"
+        ? loginData.perfil
+        : "colaborador";
+      const nome = String(loginData.nome || "");
+      const permissoes = parsePermissoes(loginData.permissoes);
       if (perfil === "diario" && permissoes.length === 0) permissoes.push("diario_obra");
 
-      localStorage.setItem("portal_user_id", (func as any).id);
+      localStorage.setItem("portal_user_id", loginData.funcionario_id);
       localStorage.setItem("portal_user_nome", nome);
       localStorage.setItem("portal_perfil_acesso", perfil);
       localStorage.setItem("portal_permissoes", JSON.stringify(permissoes));
@@ -63,7 +54,7 @@ export default function LoginPortal() {
       supabase
         .from("portal_credentials")
         .update({ ultimo_acesso: new Date().toISOString() })
-        .eq("funcionario_id", (func as any).id)
+        .eq("funcionario_id", loginData.funcionario_id)
         .then(() => {}, () => {});
 
       toast({ title: "Login realizado com sucesso!", description: `Bem-vindo, ${nome}.` });

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { cloudClient } from "@/integrations/supabase/cloudClient";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,7 +57,7 @@ export default function Acesso() {
     try {
       const [{ data: funcs, error: e1 }, { data: creds, error: e2 }] = await Promise.all([
         supabase.from("funcionarios").select("id, nome, cpf, cargo, status").order("nome"),
-        supabase.from("portal_credentials").select("*"),
+        cloudClient.from("portal_credentials").select("*"),
       ]);
       if (e1) throw e1;
       if (e2) throw e2;
@@ -128,7 +129,12 @@ export default function Acesso() {
     if (!editando) return;
     setSalvando(true);
     try {
-      const { error } = await supabase.from("portal_credentials").upsert(
+      const { data: authData } = await cloudClient.auth.getUser();
+      if (!authData.user) {
+        throw new Error("Sua sessão administrativa expirou. Entre novamente para salvar os acessos.");
+      }
+
+      const { error } = await cloudClient.from("portal_credentials").upsert(
         {
           funcionario_id: editando.id,
           perfil_acesso: perfil,
