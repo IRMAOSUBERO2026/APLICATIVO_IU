@@ -52,16 +52,15 @@ serve(async (req) => {
       return json({ error: "PIN incorreto ou não configurado." }, 401);
     }
 
-    // 3. Determine access profile
-    const cargo = (func.cargo || "").toLowerCase();
-    const isMaster = /(diretor|administrador|admin|master|gestor|s[oó]cio|propriet)/.test(cargo);
+    // 3. Determine access profile — SOMENTE o perfil salvo em portal_credentials.
+    // (Antes o cargo do funcionário concedia admin automaticamente: falha de segurança.)
     const { data: accessConfig } = await admin
       .from("portal_credentials")
       .select("perfil_acesso, permissoes")
       .eq("funcionario_id", func.id)
       .maybeSingle();
     const perfilSalvo = String(accessConfig?.perfil_acesso || "colaborador").toLowerCase();
-    const perfil = isMaster ? "admin" : perfilSalvo === "diario" ? "diario" : "colaborador";
+    const perfil = perfilSalvo === "admin" ? "admin" : perfilSalvo === "diario" ? "diario" : "colaborador";
 
     const email = `${cleanCpf}@irmaosubero.com`;
     // Fresh strong password each login; returned once to the client to sign in.
