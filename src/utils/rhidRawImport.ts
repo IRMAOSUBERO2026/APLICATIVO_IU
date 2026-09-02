@@ -11,7 +11,21 @@ export interface RawPreAnalysis {
 }
 export interface RawImportStats { importacaoId: string | null; gravados: number; vinculadas: number; semVinculo: number; duplicadas: number; erros: string[]; }
 
-function encontrarFuncionario(row: RHiDMarcacao, maps: MatchMaps) {
+/** Chave estável de agrupamento de marcações sem vínculo (CPF > PIS > nome). */
+export function chaveVinculoRaw(row: RHiDMarcacao) {
+  if (row.cpf) return `cpf:${row.cpf}`;
+  if (row.pis) return `pis:${row.pis}`;
+  return `nome:${nameKey(row.nome || "")}`;
+}
+
+export type VinculoManual = Record<string, string>;
+
+function encontrarFuncionario(row: RHiDMarcacao, maps: MatchMaps, manuais?: VinculoManual) {
+  const manualId = manuais?.[chaveVinculoRaw(row)];
+  if (manualId) {
+    const alvo = maps.funcionarios.find((f) => f.id === manualId);
+    if (alvo) return { funcionario: alvo, criterio: "manual" as const };
+  }
   const porCpf = row.cpf ? maps.funcPorCpf.get(row.cpf) : null;
   if (porCpf) return { funcionario: porCpf, criterio: "cpf" as const };
   const porPis = row.pis ? maps.funcPorPis.get(row.pis) : null;
@@ -21,18 +35,43 @@ function encontrarFuncionario(row: RHiDMarcacao, maps: MatchMaps) {
   return { funcionario: null, criterio: null };
 }
 
-export function prepararRawPreAnalise(parse: RHiDMarcacoesParseResult, maps: MatchMaps, hash: string): RawPreAnalysis {
+export interface GrupoSemVinculo {
+  chave: string; cpf: string | null; pis: string | null; nome: string; total: number; dias: number;
+  primeira: string; ultima: string; dispositivos: string[];
+}
+
+/** Agrupa as marcações que não encontraram funcionário, para correção manual. */
+export function listarSemVinculo(parse: RHiDMarcacoesParseResult, maps: MatchMaps, manuais?: VinculoManual): GrupoSemVinculo[] {
+  const grupos = new Map<string, GrupoSemVinculo & { diasSet: Set<string>; dispSet: Set<string> }>();
+  for (const row of parse.registros) {
+    if (encontrarFuncionario(row, maps, manuais).funcionario) continue;
+    const chave = chaveVinculoRaw(row);
+    const item = grupos.get(chave) || { chave, cpf: row.cpf || null, pis: row.pis || null, nome: row.nome || "Sem nome no arquivo", total: 0, dias: 0, primeira: row.dataHora, ultima: row.dataHora, diasSet: new Set<string>(), dispSet: new Set<string>(), dispositivos: [] };
+    item.total++;
+    item.diasSet.add(row.dataHora.slice(0, 10));
+    if (row.dataHora < item.primeira) item.primeira = row.dataHora;
+    if (row.dataHora > item.ultima) item.ultima = row.dataHora;
+    if ((row as any).dispositivo) item.dispSet.add((row as any).dispositivo);
+    grupos.set(chave, item);
+  }
+  return Array.from(grupos.values())
+    .map((g) => ({ chave: g.chave, cpf: g.cpf, pis: g.pis, nome: g.nome, total: g.total, dias: g.diasSet.size, primeira: g.primeira, ultima: g.ultima, dispositivos: Array.from(g.dispSet) }))
+    .sort((a, b) => b.total - a.total);
+}
+
+export function prepararRawPreAnalise(parse: RHiDMarcacoesParseResult, maps: MatchMaps, hash: string, manuais?: VinculoManual): RawPreAnalysis {
   const porCriterio = { cpf: 0, pis: 0, nome: 0, sem: 0 }; const vistos = new Set<string>();
   let vinculadas = 0; let duplicadas = 0; let suspeitas = 0;
   for (const row of parse.registros) {
-    const match = encontrarFuncionario(row, maps);
-    if (match.criterio) { vinculadas++; porCriterio[match.criterio]++; } else porCriterio.sem++;
+    const match = encontrarFuncionario(row, maps, manuais);
+    if (match.criterio) { vinculadas++; if (match.criterio !== "manual") porCriterio[match.criterio]++; } else porCriterio.sem++;
     const chave = `${row.id}|${row.nsr ?? ""}|${row.dataHora}|${row.cpf ?? ""}`;
     if (vistos.has(chave)) duplicadas++; else vistos.add(chave);
     if (row.suspeita) suspeitas++;
   }
   return { total: parse.totalLinhas, cpfs: parse.cpfs.length, dispositivos: parse.dispositivos, dataInicio: parse.dataInicio, dataFim: parse.dataFim, vinculadas, semVinculo: porCriterio.sem, porCriterio, duplicadas, suspeitas, hash };
 }
+
 
 export async function importarMarcacoesRHiD(parse: RHiDMarcacoesParseResult, fileName: string, maps: MatchMaps): Promise<RawImportStats> {
   const erros = [...parse.erros]; const stats: RawImportStats = { importacaoId: null, gravados: 0, vinculadas: 0, semVinculo: 0, duplicadas: 0, erros };
