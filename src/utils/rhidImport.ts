@@ -13,8 +13,20 @@ import type { RHiDLinha, RHiDParseResult } from "@/utils/rhidCsvParser";
 
 const apenasDigitos = (s: string) => (s || "").replace(/\D/g, "");
 
+export interface FuncionarioMatch {
+  id: string;
+  nome: string;
+  cpf: string;
+  pis: string;
+  obra_id: string | null;
+  status: string | null;
+}
+
 export interface MatchMaps {
   funcPorCpf: Map<string, { id: string; nome: string }>;
+  funcPorPis: Map<string, FuncionarioMatch>;
+  funcPorNome: Map<string, FuncionarioMatch>;
+  funcionarios: FuncionarioMatch[];
 }
 
 export interface PreAnalise {
@@ -29,14 +41,23 @@ export interface PreAnalise {
   importacaoAnterior: { id: string; importado_em: string; nome_arquivo: string } | null;
 }
 
+const nomeChave = (nome: string) => nome.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+
 export async function carregarMatch(): Promise<MatchMaps> {
-  const { data } = await supabase.from("funcionarios").select("id, nome, cpf");
+  const { data } = await supabase.from("funcionarios").select("id, nome, cpf, pis, obra_id, status");
   const funcPorCpf = new Map<string, { id: string; nome: string }>();
-  for (const f of data || []) {
-    const cpf = apenasDigitos((f as any).cpf || "");
-    if (cpf) funcPorCpf.set(cpf, { id: (f as any).id, nome: (f as any).nome });
+  const funcPorPis = new Map<string, FuncionarioMatch>();
+  const funcPorNome = new Map<string, FuncionarioMatch>();
+  const funcionarios: FuncionarioMatch[] = [];
+  for (const raw of data || []) {
+    const f = raw as any;
+    const funcionario: FuncionarioMatch = { id: f.id, nome: f.nome || "", cpf: apenasDigitos(f.cpf), pis: apenasDigitos(f.pis), obra_id: f.obra_id || null, status: f.status || null };
+    funcionarios.push(funcionario);
+    if (funcionario.cpf) funcPorCpf.set(funcionario.cpf, { id: funcionario.id, nome: funcionario.nome });
+    if (funcionario.pis) funcPorPis.set(funcionario.pis, funcionario);
+    if (funcionario.nome) funcPorNome.set(nomeChave(funcionario.nome), funcionario);
   }
-  return { funcPorCpf };
+  return { funcPorCpf, funcPorPis, funcPorNome, funcionarios };
 }
 
 /** Verifica se um arquivo com o mesmo hash já foi importado. */
