@@ -190,7 +190,7 @@ export function parseRHiDCSV(conteudo: string): RHiDParseResult {
       let nomeFeriado: string | null = null;
       let capturarHorarios = false;
       if (todos((v) => v === "-" || v === "")) { tipoDia = todos((v) => v === "-") ? "sem_vinculo" : "normal"; capturarHorarios = tipoDia === "normal"; }
-      else if (todos((v) => /^folga$/i.test(v))) typeo: { tipoDia = "folga"; break typeo; }
+      else if (todos((v) => /^folga$/i.test(v))) tipoDia = "folga";
       else if (algum((v) => /feriado:/i.test(v))) { tipoDia = "feriado"; nomeFeriado = t((rawHor.find((v) => /feriado:/i.test(v)) || "").split(/feriado:/i)[1] || "") || null; }
       else if (algum((v) => /^justificado feriado$/i.test(v))) tipoDia = "feriado";
       else if (algum((v) => /justificado atestado/i.test(v))) tipoDia = "atestado";
@@ -248,17 +248,17 @@ export function parseRHiDMarcacoesCSV(conteudo: string): RHiDMarcacoesParseResul
   const header = linhas.findIndex((line) => /(^|;)nsr;?/i.test(line) && /data/i.test(line) && /cpf/i.test(line));
   if (header < 0) return { registros: [], erros: ["Cabeçalho incompatível: esperado o CSV de marcações do RHiD com as colunas Id, NSR, Data, PIS e CPF."], totalLinhas: 0, cpfs: [], dispositivos: [], dataInicio: null, dataFim: null };
   const headerCols = dividirCSV(linhas[header]).map(normHeader);
-  const indexOf = (names: string[]) => headerCols.findIndex((h) => names.includes(h.replace(/\*$/, "")));
+  const indexOf = (names: string[]) => headerCols.findIndex((h) => names.includes(h));
   const col = { id: indexOf(["id"]), nsr: indexOf(["nsr"]), data: indexOf(["data"]), pis: indexOf(["pis"]), cpf: indexOf(["cpf"]), dispositivo: indexOf(["dispositivo"]), nome: indexOf(["funcionario"]), departamento: indexOf(["departamento"]), facial: indexOf(["reconhecimento facial"]), suspeita: indexOf(["suspeita"]), local: indexOf(["local de trabalho"]) };
   if (col.data < 0 || col.cpf < 0 || col.nome < 0) return { registros: [], erros: ["Cabeçalho incompatível: não foi possível localizar Data, CPF e Funcionário."], totalLinhas: 0, cpfs: [], dispositivos: [], dataInicio: null, dataFim: null };
   for (let i = header + 1; i < linhas.length; i++) {
     if (!linhas[i].trim()) continue;
     const cells = dividirCSV(linhas[i]); const dataHora = parseDataHoraRHiD(cells[col.data]);
     if (!dataHora) { erros.push(`Linha ${i + 1}: data/hora inválida.`); continue; }
-    const cpf = documentoChave(cells[col.cpf]); const pis = documentoChave(cells[col.pis]);
+    const cpf = documentoChave(col.cpf >= 0 ? cells[col.cpf] : ""); const pis = documentoChave(col.pis >= 0 ? cells[col.pis] : "");
     const nome = t(cells[col.nome]);
     if (!nome && !cpf && !pis) { erros.push(`Linha ${i + 1}: sem funcionário, CPF ou PIS.`); continue; }
-    const dispositivo = t(cells[col.dispositivo]);
+    const dispositivo = t(col.dispositivo >= 0 ? cells[col.dispositivo] : "");
     const registro: RHiDMarcacao = { linha: i + 1, id: t(cells[col.id]), nsr: Number.isFinite(Number(cells[col.nsr])) ? Number(cells[col.nsr]) : null, dataHora, cpf, pis, nome, dispositivo, departamento: t(cells[col.departamento]), reconhecimentoFacial: t(cells[col.facial]) || null, suspeita: t(cells[col.suspeita]) || null, localTrabalho: t(cells[col.local]) || null };
     registros.push(registro); if (cpf) cpfs.add(cpf); if (dispositivo) dispositivos.add(dispositivo);
   }
