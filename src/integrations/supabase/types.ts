@@ -2410,6 +2410,180 @@ export type Database = {
           },
         ]
       }
+      ponto_batidas_raw: {
+        Row: {
+          arquivo_origem: string | null
+          e_deslocamento: boolean | null
+          equipamento_id: string | null
+          funcionario_id: string | null
+          hash_verificacao: string | null
+          id: string
+          importado_em: string | null
+          importado_por: string | null
+          obra_id_batida: string | null
+          pis: string | null
+          sequencia_afd: number | null
+          timestamp_batida: string
+          tipo_registro: string
+        }
+        Insert: {
+          arquivo_origem?: string | null
+          e_deslocamento?: boolean | null
+          equipamento_id?: string | null
+          funcionario_id?: string | null
+          hash_verificacao?: string | null
+          id?: string
+          importado_em?: string | null
+          importado_por?: string | null
+          obra_id_batida?: string | null
+          pis?: string | null
+          sequencia_afd?: number | null
+          timestamp_batida: string
+          tipo_registro: string
+        }
+        Update: {
+          arquivo_origem?: string | null
+          e_deslocamento?: boolean | null
+          equipamento_id?: string | null
+          funcionario_id?: string | null
+          hash_verificacao?: string | null
+          id?: string
+          importado_em?: string | null
+          importado_por?: string | null
+          obra_id_batida?: string | null
+          pis?: string | null
+          sequencia_afd?: number | null
+          timestamp_batida?: string
+          tipo_registro?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ponto_batidas_raw_equipamento_id_fkey"
+            columns: ["equipamento_id"]
+            isOneToOne: false
+            referencedRelation: "ponto_equipamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ponto_batidas_raw_funcionario_id_fkey"
+            columns: ["funcionario_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ponto_batidas_raw_obra_id_batida_fkey"
+            columns: ["obra_id_batida"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ponto_equipamentos: {
+        Row: {
+          ativo: boolean | null
+          criado_em: string | null
+          descricao: string | null
+          id: string
+          modelo: string | null
+          obra_id: string
+          serial_numero: string
+        }
+        Insert: {
+          ativo?: boolean | null
+          criado_em?: string | null
+          descricao?: string | null
+          id?: string
+          modelo?: string | null
+          obra_id: string
+          serial_numero: string
+        }
+        Update: {
+          ativo?: boolean | null
+          criado_em?: string | null
+          descricao?: string | null
+          id?: string
+          modelo?: string | null
+          obra_id?: string
+          serial_numero?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ponto_equipamentos_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ponto_importacoes_log: {
+        Row: {
+          arquivo_nome: string | null
+          equipamento_id: string | null
+          erros: string | null
+          hash_arquivo: string | null
+          id: string
+          importado_em: string | null
+          importado_por: string | null
+          obra_id: string | null
+          periodo_fim: string | null
+          periodo_inicio: string | null
+          pis_desconhecidos: number | null
+          registros_biometricos: number | null
+          status: string | null
+          total_registros: number | null
+        }
+        Insert: {
+          arquivo_nome?: string | null
+          equipamento_id?: string | null
+          erros?: string | null
+          hash_arquivo?: string | null
+          id?: string
+          importado_em?: string | null
+          importado_por?: string | null
+          obra_id?: string | null
+          periodo_fim?: string | null
+          periodo_inicio?: string | null
+          pis_desconhecidos?: number | null
+          registros_biometricos?: number | null
+          status?: string | null
+          total_registros?: number | null
+        }
+        Update: {
+          arquivo_nome?: string | null
+          equipamento_id?: string | null
+          erros?: string | null
+          hash_arquivo?: string | null
+          id?: string
+          importado_em?: string | null
+          importado_por?: string | null
+          obra_id?: string | null
+          periodo_fim?: string | null
+          periodo_inicio?: string | null
+          pis_desconhecidos?: number | null
+          registros_biometricos?: number | null
+          status?: string | null
+          total_registros?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ponto_importacoes_log_equipamento_id_fkey"
+            columns: ["equipamento_id"]
+            isOneToOne: false
+            referencedRelation: "ponto_equipamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ponto_importacoes_log_obra_id_fkey"
+            columns: ["obra_id"]
+            isOneToOne: false
+            referencedRelation: "obras"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       portal_credentials: {
         Row: {
           created_at: string
@@ -3261,12 +3435,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3290,11 +3464,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3315,11 +3489,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3340,11 +3514,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3357,11 +3531,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
