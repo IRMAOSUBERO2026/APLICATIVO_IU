@@ -23,9 +23,10 @@ export interface FuncionarioMatch {
 }
 
 export interface MatchMaps {
-  funcPorCpf: Map<string, { id: string; nome: string }>;
+  funcPorCpf: Map<string, FuncionarioMatch>;
   funcPorPis: Map<string, FuncionarioMatch>;
-  funcPorNome: Map<string, FuncionarioMatch>;
+  /** O valor null representa nomes repetidos, que nunca são usados para vínculo automático. */
+  funcPorNome: Map<string, FuncionarioMatch | null>;
   funcionarios: FuncionarioMatch[];
 }
 
@@ -41,21 +42,24 @@ export interface PreAnalise {
   importacaoAnterior: { id: string; importado_em: string; nome_arquivo: string } | null;
 }
 
-const nomeChave = (nome: string) => nome.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+const nomeChave = (nome: string) => nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 
 export async function carregarMatch(): Promise<MatchMaps> {
   const { data } = await supabase.from("funcionarios").select("id, nome, cpf, pis, obra_id, status");
-  const funcPorCpf = new Map<string, { id: string; nome: string }>();
+  const funcPorCpf = new Map<string, FuncionarioMatch>();
   const funcPorPis = new Map<string, FuncionarioMatch>();
-  const funcPorNome = new Map<string, FuncionarioMatch>();
+  const funcPorNome = new Map<string, FuncionarioMatch | null>();
   const funcionarios: FuncionarioMatch[] = [];
   for (const raw of data || []) {
     const f = raw as any;
     const funcionario: FuncionarioMatch = { id: f.id, nome: f.nome || "", cpf: apenasDigitos(f.cpf), pis: apenasDigitos(f.pis), obra_id: f.obra_id || null, status: f.status || null };
     funcionarios.push(funcionario);
-    if (funcionario.cpf) funcPorCpf.set(funcionario.cpf, { id: funcionario.id, nome: funcionario.nome });
+    if (funcionario.cpf) funcPorCpf.set(funcionario.cpf, funcionario);
     if (funcionario.pis) funcPorPis.set(funcionario.pis, funcionario);
-    if (funcionario.nome) funcPorNome.set(nomeChave(funcionario.nome), funcionario);
+    if (funcionario.nome) {
+      const key = nomeChave(funcionario.nome);
+      funcPorNome.set(key, funcPorNome.has(key) ? null : funcionario);
+    }
   }
   return { funcPorCpf, funcPorPis, funcPorNome, funcionarios };
 }
