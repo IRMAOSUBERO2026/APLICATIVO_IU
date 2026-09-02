@@ -54,6 +54,32 @@ export interface RHiDParseResult {
   funcionariosPorCpf: { cpf: string; nome: string }[];
 }
 
+/** Uma linha do CSV de marcações brutas exportado pelo RHiD/ControlID. */
+export interface RHiDMarcacao {
+  linha: number;
+  id: string;
+  nsr: number | null;
+  dataHora: string; // ISO com o fuso de Brasília
+  cpf: string | null;
+  pis: string | null;
+  nome: string;
+  dispositivo: string;
+  departamento: string;
+  reconhecimentoFacial: string | null;
+  suspeita: string | null;
+  localTrabalho: string | null;
+}
+
+export interface RHiDMarcacoesParseResult {
+  registros: RHiDMarcacao[];
+  erros: string[];
+  totalLinhas: number;
+  cpfs: string[];
+  dispositivos: string[];
+  dataInicio: string | null;
+  dataFim: string | null;
+}
+
 const EMPTY: Marcador = null;
 
 const apenasDigitos = (s: string) => (s || "").replace(/\D/g, "");
