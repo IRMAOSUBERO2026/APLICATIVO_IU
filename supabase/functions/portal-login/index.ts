@@ -88,6 +88,7 @@ serve(async (req) => {
     }
 
     const userId = authUser!.id;
+    const isMaster = perfil === "admin";
     const roleText = isMaster ? "admin" : "colaborador";
 
     // 5. Ensure profile mapping
@@ -97,7 +98,7 @@ serve(async (req) => {
     );
 
     // 6. Authoritatively set the role
-    const appRole = isMaster ? "admin" : "colaborador";
+    const appRole = roleText;
     if (isMaster) {
       await admin.from("user_roles").upsert(
         { user_id: userId, role: "admin" },
