@@ -1,13 +1,13 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "@/hooks/use-toast";
-import { AlertCircle, ArrowRight, CheckCircle2, Clock3, FileSpreadsheet, Info, ScanLine, Upload } from "lucide-react";
+import { AlertCircle, ArrowRight, CheckCircle2, Clock3, FileSpreadsheet, Info, ScanLine, Upload, UserSearch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Link } from "react-router-dom";
 import { parseRHiDCSV, parseRHiDMarcacoesCSV, sha256Hex, type RHiDMarcacoesParseResult, type RHiDParseResult, type TipoDia } from "@/utils/rhidCsvParser";
 import { carregarMatch, importarRelatorioRHiD, preAnalisar, type ImportStats, type MatchMaps, type PreAnalise } from "@/utils/rhidImport";
-import { importarMarcacoesRHiD, prepararRawPreAnalise, type RawImportStats, type RawPreAnalysis } from "@/utils/rhidRawImport";
+import { importarMarcacoesRHiD, listarSemVinculo, prepararRawPreAnalise, type RawImportStats, type VinculoManual } from "@/utils/rhidRawImport";
 
 const MESES = ["", "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const TIPO_LABEL: Record<TipoDia, { label: string; cls: string }> = {
@@ -15,14 +15,20 @@ const TIPO_LABEL: Record<TipoDia, { label: string; cls: string }> = {
 };
 const fmtCnpj = (d: string) => d.length === 14 ? d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5") : d;
 const fmtDate = (value: string | null) => value ? value.split("-").reverse().join("/") : "—";
+const fmtCpf = (d: string | null) => d && d.length === 11 ? d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4") : (d || "—");
 
 export default function ImportacaoCSVRHiD() {
   const [file, setFile] = useState<File | null>(null); const [loading, setLoading] = useState(false); const [saving, setSaving] = useState(false);
   const [parse, setParse] = useState<RHiDParseResult | null>(null); const [pre, setPre] = useState<PreAnalise | null>(null); const [maps, setMaps] = useState<MatchMaps | null>(null); const [reviewed, setReviewed] = useState(false); const [stats, setStats] = useState<ImportStats | null>(null);
-  const [rawParse, setRawParse] = useState<RHiDMarcacoesParseResult | null>(null); const [rawPre, setRawPre] = useState<RawPreAnalysis | null>(null); const [rawStats, setRawStats] = useState<RawImportStats | null>(null);
+  const [rawParse, setRawParse] = useState<RHiDMarcacoesParseResult | null>(null); const [rawHash, setRawHash] = useState(""); const [rawStats, setRawStats] = useState<RawImportStats | null>(null);
+  const [manuais, setManuais] = useState<VinculoManual>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const reset = () => { setParse(null); setPre(null); setMaps(null); setReviewed(false); setStats(null); setRawParse(null); setRawPre(null); setRawStats(null); };
+  const rawPre = useMemo(() => (rawParse && maps ? prepararRawPreAnalise(rawParse, maps, rawHash, manuais) : null), [rawParse, maps, rawHash, manuais]);
+  const semVinculoGrupos = useMemo(() => (rawParse && maps ? listarSemVinculo(rawParse, maps, manuais) : []), [rawParse, maps, manuais]);
+  const funcionariosOrdenados = useMemo(() => (maps?.funcionarios || []).slice().sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")), [maps]);
+
+  const reset = () => { setParse(null); setPre(null); setMaps(null); setReviewed(false); setStats(null); setRawParse(null); setRawHash(""); setRawStats(null); setManuais({}); };
 
   const handleSelect = async (selected: File | null) => {
     setFile(selected); reset(); if (!selected) return; setLoading(true);
@@ -32,7 +38,7 @@ export default function ImportacaoCSVRHiD() {
       const hash = await sha256Hex(text); const matchMaps = await carregarMatch();
       const bruto = parseRHiDMarcacoesCSV(text);
       if (bruto.registros.length > 0) {
-        setRawParse(bruto); setRawPre(prepararRawPreAnalise(bruto, matchMaps, hash)); setMaps(matchMaps);
+        setRawParse(bruto); setRawHash(hash); setMaps(matchMaps);
         toast({ title: "CSV bruto identificado ✓", description: `${bruto.totalLinhas.toLocaleString("pt-BR")} marcações · ${bruto.cpfs.length} CPFs · período de ${fmtDate(bruto.dataInicio)} a ${fmtDate(bruto.dataFim)}.` }); return;
       }
       const mensal = parseRHiDCSV(text);
@@ -43,11 +49,12 @@ export default function ImportacaoCSVRHiD() {
     finally { setLoading(false); }
   };
 
+
   const handleConfirm = async () => {
     if (!maps || !file) return; setSaving(true);
     try {
       if (rawParse && rawPre) {
-        const result = await importarMarcacoesRHiD(rawParse, file.name, maps); setRawStats(result);
+        const result = await importarMarcacoesRHiD(rawParse, file.name, maps, manuais); setRawStats(result);
         toast({ title: result.importacaoId ? "Marcações importadas ✓" : "Falha na importação", description: result.importacaoId ? `${result.gravados.toLocaleString("pt-BR")} batidas enviadas para a apuração mensal.` : result.erros[0] || "Erro desconhecido.", variant: result.importacaoId ? "default" : "destructive" });
       } else if (parse && pre) {
         const result = await importarRelatorioRHiD(parse, file.name, pre.hash, maps); setStats(result);
@@ -63,6 +70,27 @@ export default function ImportacaoCSVRHiD() {
       <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4"><Label>Arquivo CSV de marcações do RHiD</Label><div onClick={() => fileInputRef.current?.click()} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); void handleSelect(e.dataTransfer.files?.[0] || null); }} className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${file ? "border-primary bg-primary/5" : "border-muted-foreground/20 hover:border-primary/50"}`}><input ref={fileInputRef} type="file" accept=".csv,.CSV,text/csv" className="hidden" onChange={(e) => void handleSelect(e.target.files?.[0] || null)} /><div className="flex flex-col items-center gap-2"><div className={`h-12 w-12 rounded-full flex items-center justify-center ${file ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>{file ? <CheckCircle2 className="h-6 w-6" /> : <Upload className="h-6 w-6" />}</div>{file ? <div><p className="font-medium">{file.name}</p><p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB</p></div> : <div><p className="font-medium">Arraste ou clique para selecionar o CSV</p><p className="text-xs text-muted-foreground">Detecção automática · separador ; · aceita arquivos em português</p></div>}</div></div>{loading && <p className="text-sm text-muted-foreground">Lendo o arquivo e cruzando CPF, PIS e nomes...</p>}</div>
 
       {rawPre && !rawStats && <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4"><div className="flex items-start gap-3"><div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><ScanLine className="h-5 w-5" /></div><div><h3 className="font-bold text-lg">Pré-análise das marcações brutas</h3><p className="text-sm text-muted-foreground">As batidas serão mantidas em ordem cronológica. A apuração mensal fará o pareamento de entrada e saída por funcionário e dia.</p></div></div><div className="grid grid-cols-2 sm:grid-cols-4 gap-3"><div className="p-3 rounded-lg bg-muted/50"><p className="text-[10px] uppercase font-bold text-muted-foreground">Marcações</p><p className="text-lg font-bold">{rawPre.total.toLocaleString("pt-BR")}</p></div><div className="p-3 rounded-lg bg-success/10"><p className="text-[10px] uppercase font-bold text-success">Vinculadas</p><p className="text-lg font-bold text-success">{rawPre.vinculadas.toLocaleString("pt-BR")}</p></div><div className="p-3 rounded-lg bg-warning/10"><p className="text-[10px] uppercase font-bold text-warning">Revisar</p><p className="text-lg font-bold text-warning">{rawPre.semVinculo}</p></div><div className="p-3 rounded-lg bg-muted/50"><p className="text-[10px] uppercase font-bold text-muted-foreground">CPFs</p><p className="text-lg font-bold">{rawPre.cpfs}</p></div></div><div className="flex flex-wrap gap-2 text-xs"><span className="px-2 py-1 rounded bg-primary/10 text-primary">CPF: {rawPre.porCriterio.cpf}</span><span className="px-2 py-1 rounded bg-primary/10 text-primary">PIS: {rawPre.porCriterio.pis}</span><span className="px-2 py-1 rounded bg-primary/10 text-primary">Nome: {rawPre.porCriterio.nome}</span><span className="px-2 py-1 rounded bg-muted text-muted-foreground">Duplicadas: {rawPre.duplicadas}</span></div><p className="text-sm text-muted-foreground flex items-center gap-2"><Clock3 className="h-4 w-4" />Período: {fmtDate(rawPre.dataInicio)} a {fmtDate(rawPre.dataFim)} · {rawPre.dispositivos.length} dispositivos</p>{rawPre.semVinculo > 0 && <div className="p-3 rounded-lg border border-warning/40 bg-warning/5 text-sm"><AlertCircle className="h-4 w-4 text-warning inline mr-2" />As marcações sem vínculo serão preservadas para revisão e não serão atribuídas a outro funcionário.</div>}<label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={reviewed} onChange={(e) => setReviewed(e.target.checked)} className="h-4 w-4" />Revisei a pré-análise e confirmo a organização automática.</label><Button onClick={handleConfirm} disabled={saving || !reviewed} className="gap-2">{saving ? "Organizando..." : "Confirmar e enviar para apuração"}</Button></div>}
+
+      {rawParse && !rawStats && <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4">
+        <div className="flex items-start gap-3"><div className="h-10 w-10 rounded-lg bg-warning/10 text-warning flex items-center justify-center"><UserSearch className="h-5 w-5" /></div><div><h3 className="font-bold text-lg">Marcações sem vínculo ({semVinculoGrupos.length})</h3><p className="text-sm text-muted-foreground">Confira cada CPF/nome que o sistema não localizou e escolha manualmente o funcionário correspondente antes de confirmar a importação.</p></div></div>
+        {semVinculoGrupos.length === 0
+          ? <p className="text-sm text-success flex items-center gap-1"><CheckCircle2 className="h-4 w-4" />Todas as marcações estão vinculadas a um funcionário.</p>
+          : <>
+            {Object.keys(manuais).length > 0 && <p className="text-xs text-primary font-medium">{Object.keys(manuais).length} correção(ões) manual(is) aplicada(s) nesta importação.</p>}
+            <div className="overflow-x-auto"><table className="w-full text-xs min-w-[720px]"><thead><tr className="text-left text-muted-foreground uppercase text-[10px]"><th className="py-2 pr-3">Nome no arquivo</th><th className="py-2 pr-3">CPF</th><th className="py-2 pr-3">PIS</th><th className="py-2 pr-3">Batidas</th><th className="py-2 pr-3">Período</th><th className="py-2">Vincular ao funcionário</th></tr></thead><tbody className="divide-y">
+              {semVinculoGrupos.map((g) => <tr key={g.chave}>
+                <td className="py-2 pr-3 font-medium">{g.nome}</td>
+                <td className="py-2 pr-3 font-mono">{fmtCpf(g.cpf)}</td>
+                <td className="py-2 pr-3 font-mono">{g.pis || "—"}</td>
+                <td className="py-2 pr-3">{g.total} · {g.dias} dias</td>
+                <td className="py-2 pr-3 whitespace-nowrap">{fmtDate(g.primeira.slice(0, 10))} a {fmtDate(g.ultima.slice(0, 10))}</td>
+                <td className="py-2"><select value={manuais[g.chave] || ""} onChange={(e) => { const v = e.target.value; setManuais((prev) => { const next = { ...prev }; if (v) next[g.chave] = v; else delete next[g.chave]; return next; }); setReviewed(false); }} className="w-full max-w-[260px] rounded-md border bg-background px-2 py-1.5 text-xs"><option value="">Manter sem vínculo</option>{funcionariosOrdenados.map((f) => <option key={f.id} value={f.id}>{f.nome}{f.cpf ? ` · ${fmtCpf(f.cpf)}` : ""}{f.status ? ` · ${f.status}` : ""}</option>)}</select></td>
+              </tr>)}
+            </tbody></table></div>
+            <p className="text-[11px] text-muted-foreground">As correções valem para todas as batidas do CPF/nome selecionado neste arquivo. Nenhum funcionário é criado automaticamente.</p>
+          </>}
+      </div>}
+
 
       {pre && !stats && !rawPre && <div className="rounded-xl border bg-card p-6 shadow-sm space-y-4"><h3 className="font-bold text-lg">Resumo da pré-análise</h3>{pre.importacaoAnterior && <div className="p-3 rounded-lg border border-warning/40 bg-warning/5 text-sm flex items-start gap-2"><AlertCircle className="h-4 w-4 text-warning mt-0.5" /><span>Este arquivo já foi importado em <b>{new Date(pre.importacaoAnterior.importado_em).toLocaleString("pt-BR")}</b>. Um novo lote preservará o histórico.</span></div>}<div className="grid grid-cols-2 sm:grid-cols-4 gap-3">{[["Competência", pre.competenciaMes ? `${MESES[pre.competenciaMes]}/${pre.competenciaAno}` : "—"], ["Linhas", pre.totalLinhas], ["Funcionários", pre.totalFuncionarios], ["CNPJs", pre.cnpjs.length]].map(([label, value]) => <div key={String(label)} className="p-3 rounded-lg bg-muted/50"><p className="text-[10px] uppercase font-bold text-muted-foreground">{label}</p><p className="text-lg font-bold">{value}</p></div>)}</div><div><p className="text-xs font-bold uppercase text-muted-foreground mb-2">Dias por classificação</p><div className="flex flex-wrap gap-2">{(Object.keys(TIPO_LABEL) as TipoDia[]).map((key) => <span key={key} className={`px-2.5 py-1 rounded-full text-xs font-medium ${TIPO_LABEL[key].cls}`}>{TIPO_LABEL[key].label}: {pre.contagemTipoDia[key]}</span>)}</div></div><div><p className="text-xs font-bold uppercase text-muted-foreground mb-2">Centros de custo</p><div className="flex flex-wrap gap-2 text-xs">{pre.cnpjs.map((cnpj) => <span key={cnpj} className="px-2 py-1 rounded bg-primary/10 text-primary font-mono">{fmtCnpj(cnpj)}</span>)}</div></div><div><p className="text-xs font-bold uppercase text-muted-foreground mb-2">CPFs sem correspondência ({pre.naoEncontrados.length})</p>{pre.naoEncontrados.length === 0 ? <p className="text-sm text-success flex items-center gap-1"><CheckCircle2 className="h-4 w-4" />Todos localizados por CPF.</p> : <div className="max-h-40 overflow-auto rounded border border-destructive/30 bg-destructive/5 divide-y">{pre.naoEncontrados.map((item) => <div key={`${item.cpf}-${item.nome}`} className="flex justify-between px-3 py-1.5 text-xs"><span className="font-medium text-destructive">{item.nome}</span><span className="font-mono text-muted-foreground">{item.cpf}</span></div>)}</div>}<p className="text-[11px] text-muted-foreground mt-1">Registros sem vínculo são preservados para conciliação. Nenhum cadastro é criado automaticamente.</p></div>{parse && parse.erros.length > 0 && <div className="text-xs"><p className="font-bold text-warning mb-1">Avisos ({parse.erros.length})</p><div className="max-h-24 overflow-auto rounded bg-muted p-2 font-mono whitespace-pre-wrap">{parse.erros.slice(0, 50).join("\n")}</div></div>}<label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={reviewed} onChange={(e) => setReviewed(e.target.checked)} className="h-4 w-4" />Revisei o resumo e confirmo a importação.</label><Button onClick={handleConfirm} disabled={saving || !reviewed} className="gap-2">{saving ? "Importando..." : "Confirmar importação"}</Button></div>}
 

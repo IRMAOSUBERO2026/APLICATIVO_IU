@@ -73,13 +73,13 @@ export function prepararRawPreAnalise(parse: RHiDMarcacoesParseResult, maps: Mat
 }
 
 
-export async function importarMarcacoesRHiD(parse: RHiDMarcacoesParseResult, fileName: string, maps: MatchMaps): Promise<RawImportStats> {
+export async function importarMarcacoesRHiD(parse: RHiDMarcacoesParseResult, fileName: string, maps: MatchMaps, manuais?: VinculoManual): Promise<RawImportStats> {
   const erros = [...parse.erros]; const stats: RawImportStats = { importacaoId: null, gravados: 0, vinculadas: 0, semVinculo: 0, duplicadas: 0, erros };
   const { data: existentes } = await supabase.from("ponto_batidas_raw").select("timestamp_batida, funcionario_id, pis, nsr, arquivo_origem").eq("arquivo_origem", fileName);
   const jaImportadas = new Set((existentes || []).map((row: any) => `${row.timestamp_batida}|${row.funcionario_id || ""}|${row.pis || ""}|${row.nsr || ""}`));
   const rows: any[] = []; const seen = new Set<string>();
   for (const row of parse.registros) {
-    const match = encontrarFuncionario(row, maps);
+    const match = encontrarFuncionario(row, maps, manuais);
     if (match.funcionario) stats.vinculadas++; else stats.semVinculo++;
     const chave = `${row.id}|${row.nsr ?? ""}|${row.dataHora}|${row.cpf ?? ""}`;
     if (seen.has(chave)) { stats.duplicadas++; continue; }
