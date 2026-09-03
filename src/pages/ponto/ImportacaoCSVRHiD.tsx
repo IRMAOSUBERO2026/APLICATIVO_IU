@@ -54,7 +54,7 @@ export default function ImportacaoCSVRHiD() {
     if (!maps || !file) return; setSaving(true);
     try {
       if (rawParse && rawPre) {
-        const result = await importarMarcacoesRHiD(rawParse, file.name, maps); setRawStats(result);
+        const result = await importarMarcacoesRHiD(rawParse, file.name, maps, manuais); setRawStats(result);
         toast({ title: result.importacaoId ? "Marcações importadas ✓" : "Falha na importação", description: result.importacaoId ? `${result.gravados.toLocaleString("pt-BR")} batidas enviadas para a apuração mensal.` : result.erros[0] || "Erro desconhecido.", variant: result.importacaoId ? "default" : "destructive" });
       } else if (parse && pre) {
         const result = await importarRelatorioRHiD(parse, file.name, pre.hash, maps); setStats(result);
