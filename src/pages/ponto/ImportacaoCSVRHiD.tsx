@@ -1,13 +1,13 @@
 import { AppLayout } from "@/components/layout/AppLayout";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "@/hooks/use-toast";
-import { AlertCircle, ArrowRight, CheckCircle2, Clock3, FileSpreadsheet, Info, ScanLine, Upload } from "lucide-react";
+import { AlertCircle, ArrowRight, CheckCircle2, Clock3, FileSpreadsheet, Info, ScanLine, Upload, UserSearch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Link } from "react-router-dom";
 import { parseRHiDCSV, parseRHiDMarcacoesCSV, sha256Hex, type RHiDMarcacoesParseResult, type RHiDParseResult, type TipoDia } from "@/utils/rhidCsvParser";
 import { carregarMatch, importarRelatorioRHiD, preAnalisar, type ImportStats, type MatchMaps, type PreAnalise } from "@/utils/rhidImport";
-import { importarMarcacoesRHiD, prepararRawPreAnalise, type RawImportStats, type RawPreAnalysis } from "@/utils/rhidRawImport";
+import { importarMarcacoesRHiD, listarSemVinculo, prepararRawPreAnalise, type RawImportStats, type VinculoManual } from "@/utils/rhidRawImport";
 
 const MESES = ["", "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const TIPO_LABEL: Record<TipoDia, { label: string; cls: string }> = {
@@ -15,14 +15,20 @@ const TIPO_LABEL: Record<TipoDia, { label: string; cls: string }> = {
 };
 const fmtCnpj = (d: string) => d.length === 14 ? d.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5") : d;
 const fmtDate = (value: string | null) => value ? value.split("-").reverse().join("/") : "—";
+const fmtCpf = (d: string | null) => d && d.length === 11 ? d.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4") : (d || "—");
 
 export default function ImportacaoCSVRHiD() {
   const [file, setFile] = useState<File | null>(null); const [loading, setLoading] = useState(false); const [saving, setSaving] = useState(false);
   const [parse, setParse] = useState<RHiDParseResult | null>(null); const [pre, setPre] = useState<PreAnalise | null>(null); const [maps, setMaps] = useState<MatchMaps | null>(null); const [reviewed, setReviewed] = useState(false); const [stats, setStats] = useState<ImportStats | null>(null);
-  const [rawParse, setRawParse] = useState<RHiDMarcacoesParseResult | null>(null); const [rawPre, setRawPre] = useState<RawPreAnalysis | null>(null); const [rawStats, setRawStats] = useState<RawImportStats | null>(null);
+  const [rawParse, setRawParse] = useState<RHiDMarcacoesParseResult | null>(null); const [rawHash, setRawHash] = useState(""); const [rawStats, setRawStats] = useState<RawImportStats | null>(null);
+  const [manuais, setManuais] = useState<VinculoManual>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const reset = () => { setParse(null); setPre(null); setMaps(null); setReviewed(false); setStats(null); setRawParse(null); setRawPre(null); setRawStats(null); };
+  const rawPre = useMemo(() => (rawParse && maps ? prepararRawPreAnalise(rawParse, maps, rawHash, manuais) : null), [rawParse, maps, rawHash, manuais]);
+  const semVinculoGrupos = useMemo(() => (rawParse && maps ? listarSemVinculo(rawParse, maps, manuais) : []), [rawParse, maps, manuais]);
+  const funcionariosOrdenados = useMemo(() => (maps?.funcionarios || []).slice().sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")), [maps]);
+
+  const reset = () => { setParse(null); setPre(null); setMaps(null); setReviewed(false); setStats(null); setRawParse(null); setRawHash(""); setRawStats(null); setManuais({}); };
 
   const handleSelect = async (selected: File | null) => {
     setFile(selected); reset(); if (!selected) return; setLoading(true);
@@ -32,7 +38,7 @@ export default function ImportacaoCSVRHiD() {
       const hash = await sha256Hex(text); const matchMaps = await carregarMatch();
       const bruto = parseRHiDMarcacoesCSV(text);
       if (bruto.registros.length > 0) {
-        setRawParse(bruto); setRawPre(prepararRawPreAnalise(bruto, matchMaps, hash)); setMaps(matchMaps);
+        setRawParse(bruto); setRawHash(hash); setMaps(matchMaps);
         toast({ title: "CSV bruto identificado ✓", description: `${bruto.totalLinhas.toLocaleString("pt-BR")} marcações · ${bruto.cpfs.length} CPFs · período de ${fmtDate(bruto.dataInicio)} a ${fmtDate(bruto.dataFim)}.` }); return;
       }
       const mensal = parseRHiDCSV(text);
@@ -42,6 +48,7 @@ export default function ImportacaoCSVRHiD() {
     } catch (error: any) { toast({ title: "Erro ao ler arquivo", description: error?.message || "Não foi possível analisar o arquivo.", variant: "destructive" }); }
     finally { setLoading(false); }
   };
+
 
   const handleConfirm = async () => {
     if (!maps || !file) return; setSaving(true);
