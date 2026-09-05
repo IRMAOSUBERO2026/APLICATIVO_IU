@@ -229,8 +229,12 @@ function documentoChave(raw: string | undefined, tamanho = 11): string | null {
   if (!digits || digits === "0".repeat(digits.length)) return null;
   if (digits.length === tamanho) return digits;
   if (digits.length < tamanho) return digits.padStart(tamanho, "0");
+  // Alguns relógios enviam o CPF com zeros à esquerda no campo PIS (ex.: 12 dígitos).
+  const semZeros = digits.replace(/^0+/, "");
+  if (semZeros.length === tamanho) return semZeros;
   return null;
 }
+
 
 function parseDataHoraRHiD(raw: string): string | null {
   const m = t(raw).match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
