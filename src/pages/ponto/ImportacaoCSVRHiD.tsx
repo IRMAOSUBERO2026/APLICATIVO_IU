@@ -26,7 +26,7 @@ export default function ImportacaoCSVRHiD() {
 
   const rawPre = useMemo(() => (rawParse && maps ? prepararRawPreAnalise(rawParse, maps, rawHash, manuais) : null), [rawParse, maps, rawHash, manuais]);
   const semVinculoGrupos = useMemo(() => (rawParse && maps ? listarSemVinculo(rawParse, maps, manuais) : []), [rawParse, maps, manuais]);
-  const funcionariosOrdenados = useMemo(() => (maps?.funcionarios || []).slice().sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")), [maps]);
+  const funcionariosOrdenados = useMemo(() => (maps ? escoparPorPeriodo(maps, rawParse?.dataInicio || null, rawParse?.dataFim || null).elegiveis : []).slice().sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")), [maps, rawParse]);
 
   const reset = () => { setParse(null); setPre(null); setMaps(null); setReviewed(false); setStats(null); setRawParse(null); setRawHash(""); setRawStats(null); setManuais({}); };
 
