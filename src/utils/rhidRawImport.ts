@@ -145,12 +145,13 @@ export function prepararRawPreAnalise(parse: RHiDMarcacoesParseResult, maps: Mat
 
 
 export async function importarMarcacoesRHiD(parse: RHiDMarcacoesParseResult, fileName: string, maps: MatchMaps, manuais?: VinculoManual): Promise<RawImportStats> {
+  const escopo = escoparPorPeriodo(maps, parse.dataInicio, parse.dataFim);
   const erros = [...parse.erros]; const stats: RawImportStats = { importacaoId: null, gravados: 0, vinculadas: 0, semVinculo: 0, duplicadas: 0, erros };
   const { data: existentes } = await supabase.from("ponto_batidas_raw").select("timestamp_batida, funcionario_id, pis, nsr, arquivo_origem").eq("arquivo_origem", fileName);
   const jaImportadas = new Set((existentes || []).map((row: any) => `${row.timestamp_batida}|${row.funcionario_id || ""}|${row.pis || ""}|${row.nsr || ""}`));
   const rows: any[] = []; const seen = new Set<string>();
   for (const row of parse.registros) {
-    const match = encontrarFuncionario(row, maps, manuais);
+    const match = encontrarFuncionario(row, escopo.maps, manuais);
     if (match.funcionario) stats.vinculadas++; else stats.semVinculo++;
     const chave = `${row.id}|${row.nsr ?? ""}|${row.dataHora}|${row.cpf ?? ""}`;
     if (seen.has(chave)) { stats.duplicadas++; continue; }
@@ -173,7 +174,7 @@ export async function importarMarcacoesRHiD(parse: RHiDMarcacoesParseResult, fil
 export function resumoPorFuncionario(parse: RHiDMarcacoesParseResult, maps: MatchMaps) {
   const result = new Map<string, { nome: string; total: number; dias: Set<string>; batidas: RHiDMarcacao[]; vinculo: string }>();
   for (const row of parse.registros) {
-    const match = encontrarFuncionario(row, maps); const key = match.funcionario?.id || `sem-${row.cpf || row.nome}`;
+    const match = encontrarFuncionario(row, escoparPorPeriodo(maps, parse.dataInicio, parse.dataFim).maps); const key = match.funcionario?.id || `sem-${row.cpf || row.nome}`;
     const item = result.get(key) || { nome: match.funcionario?.nome || row.nome || "Sem cadastro", total: 0, dias: new Set<string>(), batidas: [], vinculo: match.criterio || "sem" };
     item.total++; item.dias.add(row.dataHora.slice(0, 10)); item.batidas.push(row); result.set(key, item);
   }
