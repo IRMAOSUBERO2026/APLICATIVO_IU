@@ -1,13 +1,67 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { RHiDMarcacao, RHiDMarcacoesParseResult } from "@/utils/rhidCsvParser";
-import type { MatchMaps } from "@/utils/rhidImport";
+import type { FuncionarioMatch, MatchMaps } from "@/utils/rhidImport";
 
 const nameKey = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+const norm = (v: string | null | undefined) => (v || "").toLowerCase().trim();
+
+/** Status que indicam que o funcionário não está mais na empresa. */
+const STATUS_FORA = ["desligado", "demitido", "inativo", "rescindido", "abandono", "encerrado"];
+
+/**
+ * Só sugere vínculo para quem estava na empresa durante o período do arquivo:
+ * funcionários ativos ou desligados com rescisão dentro (ou depois) do período.
+ */
+export function funcionarioElegivel(f: FuncionarioMatch, inicio: string | null, fim: string | null) {
+  const foraDaEmpresa = STATUS_FORA.some((s) => norm(f.status).includes(s));
+  if (!foraDaEmpresa) return true;
+  if (!f.data_rescisao) return false;
+  if (inicio && f.data_rescisao < inicio) return false;
+  return true;
+}
+
+export interface EscopoVinculo {
+  maps: MatchMaps;
+  elegiveis: FuncionarioMatch[];
+  excluidos: number;
+  inicio: string | null;
+  fim: string | null;
+}
+
+/** Reconstrói os índices de busca apenas com funcionários elegíveis no período do arquivo. */
+export function escoparPorPeriodo(maps: MatchMaps, inicio: string | null, fim: string | null): EscopoVinculo {
+  const elegiveis = maps.funcionarios.filter((f) => funcionarioElegivel(f, inicio, fim));
+  const funcPorCpf = new Map<string, FuncionarioMatch>();
+  const funcPorPis = new Map<string, FuncionarioMatch>();
+  const funcPorNome = new Map<string, FuncionarioMatch | null>();
+  for (const f of elegiveis) {
+    if (f.cpf) funcPorCpf.set(f.cpf, f);
+    if (f.pis) funcPorPis.set(f.pis, f);
+    if (f.nome) {
+      const key = nameKey(f.nome);
+      funcPorNome.set(key, funcPorNome.has(key) ? null : f);
+    }
+  }
+  return { maps: { funcPorCpf, funcPorPis, funcPorNome, funcionarios: elegiveis }, elegiveis, excluidos: maps.funcionarios.length - elegiveis.length, inicio, fim };
+}
+
+/** Variações de documento: alguns relógios gravam o CPF (com zero à frente) no campo PIS. */
+function variantes(doc: string | null): string[] {
+  if (!doc) return [];
+  const digits = doc.replace(/\D/g, "");
+  const out = new Set<string>();
+  if (digits) out.add(digits);
+  const semZeros = digits.replace(/^0+/, "");
+  if (semZeros) out.add(semZeros);
+  if (digits.length < 11) out.add(digits.padStart(11, "0"));
+  return Array.from(out);
+}
 
 export interface RawPreAnalysis {
   total: number; cpfs: number; dispositivos: string[]; dataInicio: string | null; dataFim: string | null;
   vinculadas: number; semVinculo: number; porCriterio: { cpf: number; pis: number; nome: number; sem: number };
   duplicadas: number; suspeitas: number; hash: string;
+  elegiveis: number; foraDoPeriodo: number;
 }
 export interface RawImportStats { importacaoId: string | null; gravados: number; vinculadas: number; semVinculo: number; duplicadas: number; erros: string[]; }
 
@@ -26,14 +80,28 @@ function encontrarFuncionario(row: RHiDMarcacao, maps: MatchMaps, manuais?: Vinc
     const alvo = maps.funcionarios.find((f) => f.id === manualId);
     if (alvo) return { funcionario: alvo, criterio: "manual" as const };
   }
-  const porCpf = row.cpf ? maps.funcPorCpf.get(row.cpf) : null;
-  if (porCpf) return { funcionario: porCpf, criterio: "cpf" as const };
-  const porPis = row.pis ? maps.funcPorPis.get(row.pis) : null;
-  if (porPis) return { funcionario: porPis, criterio: "pis" as const };
+  for (const v of variantes(row.cpf)) {
+    const achado = maps.funcPorCpf.get(v);
+    if (achado) return { funcionario: achado, criterio: "cpf" as const };
+  }
+  for (const v of variantes(row.pis)) {
+    const achado = maps.funcPorPis.get(v);
+    if (achado) return { funcionario: achado, criterio: "pis" as const };
+  }
+  // PIS preenchido com o CPF (com ou sem zero à esquerda)
+  for (const v of variantes(row.pis)) {
+    const achado = maps.funcPorCpf.get(v);
+    if (achado) return { funcionario: achado, criterio: "cpf" as const };
+  }
+  for (const v of variantes(row.cpf)) {
+    const achado = maps.funcPorPis.get(v);
+    if (achado) return { funcionario: achado, criterio: "pis" as const };
+  }
   const porNome = row.nome ? maps.funcPorNome.get(nameKey(row.nome)) : null;
   if (porNome) return { funcionario: porNome, criterio: "nome" as const };
   return { funcionario: null, criterio: null };
 }
+
 
 export interface GrupoSemVinculo {
   chave: string; cpf: string | null; pis: string | null; nome: string; total: number; dias: number;
