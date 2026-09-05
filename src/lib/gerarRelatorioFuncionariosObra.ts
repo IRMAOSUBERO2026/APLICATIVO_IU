@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface Func {
   nome: string;
+  pis?: string | null;
   cpf: string | null;
   cargo: string | null;
   numero_registro?: string | null;
@@ -30,15 +31,30 @@ function fmtCpf(c: string | null) {
   return `${n.slice(0, 3)}.${n.slice(3, 6)}.${n.slice(6, 9)}-${n.slice(9)}`;
 }
 
+/** Colunas possíveis da planilha, na ordem padrão. */
+const COLUNAS_DISPONIVEIS: { label: string; width: number; get: (f: Func) => any; numero?: boolean; centro?: boolean }[] = [
+  { label: "Registro", width: 12, get: (f) => f.numero_registro || "—", centro: true },
+  { label: "Nome", width: 38, get: (f) => f.nome },
+  { label: "CPF", width: 17, get: (f) => fmtCpf(f.cpf), centro: true },
+  { label: "PIS", width: 16, get: (f) => f.pis || "—", centro: true },
+  { label: "Cargo", width: 24, get: (f) => f.cargo || "—" },
+  { label: "Admissão", width: 13, get: (f) => fmtData(f.data_admissao), centro: true },
+  { label: "Telefone", width: 16, get: (f) => f.telefone || "—" },
+  { label: "Salário Base", width: 15, get: (f) => f.salario_base ?? 0, numero: true },
+  { label: "Salário Combinado", width: 18, get: (f) => f.salario_combinado ?? 0, numero: true },
+  { label: "Status", width: 14, get: (f) => f.status || "—", centro: true },
+];
+
 export async function gerarRelatorioFuncionariosObra(opts?: {
   empresaId?: string;
   obraId?: string;
+  colunas?: string[];
 }) {
   // Buscar dados
   let q = supabase
     .from("funcionarios")
     .select(
-      "nome, cpf, cargo, numero_registro, salario_base, salario_combinado, data_admissao, telefone, status, obra_id, empresa_id"
+      "nome, cpf, pis, cargo, numero_registro, salario_base, salario_combinado, data_admissao, telefone, status, obra_id, empresa_id"
     )
     .eq("status", "ativo")
     .order("nome");
@@ -81,17 +97,10 @@ export async function gerarRelatorioFuncionariosObra(opts?: {
     pageSetup: { orientation: "landscape", fitToPage: true, fitToWidth: 1 },
   });
 
-  const cols = [
-    { header: "#", width: 5 },
-    { header: "Registro", width: 12 },
-    { header: "Nome", width: 38 },
-    { header: "CPF", width: 17 },
-    { header: "Cargo", width: 24 },
-    { header: "Admissão", width: 13 },
-    { header: "Telefone", width: 16 },
-    { header: "Salário Base", width: 15 },
-    { header: "Salário Combinado", width: 18 },
-  ];
+  const escolhidas = opts?.colunas?.length
+    ? COLUNAS_DISPONIVEIS.filter((c) => opts!.colunas!.includes(c.label))
+    : COLUNAS_DISPONIVEIS.filter((c) => c.label !== "Status" && c.label !== "PIS");
+  const cols = [{ label: "#", width: 5 }, ...escolhidas].map((c) => ({ header: c.label, width: c.width }));
   ws.columns = cols.map((c) => ({ width: c.width }));
   const NCOL = cols.length;
 
@@ -142,17 +151,7 @@ export async function gerarRelatorioFuncionariosObra(opts?: {
     });
 
     lista.forEach((f, i) => {
-      const row = ws.addRow([
-        i + 1,
-        f.numero_registro || "—",
-        f.nome,
-        fmtCpf(f.cpf),
-        f.cargo || "—",
-        fmtData(f.data_admissao),
-        f.telefone || "—",
-        f.salario_base ?? 0,
-        f.salario_combinado ?? 0,
-      ]);
+      const row = ws.addRow([i + 1, ...escolhidas.map((c) => c.get(f))]);
       const zebra = i % 2 === 1;
       row.eachCell((cell, col) => {
         cell.font = { size: 10 };
@@ -161,8 +160,9 @@ export async function gerarRelatorioFuncionariosObra(opts?: {
         cell.border = {
           bottom: { style: "hair", color: { argb: "FFDDDDDD" } },
         };
-        if (col === 1 || col === 2 || col === 4 || col === 6) cell.alignment = { horizontal: "center" };
-        if (col === 8 || col === 9) {
+        const def = col === 1 ? null : escolhidas[col - 2];
+        if (col === 1 || def?.centro) cell.alignment = { horizontal: "center" };
+        if (def?.numero) {
           cell.numFmt = 'R$ #,##0.00';
           cell.alignment = { horizontal: "right" };
         }

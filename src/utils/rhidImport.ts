@@ -18,6 +18,8 @@ export interface FuncionarioMatch {
   pis: string;
   obra_id: string | null;
   status: string | null;
+  data_rescisao: string | null;
+  numero_registro: string | null;
 }
 
 export interface MatchMaps {
@@ -43,14 +45,14 @@ export interface PreAnalise {
 const nomeChave = (nome: string) => nome.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 
 export async function carregarMatch(): Promise<MatchMaps> {
-  const { data } = await supabase.from("funcionarios").select("id, nome, cpf, pis, obra_id, status");
+  const { data } = await supabase.from("funcionarios").select("id, nome, cpf, pis, obra_id, status, data_rescisao, numero_registro");
   const funcPorCpf = new Map<string, FuncionarioMatch>();
   const funcPorPis = new Map<string, FuncionarioMatch>();
   const funcPorNome = new Map<string, FuncionarioMatch | null>();
   const funcionarios: FuncionarioMatch[] = [];
   for (const raw of data || []) {
     const f = raw as any;
-    const funcionario: FuncionarioMatch = { id: f.id, nome: f.nome || "", cpf: apenasDigitos(f.cpf), pis: apenasDigitos(f.pis), obra_id: f.obra_id || null, status: f.status || null };
+    const funcionario: FuncionarioMatch = { id: f.id, nome: f.nome || "", cpf: apenasDigitos(f.cpf), pis: apenasDigitos(f.pis), obra_id: f.obra_id || null, status: f.status || null, data_rescisao: f.data_rescisao ? String(f.data_rescisao).slice(0, 10) : null, numero_registro: f.numero_registro || null };
     funcionarios.push(funcionario);
     if (funcionario.cpf) funcPorCpf.set(funcionario.cpf, funcionario);
     if (funcionario.pis) funcPorPis.set(funcionario.pis, funcionario);
