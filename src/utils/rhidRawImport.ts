@@ -110,9 +110,10 @@ export interface GrupoSemVinculo {
 
 /** Agrupa as marcações que não encontraram funcionário, para correção manual. */
 export function listarSemVinculo(parse: RHiDMarcacoesParseResult, maps: MatchMaps, manuais?: VinculoManual): GrupoSemVinculo[] {
+  const escopo = escoparPorPeriodo(maps, parse.dataInicio, parse.dataFim);
   const grupos = new Map<string, GrupoSemVinculo & { diasSet: Set<string>; dispSet: Set<string> }>();
   for (const row of parse.registros) {
-    if (encontrarFuncionario(row, maps, manuais).funcionario) continue;
+    if (encontrarFuncionario(row, escopo.maps, manuais).funcionario) continue;
     const chave = chaveVinculoRaw(row);
     const item = grupos.get(chave) || { chave, cpf: row.cpf || null, pis: row.pis || null, nome: row.nome || "Sem nome no arquivo", total: 0, dias: 0, primeira: row.dataHora, ultima: row.dataHora, diasSet: new Set<string>(), dispSet: new Set<string>(), dispositivos: [] };
     item.total++;
@@ -128,17 +129,19 @@ export function listarSemVinculo(parse: RHiDMarcacoesParseResult, maps: MatchMap
 }
 
 export function prepararRawPreAnalise(parse: RHiDMarcacoesParseResult, maps: MatchMaps, hash: string, manuais?: VinculoManual): RawPreAnalysis {
+  const escopo = escoparPorPeriodo(maps, parse.dataInicio, parse.dataFim);
   const porCriterio = { cpf: 0, pis: 0, nome: 0, sem: 0 }; const vistos = new Set<string>();
   let vinculadas = 0; let duplicadas = 0; let suspeitas = 0;
   for (const row of parse.registros) {
-    const match = encontrarFuncionario(row, maps, manuais);
+    const match = encontrarFuncionario(row, escopo.maps, manuais);
     if (match.criterio) { vinculadas++; if (match.criterio !== "manual") porCriterio[match.criterio]++; } else porCriterio.sem++;
     const chave = `${row.id}|${row.nsr ?? ""}|${row.dataHora}|${row.cpf ?? ""}`;
     if (vistos.has(chave)) duplicadas++; else vistos.add(chave);
     if (row.suspeita) suspeitas++;
   }
-  return { total: parse.totalLinhas, cpfs: parse.cpfs.length, dispositivos: parse.dispositivos, dataInicio: parse.dataInicio, dataFim: parse.dataFim, vinculadas, semVinculo: porCriterio.sem, porCriterio, duplicadas, suspeitas, hash };
+  return { total: parse.totalLinhas, cpfs: parse.cpfs.length, dispositivos: parse.dispositivos, dataInicio: parse.dataInicio, dataFim: parse.dataFim, vinculadas, semVinculo: porCriterio.sem, porCriterio, duplicadas, suspeitas, hash, elegiveis: escopo.elegiveis.length, foraDoPeriodo: escopo.excluidos };
 }
+
 
 
 export async function importarMarcacoesRHiD(parse: RHiDMarcacoesParseResult, fileName: string, maps: MatchMaps, manuais?: VinculoManual): Promise<RawImportStats> {
