@@ -21,6 +21,19 @@ const RELATORIOS = [
   { id: "diario", label: "Diário de Obra", icon: HardHat, desc: "Registros diários por obra" },
 ];
 
+/** Colunas disponíveis por relatório — o usuário escolhe o que sai na planilha. */
+const COLUNAS: Record<string, string[]> = {
+  funcionarios_obra: ["Registro", "Nome", "CPF", "PIS", "Cargo", "Admissão", "Telefone", "Salário Base", "Salário Combinado", "Status"],
+  funcionarios: ["Registro", "Nome", "CPF", "PIS", "Cargo", "Admissão", "Telefone", "Email", "Salário Base", "Salário Combinado", "Status", "Obra", "Empresa"],
+  folha: ["Funcionário", "CPF", "Mês", "Ano", "Salário Registro", "Salário Combinado", "Total HE", "Total Bonificações", "Total Descontos", "Salário Final"],
+  compras: ["Número", "NF-e", "Fornecedor", "Data Emissão", "Total", "Status", "Forma Pagamento"],
+  financeiro_pagar: ["Descrição", "Fornecedor", "Valor", "Vencimento", "Status", "Valor Pago", "Data Pagamento", "Categoria"],
+  financeiro_receber: ["Descrição", "Cliente", "Valor", "Vencimento", "Status", "Valor Recebido", "Categoria"],
+  estoque: ["Produto", "Unidade", "Tipo", "Quantidade", "Valor Unit.", "Data", "Documento"],
+  contratos: ["Descrição", "Tipo", "Locador", "Valor Mensal", "Dia Vencimento", "Início", "Fim", "Status", "Endereço", "Cidade", "UF"],
+  diario: ["Obra", "Código", "Data", "Clima", "Equipe Presente", "Atividades", "Ocorrências", "Responsável"],
+};
+
 export default function Relatorios() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [obras, setObras] = useState<Obra[]>([]);
@@ -30,6 +43,25 @@ export default function Relatorios() {
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
   const [loading, setLoading] = useState(false);
+  const [colunas, setColunas] = useState<string[]>([]);
+
+  const colunasDisponiveis = COLUNAS[selectedRelatorio] || [];
+  const colunasAtivas = colunas.length > 0 ? colunas : colunasDisponiveis;
+  const toggleColuna = (c: string) =>
+    setColunas((prev) => {
+      const base = prev.length > 0 ? prev : colunasDisponiveis;
+      return base.includes(c) ? base.filter((x) => x !== c) : colunasDisponiveis.filter((x) => base.includes(x) || x === c);
+    });
+
+  useEffect(() => { setColunas([]); }, [selectedRelatorio]);
+
+  /** Mantém apenas as colunas escolhidas, na ordem definida. */
+  const aplicarColunas = (rows: any[]) =>
+    rows.map((row) => {
+      const out: any = {};
+      for (const c of colunasAtivas) if (c in row) out[c] = row[c];
+      return out;
+    });
 
   useEffect(() => {
     Promise.all([
@@ -58,6 +90,7 @@ export default function Relatorios() {
         const total = await gerarRelatorioFuncionariosObra({
           empresaId: filterEmpresa || undefined,
           obraId: filterObra || undefined,
+          colunas: colunasAtivas,
         });
         if (total === 0) {
           toast({ title: "Nenhum funcionário ativo encontrado", description: "Tente ajustar os filtros.", variant: "destructive" });
@@ -74,14 +107,17 @@ export default function Relatorios() {
 
       switch (selectedRelatorio) {
         case "funcionarios": {
-          let q = supabase.from("funcionarios").select("nome, cpf, cargo, salario_base, salario_combinado, status, data_admissao, telefone, email, empresa_id, obra_id");
+          let q = supabase.from("funcionarios").select("nome, cpf, pis, numero_registro, cargo, salario_base, salario_combinado, status, data_admissao, telefone, email, empresa_id, obra_id");
           if (filterEmpresa) q = q.eq("empresa_id", filterEmpresa);
           if (filterObra) q = q.eq("obra_id", filterObra);
           const { data: d } = await q;
-          data = (d || []).map(f => ({
-            Nome: f.nome, CPF: f.cpf, Cargo: f.cargo,
+          const obraNome = new Map(obras.map((o) => [o.id, `${o.codigo} - ${o.nome}`]));
+          const empNome = new Map(empresas.map((e) => [e.id, e.nome_fantasia || e.razao_social]));
+          data = (d || []).map((f: any) => ({
+            Registro: f.numero_registro, Nome: f.nome, CPF: f.cpf, PIS: f.pis, Cargo: f.cargo,
+            Admissão: f.data_admissao, Telefone: f.telefone, Email: f.email,
             "Salário Base": f.salario_base, "Salário Combinado": f.salario_combinado,
-            Status: f.status, Admissão: f.data_admissao, Telefone: f.telefone, Email: f.email,
+            Status: f.status, Obra: obraNome.get(f.obra_id) || "", Empresa: empNome.get(f.empresa_id) || "",
           }));
           filename = "funcionarios";
           break;
@@ -185,6 +221,8 @@ export default function Relatorios() {
         }
       }
 
+      data = aplicarColunas(data);
+
       if (data.length === 0) {
         toast({ title: "Nenhum dado encontrado", description: "Tente ajustar os filtros.", variant: "destructive" });
         setLoading(false);
@@ -274,6 +312,27 @@ export default function Relatorios() {
                 </div>
               </div>
             </div>
+
+            {colunasDisponiveis.length > 0 && (
+              <div className="rounded-xl border bg-card p-5 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-semibold flex items-center gap-2"><FileSpreadsheet className="h-4 w-4" /> Colunas da planilha</h3>
+                  <div className="flex gap-2 text-xs">
+                    <button onClick={() => setColunas(colunasDisponiveis)} className="rounded-md border px-2 py-1 hover:bg-muted">Todas</button>
+                    <button onClick={() => setColunas(["Nome"].filter(c => colunasDisponiveis.includes(c)))} className="rounded-md border px-2 py-1 hover:bg-muted">Limpar</button>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">Marque só o que deve sair no arquivo. A ordem das colunas segue a lista abaixo.</p>
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {colunasDisponiveis.map((c) => (
+                    <label key={c} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input type="checkbox" checked={colunasAtivas.includes(c)} onChange={() => toggleColuna(c)} className="h-4 w-4" />
+                      {c}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Preview + Download */}
             <div className="rounded-xl border bg-card p-5 space-y-4">
