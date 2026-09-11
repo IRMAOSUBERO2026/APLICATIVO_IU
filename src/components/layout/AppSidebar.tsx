@@ -73,6 +73,7 @@ const menuSections = [
       { icon: Upload, label: "Importar Relatório RHiD", path: "/ponto/importar-rhid" },
       { icon: FileText, label: "Consultar Relatório RHiD", path: "/ponto/relatorio-rhid" },
       { icon: Bell, label: "Inconsistências", path: "/ponto/inconsistencias" },
+      { icon: CalendarClock, label: "Espelho de Ponto Mensal", path: "/ponto/espelho" },
       { icon: BarChart3, label: "Apuração Mensal", path: "/ponto/apuracao" },
       { icon: Palmtree, label: "Férias", path: "/ferias" },
       { icon: FileText, label: "Doc. Mensal", path: "/documentacao-mensal" },
