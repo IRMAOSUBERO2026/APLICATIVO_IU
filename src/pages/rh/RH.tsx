@@ -101,9 +101,9 @@ export default function RH() {
 
   const [obrasTodas, setObrasTodas] = useState<any[]>([]);
 
-  // Colunas leves para a listagem: a coluna foto_url guarda imagens em base64
-  // e tornava a consulta tão pesada que o banco cancelava por timeout.
-  const LIST_COLS = "id,empresa_id,obra_id,nome,cpf,rg,pis,cargo,data_admissao,data_nascimento,telefone,email,salario_base,salario_combinado,dependentes,clinica_aso,data_aso,data_nr6,data_nr12,data_nr18,data_nr35,status,data_rescisao,motivo_rescisao,numero_registro,tipo_remuneracao,escala,observacoes,created_at";
+  // As fotos agora ficam no Storage e foto_url guarda apenas o link,
+  // por isso a coluna pode voltar para a listagem sem pesar a consulta.
+  const LIST_COLS = "id,empresa_id,obra_id,nome,cpf,rg,pis,cargo,foto_url,data_admissao,data_nascimento,telefone,email,salario_base,salario_combinado,dependentes,clinica_aso,data_aso,data_nr6,data_nr12,data_nr18,data_nr35,status,data_rescisao,motivo_rescisao,numero_registro,tipo_remuneracao,escala,observacoes,created_at";
 
   const loadDbFuncionarios = useCallback(async () => {
     const { data, error } = await supabase
