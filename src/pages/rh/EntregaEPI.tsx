@@ -459,7 +459,7 @@ export default function EntregaEPI() {
             </div>
 
             <ScrollableTable>
-              <div className="rounded-3xl border border-slate-100 bg-white overflow-hidden shadow-sm">
+              <div className="w-max min-w-full rounded-3xl border border-slate-100 bg-white shadow-sm">
                 <table className="w-full min-w-[1100px] text-sm">
                   <thead className="bg-slate-50 border-b border-slate-100">
                     <tr>
