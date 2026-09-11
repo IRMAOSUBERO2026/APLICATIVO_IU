@@ -101,11 +101,14 @@ export default function RH() {
 
   const [obrasTodas, setObrasTodas] = useState<any[]>([]);
 
+  // Colunas leves para a listagem: a coluna foto_url guarda imagens em base64
+  // e tornava a consulta tão pesada que o banco cancelava por timeout.
+  const LIST_COLS = "id,empresa_id,obra_id,nome,cpf,rg,pis,cargo,data_admissao,data_nascimento,telefone,email,salario_base,salario_combinado,dependentes,clinica_aso,data_aso,data_nr6,data_nr12,data_nr18,data_nr35,status,data_rescisao,motivo_rescisao,numero_registro,tipo_remuneracao,escala,observacoes,created_at";
+
   const loadDbFuncionarios = useCallback(async () => {
-    // Consulta sem join aninhado (o join em obra_id causava timeout no banco).
     const { data, error } = await supabase
       .from("funcionarios")
-      .select("*")
+      .select(LIST_COLS)
       .order("nome")
       .limit(2000);
     if (error) {
@@ -114,6 +117,7 @@ export default function RH() {
     }
     if (data) setDbFuncionarios(data);
   }, []);
+
 
   useEffect(() => {
     loadDbFuncionarios();
