@@ -99,22 +99,36 @@ export default function RH() {
   const [desligamentoData, setDesligamentoData] = useState(format(new Date(), "yyyy-MM-dd"));
   const [desligamentoMotivo, setDesligamentoMotivo] = useState("");
 
-  const loadDbFuncionarios = useCallback(() => {
-    supabase.from("funcionarios")
-      .select("*, obras:obra_id(nome, codigo)")
+  const [obrasTodas, setObrasTodas] = useState<any[]>([]);
+
+  const loadDbFuncionarios = useCallback(async () => {
+    // Consulta sem join aninhado (o join em obra_id causava timeout no banco).
+    const { data, error } = await supabase
+      .from("funcionarios")
+      .select("*")
       .order("nome")
-      .then(({ data }) => { if (data) setDbFuncionarios(data); });
+      .limit(2000);
+    if (error) {
+      toast({ title: "Erro ao carregar funcionários", description: error.message, variant: "destructive" });
+      return;
+    }
+    if (data) setDbFuncionarios(data);
   }, []);
 
   useEffect(() => {
     loadDbFuncionarios();
     supabase.from("obras").select("id, nome, codigo, status")
-      .in("status", OBRA_STATUS_ATIVOS_ARR)
       .order("codigo")
-      .then(({ data }) => { if (data) setObras(data); });
+      .then(({ data }) => {
+        if (data) {
+          setObrasTodas(data);
+          setObras(data.filter((o: any) => OBRA_STATUS_ATIVOS_ARR.includes(o.status)));
+        }
+      });
     supabase.from("empresas").select("id, razao_social, nome_fantasia, cnpj")
       .then(({ data }) => { if (data) setEmpresas(data); });
   }, [loadDbFuncionarios]);
+
 
   // Auto-check experiencia status
   useEffect(() => {
