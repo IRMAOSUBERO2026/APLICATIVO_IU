@@ -99,22 +99,40 @@ export default function RH() {
   const [desligamentoData, setDesligamentoData] = useState(format(new Date(), "yyyy-MM-dd"));
   const [desligamentoMotivo, setDesligamentoMotivo] = useState("");
 
-  const loadDbFuncionarios = useCallback(() => {
-    supabase.from("funcionarios")
-      .select("*, obras:obra_id(nome, codigo)")
+  const [obrasTodas, setObrasTodas] = useState<any[]>([]);
+
+  // Colunas leves para a listagem: a coluna foto_url guarda imagens em base64
+  // e tornava a consulta tão pesada que o banco cancelava por timeout.
+  const LIST_COLS = "id,empresa_id,obra_id,nome,cpf,rg,pis,cargo,data_admissao,data_nascimento,telefone,email,salario_base,salario_combinado,dependentes,clinica_aso,data_aso,data_nr6,data_nr12,data_nr18,data_nr35,status,data_rescisao,motivo_rescisao,numero_registro,tipo_remuneracao,escala,observacoes,created_at";
+
+  const loadDbFuncionarios = useCallback(async () => {
+    const { data, error } = await supabase
+      .from("funcionarios")
+      .select(LIST_COLS)
       .order("nome")
-      .then(({ data }) => { if (data) setDbFuncionarios(data); });
+      .limit(2000);
+    if (error) {
+      toast({ title: "Erro ao carregar funcionários", description: error.message, variant: "destructive" });
+      return;
+    }
+    if (data) setDbFuncionarios(data);
   }, []);
+
 
   useEffect(() => {
     loadDbFuncionarios();
     supabase.from("obras").select("id, nome, codigo, status")
-      .in("status", OBRA_STATUS_ATIVOS_ARR)
       .order("codigo")
-      .then(({ data }) => { if (data) setObras(data); });
+      .then(({ data }) => {
+        if (data) {
+          setObrasTodas(data);
+          setObras(data.filter((o: any) => OBRA_STATUS_ATIVOS_ARR.includes(o.status)));
+        }
+      });
     supabase.from("empresas").select("id, razao_social, nome_fantasia, cnpj")
       .then(({ data }) => { if (data) setEmpresas(data); });
   }, [loadDbFuncionarios]);
+
 
   // Auto-check experiencia status
   useEffect(() => {
@@ -137,14 +155,17 @@ export default function RH() {
     return { nome: nomeAbrev, cnpj: cnpjCompacto };
   };
 
+  const obraById = new Map(obrasTodas.map((o: any) => [o.id, o]));
+
   const allFuncionarios = [
     ...dbFuncionarios.map(f => ({
       ...f,
       source: "db" as const,
-      obraNome: (f as any).obras?.nome || "Sem obra",
-      obraCodigo: (f as any).obras?.codigo || "",
+      obraNome: obraById.get(f.obra_id)?.nome || "Sem obra",
+      obraCodigo: obraById.get(f.obra_id)?.codigo || "",
     })),
   ];
+
 
   const filtered = allFuncionarios.filter(f => {
     const searchMatch = !search || 
