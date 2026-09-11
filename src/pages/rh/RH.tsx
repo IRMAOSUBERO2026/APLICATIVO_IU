@@ -151,14 +151,17 @@ export default function RH() {
     return { nome: nomeAbrev, cnpj: cnpjCompacto };
   };
 
+  const obraById = new Map(obrasTodas.map((o: any) => [o.id, o]));
+
   const allFuncionarios = [
     ...dbFuncionarios.map(f => ({
       ...f,
       source: "db" as const,
-      obraNome: (f as any).obras?.nome || "Sem obra",
-      obraCodigo: (f as any).obras?.codigo || "",
+      obraNome: obraById.get(f.obra_id)?.nome || "Sem obra",
+      obraCodigo: obraById.get(f.obra_id)?.codigo || "",
     })),
   ];
+
 
   const filtered = allFuncionarios.filter(f => {
     const searchMatch = !search || 
