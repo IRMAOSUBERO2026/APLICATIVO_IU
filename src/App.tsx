@@ -66,6 +66,7 @@ import EquipamentosPonto from "./pages/ponto/EquipamentosPonto";
 import ImportacaoAFDNew from "./pages/ponto/ImportacaoAFDNew";
 import InconsistenciasPonto from "./pages/ponto/InconsistenciasPonto";
 import ApuracaoPonto from "./pages/ponto/ApuracaoPonto";
+import EspelhoPontoMensal from "./pages/ponto/EspelhoPontoMensal";
 import ImportacaoCSVRHiD from "./pages/ponto/ImportacaoCSVRHiD";
 import ConsultaRelatorioRHiD from "./pages/ponto/ConsultaRelatorioRHiD";
 
@@ -174,6 +175,7 @@ const App = () => (
             <Route path="/ponto/importar-csv" element={<ImportacaoCSVRHiD />} />
             <Route path="/ponto/inconsistencias" element={<InconsistenciasPonto />} />
             <Route path="/ponto/apuracao" element={<ApuracaoPonto />} />
+            <Route path="/ponto/espelho" element={<EspelhoPontoMensal />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />
