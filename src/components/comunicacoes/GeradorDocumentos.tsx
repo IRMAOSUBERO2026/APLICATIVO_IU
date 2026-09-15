@@ -244,7 +244,8 @@ export function GeradorDocumentos() {
   };
 
   const handleGerar = async () => {
-    if (!funcId && !isComunicadoGeral) {
+    const geracaoReciboPorObra = tipoDoc === "recibo" && modoRecibo === "obra";
+    if (!funcId && !isComunicadoGeral && !geracaoReciboPorObra) {
       toast({ title: "Selecione um funcionário", variant: "destructive" });
       return;
     }
