@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { gerarTextoReciboPagamento, lerValorBR } from "./reciboPagamento";
+import { gerarTextoReciboPagamento, lerValorBR, validarTextoReciboIA } from "./reciboPagamento";
 import { valorPorExtenso } from "./numeroPorExtenso";
 
 describe("reciboPagamento", () => {
@@ -28,5 +28,18 @@ describe("reciboPagamento", () => {
 
   it("carrega centavos arredondados para o próximo real", () => {
     expect(valorPorExtenso(1.999)).toBe("dois reais");
+  });
+
+  it("rejeita revisão por IA que altere ou omita dados financeiros", () => {
+    const input = {
+      nomeFuncionario: "JOÃO SILVA",
+      nomeEmpresa: "EMPRESA TESTE",
+      valor: 1250.5,
+      referencia: "produção da obra",
+      data: "2026-09-15",
+    };
+    const correto = gerarTextoReciboPagamento(input);
+    expect(validarTextoReciboIA(correto, input)).toBe(true);
+    expect(validarTextoReciboIA(correto.replace("R$ 1.250,50", "R$ 1.200,00"), input)).toBe(false);
   });
 });

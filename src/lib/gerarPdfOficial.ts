@@ -34,6 +34,10 @@ export async function gerarPdfA4(
   doc.setTextColor(BRAND.graphite[0], BRAND.graphite[1], BRAND.graphite[2]);
 
   linhasCorpo.forEach((raw) => {
+    if (raw === "\f") {
+      y = brandedAddPage(ctx);
+      return;
+    }
     const linha = raw.replace(/_{5,}/g, "________________________");
     if (linha.trim() === "") {
       y += linhaH * 0.6;

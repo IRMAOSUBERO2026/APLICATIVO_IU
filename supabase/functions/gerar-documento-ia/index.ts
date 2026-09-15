@@ -91,6 +91,9 @@ Deno.serve(async (req) => {
       data = "",
       titulo = "",
       tom = "formal",
+      valor = "",
+      valorExtenso = "",
+      referencia = "",
     } = body ?? {};
 
 
@@ -106,7 +109,12 @@ Deno.serve(async (req) => {
       ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" }).format(new Date(data + "T12:00:00"))
       : new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" }).format(new Date());
 
-    const system = `Você é um Especialista Sênior em Recursos Humanos e Departamento Pessoal (mais de 20 anos de experiência em construção civil/engenharia), com domínio da CLT, das Normas Regulamentadoras (NRs), das Convenções Coletivas da construção civil e das melhores práticas de comunicação corporativa. Você escreve pela empresa "${nomeEmpresa}".
+    const isRecibo = tipo === "recibo";
+    const system = isRecibo ? `Você redige recibos de pagamento formais em português do Brasil.
+Retorne SOMENTE o texto final, sem markdown ou comentários.
+São dados imutáveis e devem aparecer literalmente no texto: colaborador "${nomeFuncionario}", empresa "${nomeEmpresa}", valor "${valor}" e valor por extenso "${valorExtenso}".
+Inclua título, identificação, referência do pagamento, declaração de recebimento e quitação, local/data e linha de assinatura do recebedor.
+Não invente fatos, datas, valores, descontos ou fundamentos legais. Não altere nenhum dado imutável.` : `Você é um Especialista Sênior em Recursos Humanos e Departamento Pessoal (mais de 20 anos de experiência em construção civil/engenharia), com domínio da CLT, das Normas Regulamentadoras (NRs), das Convenções Coletivas da construção civil e das melhores práticas de comunicação corporativa. Você escreve pela empresa "${nomeEmpresa}".
 
 MISSÃO: transformar a ideia curta e informal do gestor em um DOCUMENTO OFICIAL DE RH completo, técnico, juridicamente seguro e pronto para impressão e assinatura.
 
@@ -126,7 +134,15 @@ PADRÕES DE ESCRITA:
 - Neutralidade: em documentos disciplinares, descreva conduta e norma violada, sem adjetivos ofensivos, juízo moral ou prejulgamento.
 - Sem markdown, sem asteriscos, sem comentários seus, sem explicações. Retorne SOMENTE o texto final do documento.`;
 
-    const user = `Tipo de documento: ${instrucaoTipo}
+    const user = isRecibo ? `Gere o recibo completo com estes dados:
+Colaborador: ${nomeFuncionario}
+Cargo: ${cargoFuncionario || "não informado"}
+Empresa: ${nomeEmpresa}
+Obra: ${obra || "não informada"}
+Valor: ${valor}
+Valor por extenso: ${valorExtenso}
+Referência: ${referencia || ideia}
+Data: ${dataFmt}` : `Tipo de documento: ${instrucaoTipo}
 Título/assunto a utilizar: ${titulo ? String(titulo).toUpperCase() : "(defina o título técnico mais adequado ao tipo)"}
 Tom de escrita: ${TOM_INSTRUCOES[tom] || TOM_INSTRUCOES.formal}
 Empresa emitente: ${nomeEmpresa}
