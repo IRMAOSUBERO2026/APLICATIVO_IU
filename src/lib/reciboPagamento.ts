@@ -24,7 +24,9 @@ export function lerValorBR(valor: string): number | null {
 }
 
 export function formatarValorBR(valor: number): string {
-  return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  return valor
+    .toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+    .replace(/\u00a0/g, " ");
 }
 
 export function gerarTextoReciboPagamento(input: TextoReciboInput): string {
