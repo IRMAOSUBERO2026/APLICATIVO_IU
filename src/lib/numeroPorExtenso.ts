@@ -35,8 +35,9 @@ function inteiroExtenso(n: number): string {
 }
 
 export function valorPorExtenso(valor: number): string {
-  const inteira = Math.floor(valor);
-  const cents = Math.round((valor - inteira) * 100);
+  const totalCentavos = Math.round(valor * 100);
+  const inteira = Math.floor(totalCentavos / 100);
+  const cents = totalCentavos % 100;
   const reais = inteiroExtenso(inteira);
   const sufReais = inteira === 1 ? "real" : "reais";
   if (cents === 0) return `${reais} ${sufReais}`;
