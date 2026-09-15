@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { FileText, Download, Send, Save, Bot, Loader2, Info, Printer, Mail, FolderOpen, RefreshCw } from "lucide-react";
+import { FileText, Download, Send, Save, Bot, Loader2, Info, Printer, Mail, FolderOpen, RefreshCw, Search, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,9 +12,10 @@ import { gerarTextoDocumentoOficial, TipoDocumentoOficial, TIPO_DOCUMENTO_LABEL,
 import { gerarPdfA4, downloadBlob, imprimirBlob, EmpresaPdf } from "@/lib/gerarPdfOficial";
 import { gerarReciboPdf } from "@/lib/gerarReciboPdf";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { VARIAVEIS_DOCUMENTO, aplicarVariaveis, inserirVariavel, resolverVariaveis, temVariaveis, type ContextoVariaveis } from "@/lib/variaveisDocumento";
 import { BIBLIOTECA_MODELOS, CATEGORIAS_MODELO, modelosPorCategoria, type CategoriaModelo, type ModeloComunicacao } from "@/lib/bibliotecaModelos";
-import { gerarTextoReciboPagamento, lerValorBR } from "@/lib/reciboPagamento";
+import { formatarValorBR, gerarTextoReciboPagamento, lerValorBR, validarTextoReciboIA, type TextoReciboInput } from "@/lib/reciboPagamento";
 
 
 
@@ -29,6 +30,7 @@ interface FuncionarioSimplificado {
   matricula: string | null;
   admissao: string | null;
   obraNome: string | null;
+  obraId: string | null;
   empresa_id: string | null;
   empresa: EmpresaPdf | null;
 }
@@ -48,6 +50,14 @@ interface DocumentoGerado {
   empresa: EmpresaPdf | null;
 }
 
+interface ReciboGeradoLote {
+  funcionario: FuncionarioSimplificado;
+  valor: number;
+  texto: string;
+  revisadoIA: boolean;
+  erroIA?: string;
+}
+
 const TIPO_LABEL = TIPO_DOCUMENTO_LABEL;
 const PASTAS_DOC = TIPO_DOCUMENTO_PASTA;
 
@@ -60,6 +70,12 @@ export function GeradorDocumentos() {
   const [tipoDoc, setTipoDoc] = useState<TipoDocumentoOficial>("advertencia");
   const [contextoUsuario, setContextoUsuario] = useState("");
   const [reciboValor, setReciboValor] = useState<string>("");
+  const [modoRecibo, setModoRecibo] = useState<"individual" | "obra">("individual");
+  const [obraReciboId, setObraReciboId] = useState("");
+  const [buscaRecibo, setBuscaRecibo] = useState("");
+  const [reciboSelecionados, setReciboSelecionados] = useState<Set<string>>(new Set());
+  const [valoresRecibo, setValoresRecibo] = useState<Record<string, string>>({});
+  const [recibosLote, setRecibosLote] = useState<ReciboGeradoLote[]>([]);
   const [dataDoc, setDataDoc] = useState<string>(new Date().toISOString().slice(0, 10));
   const [usarIA, setUsarIA] = useState(true);
   const [titulo, setTitulo] = useState<string>(TITULOS_SUGERIDOS["advertencia"][0]);
@@ -116,6 +132,7 @@ export function GeradorDocumentos() {
           matricula: (f as any).numero_registro || null,
           admissao: (f as any).data_admissao || null,
           obraNome: (f as any).obra_id ? obraMap.get((f as any).obra_id) || null : null,
+          obraId: (f as any).obra_id || null,
           empresa_id: f.empresa_id,
           empresa: f.empresa_id ? (empMap.get(f.empresa_id) as EmpresaPdf) || null : null,
         }));
@@ -186,6 +203,8 @@ export function GeradorDocumentos() {
   const handleTipoChange = (v: TipoDocumentoOficial) => {
     setTipoDoc(v);
     setTitulo(TITULOS_SUGERIDOS[v]?.[0] || TIPO_LABEL[v]);
+    setTextoGerado("");
+    setRecibosLote([]);
   };
 
   const aplicarModelo = (m: ModeloComunicacao) => {
@@ -197,6 +216,33 @@ export function GeradorDocumentos() {
     toast({ title: "Modelo aplicado", description: `${m.nome} — revise as variáveis e gere o texto.` });
   };
 
+
+  const solicitarRevisaoRecibo = async (func: FuncionarioSimplificado, input: TextoReciboInput, textoPadrao: string) => {
+    if (!usarIA) return { texto: textoPadrao, revisadoIA: false };
+    try {
+      const { data, error } = await supabase.functions.invoke("gerar-documento-ia", {
+        body: {
+          tipo: "recibo",
+          ideia: input.referencia,
+          referencia: input.referencia,
+          nomeFuncionario: input.nomeFuncionario,
+          cargoFuncionario: input.cargoFuncionario || "",
+          nomeEmpresa: input.nomeEmpresa,
+          obra: func.obraNome || "",
+          data: input.data,
+          valor: formatarValorBR(input.valor),
+          valorExtenso: textoPadrao.match(/\(([^\n]+)\)/)?.[1] || "",
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const textoIA = typeof data?.texto === "string" ? data.texto.trim() : "";
+      if (!validarTextoReciboIA(textoIA, input)) throw new Error("A revisão alterou ou omitiu dados obrigatórios");
+      return { texto: textoIA, revisadoIA: true };
+    } catch (err: any) {
+      return { texto: textoPadrao, revisadoIA: false, erroIA: err?.message || "IA indisponível" };
+    }
+  };
 
   const handleGerar = async () => {
     if (!funcId && !isComunicadoGeral) {
@@ -223,12 +269,54 @@ export function GeradorDocumentos() {
     const contextoFinal = aplicarVariaveis(contextoUsuario, ctxVars);
 
     if (tipoDoc === "recibo") {
+      if (modoRecibo === "obra") {
+        const envolvidos = funcionarios.filter(f => reciboSelecionados.has(f.id));
+        const invalidos = envolvidos.filter(f => !lerValorBR(valoresRecibo[f.id] || ""));
+        if (!obraReciboId || envolvidos.length === 0) {
+          toast({ title: "Selecione a obra e os envolvidos", variant: "destructive" });
+          return;
+        }
+        if (invalidos.length > 0) {
+          toast({ title: "Preencha todos os valores", description: `${invalidos.length} funcionário(s) sem valor válido.`, variant: "destructive" });
+          return;
+        }
+        setGerando(true);
+        const gerados: ReciboGeradoLote[] = [];
+        for (const pessoa of envolvidos) {
+          const valorPessoa = lerValorBR(valoresRecibo[pessoa.id] || "");
+          if (!valorPessoa) continue;
+          const empresaPessoa = pessoa.empresa?.nome_fantasia || pessoa.empresa?.razao_social || "Empresa";
+          const referenciaPessoa = aplicarVariaveis(contextoUsuario, {
+            nome: pessoa.nome, cargo: pessoa.cargo, cpf: pessoa.cpf, rg: pessoa.rg,
+            matricula: pessoa.matricula, admissao: pessoa.admissao, empresa: empresaPessoa,
+            cnpj: pessoa.empresa?.cnpj, obra: pessoa.obraNome, data: dataDoc,
+          });
+          const input: TextoReciboInput = {
+            nomeFuncionario: pessoa.nome, cargoFuncionario: pessoa.cargo, nomeEmpresa: empresaPessoa,
+            valor: valorPessoa, referencia: referenciaPessoa, data: dataDoc,
+            cidade: pessoa.empresa?.cidade, uf: pessoa.empresa?.uf,
+          };
+          const padrao = gerarTextoReciboPagamento(input);
+          const revisao = await solicitarRevisaoRecibo(pessoa, input, padrao);
+          gerados.push({ funcionario: pessoa, valor: valorPessoa, ...revisao });
+        }
+        setRecibosLote(gerados);
+        const primeiro = gerados[0];
+        if (primeiro) {
+          setFuncId(primeiro.funcionario.id);
+          setTextoGerado(primeiro.texto);
+        }
+        setGerando(false);
+        const falhas = gerados.filter(r => r.erroIA).length;
+        toast({ title: `${gerados.length} recibo(s) gerado(s)`, description: falhas ? `${falhas} usaram o modelo padrão porque a revisão por IA não foi aceita.` : "Todos os recibos foram conferidos." });
+        return;
+      }
       const valor = lerValorBR(reciboValor);
       if (!func || !valor) {
         toast({ title: "Informe um valor válido para o recibo", variant: "destructive" });
         return;
       }
-      setTextoGerado(gerarTextoReciboPagamento({
+      const input: TextoReciboInput = {
         nomeFuncionario: func.nome,
         cargoFuncionario: func.cargo,
         nomeEmpresa,
@@ -237,8 +325,12 @@ export function GeradorDocumentos() {
         data: dataDoc,
         cidade: func.empresa?.cidade,
         uf: func.empresa?.uf,
-      }));
-      toast({ title: "Recibo gerado", description: "Valor preenchido em algarismos e por extenso." });
+      };
+      setGerando(true);
+      const revisao = await solicitarRevisaoRecibo(func, input, gerarTextoReciboPagamento(input));
+      setTextoGerado(revisao.texto);
+      setGerando(false);
+      toast({ title: "Recibo gerado", description: revisao.revisadoIA ? "Texto revisado pela IA e valores conferidos." : "Modelo padrão aplicado com valor em algarismos e por extenso." });
       return;
     }
 
@@ -317,35 +409,29 @@ export function GeradorDocumentos() {
     const empresaPdf = funcSelecionado?.empresa || funcionarios[0]?.empresa || null;
     if (tipoDoc === "recibo") {
       if (!funcSelecionado) return null;
-      const valorNum = lerValorBR(reciboValor);
-      if (!valorNum) {
-        toast({ title: "Informe o valor do recibo", variant: "destructive" });
-        return null;
-      }
-      return await gerarReciboPdf({
-        empresa: (funcSelecionado.empresa || { razao_social: "Empresa" }) as any,
-        funcionario: {
-          nome: funcSelecionado.nome,
-          cargo: funcSelecionado.cargo,
-          cpf: funcSelecionado.cpf,
-          rg: funcSelecionado.rg,
-        },
-        valor: valorNum,
-        referencia: aplicarVariaveis(contextoUsuario, {
-          nome: funcSelecionado.nome,
-          cargo: funcSelecionado.cargo,
-          cpf: funcSelecionado.cpf,
-          rg: funcSelecionado.rg,
-          matricula: funcSelecionado.matricula,
-          admissao: funcSelecionado.admissao,
-          empresa: funcSelecionado.empresa?.nome_fantasia || funcSelecionado.empresa?.razao_social,
-          cnpj: funcSelecionado.empresa?.cnpj,
-          obra: funcSelecionado.obraNome,
-          data: dataDoc,
-        }) || "Pagamento avulso",
-      });
+      return await gerarPdfA4(textoGerado, "recibo.pdf", empresaPdf);
     }
     return await gerarPdfA4(textoGerado, "doc.pdf", empresaPdf);
+  };
+
+  const recibosDaObra = funcionarios.filter(f => f.obraId === obraReciboId && (!buscaRecibo || f.nome.toLocaleLowerCase("pt-BR").includes(buscaRecibo.toLocaleLowerCase("pt-BR"))));
+  const obrasRecibo = Array.from(new Map(funcionarios.filter(f => f.obraId && f.obraNome).map(f => [f.obraId as string, f.obraNome as string])).entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  const totalLote = Array.from(reciboSelecionados).reduce((soma, id) => soma + (lerValorBR(valoresRecibo[id] || "") || 0), 0);
+
+  const selecionarTodosRecibo = (checked: boolean) => {
+    setReciboSelecionados(checked ? new Set(recibosDaObra.map(f => f.id)) : new Set());
+  };
+
+  const baixarLote = async () => {
+    if (!recibosLote.length) return;
+    const blob = await gerarPdfA4(recibosLote.map(r => r.texto).join("\n\f\n"), "recibos_obra.pdf", recibosLote[0]?.funcionario.empresa);
+    downloadBlob(blob, `recibos_${(recibosLote[0]?.funcionario.obraNome || "obra").replace(/[^a-zA-Z0-9]/g, "_")}_${dataDoc}.pdf`);
+  };
+
+  const imprimirLote = async () => {
+    if (!recibosLote.length) return;
+    const blob = await gerarPdfA4(recibosLote.map(r => r.texto).join("\n\f\n"), "recibos_obra.pdf", recibosLote[0]?.funcionario.empresa);
+    imprimirBlob(blob);
   };
 
   const handleDownload = async () => {
