@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { FileText, Download, Send, Save, Bot, Loader2, Info, Printer, Mail, FolderOpen, RefreshCw } from "lucide-react";
+import { FileText, Download, Send, Save, Bot, Loader2, Info, Printer, Mail, FolderOpen, RefreshCw, Search, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,11 +10,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { gerarTextoDocumentoOficial, TipoDocumentoOficial, TIPO_DOCUMENTO_LABEL, TIPO_DOCUMENTO_PASTA, TITULOS_SUGERIDOS, TONS_DOCUMENTO } from "@/lib/motorIaDocumentos";
 import { gerarPdfA4, downloadBlob, imprimirBlob, EmpresaPdf } from "@/lib/gerarPdfOficial";
-import { gerarReciboPdf } from "@/lib/gerarReciboPdf";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { VARIAVEIS_DOCUMENTO, aplicarVariaveis, inserirVariavel, resolverVariaveis, temVariaveis, type ContextoVariaveis } from "@/lib/variaveisDocumento";
 import { BIBLIOTECA_MODELOS, CATEGORIAS_MODELO, modelosPorCategoria, type CategoriaModelo, type ModeloComunicacao } from "@/lib/bibliotecaModelos";
-import { gerarTextoReciboPagamento, lerValorBR } from "@/lib/reciboPagamento";
+import { formatarValorBR, gerarTextoReciboPagamento, lerValorBR, validarTextoReciboIA, type TextoReciboInput } from "@/lib/reciboPagamento";
 
 
 
@@ -29,6 +29,7 @@ interface FuncionarioSimplificado {
   matricula: string | null;
   admissao: string | null;
   obraNome: string | null;
+  obraId: string | null;
   empresa_id: string | null;
   empresa: EmpresaPdf | null;
 }
@@ -48,6 +49,14 @@ interface DocumentoGerado {
   empresa: EmpresaPdf | null;
 }
 
+interface ReciboGeradoLote {
+  funcionario: FuncionarioSimplificado;
+  valor: number;
+  texto: string;
+  revisadoIA: boolean;
+  erroIA?: string;
+}
+
 const TIPO_LABEL = TIPO_DOCUMENTO_LABEL;
 const PASTAS_DOC = TIPO_DOCUMENTO_PASTA;
 
@@ -60,6 +69,12 @@ export function GeradorDocumentos() {
   const [tipoDoc, setTipoDoc] = useState<TipoDocumentoOficial>("advertencia");
   const [contextoUsuario, setContextoUsuario] = useState("");
   const [reciboValor, setReciboValor] = useState<string>("");
+  const [modoRecibo, setModoRecibo] = useState<"individual" | "obra">("individual");
+  const [obraReciboId, setObraReciboId] = useState("");
+  const [buscaRecibo, setBuscaRecibo] = useState("");
+  const [reciboSelecionados, setReciboSelecionados] = useState<Set<string>>(new Set());
+  const [valoresRecibo, setValoresRecibo] = useState<Record<string, string>>({});
+  const [recibosLote, setRecibosLote] = useState<ReciboGeradoLote[]>([]);
   const [dataDoc, setDataDoc] = useState<string>(new Date().toISOString().slice(0, 10));
   const [usarIA, setUsarIA] = useState(true);
   const [titulo, setTitulo] = useState<string>(TITULOS_SUGERIDOS["advertencia"][0]);
@@ -116,6 +131,7 @@ export function GeradorDocumentos() {
           matricula: (f as any).numero_registro || null,
           admissao: (f as any).data_admissao || null,
           obraNome: (f as any).obra_id ? obraMap.get((f as any).obra_id) || null : null,
+          obraId: (f as any).obra_id || null,
           empresa_id: f.empresa_id,
           empresa: f.empresa_id ? (empMap.get(f.empresa_id) as EmpresaPdf) || null : null,
         }));
@@ -186,6 +202,8 @@ export function GeradorDocumentos() {
   const handleTipoChange = (v: TipoDocumentoOficial) => {
     setTipoDoc(v);
     setTitulo(TITULOS_SUGERIDOS[v]?.[0] || TIPO_LABEL[v]);
+    setTextoGerado("");
+    setRecibosLote([]);
   };
 
   const aplicarModelo = (m: ModeloComunicacao) => {
@@ -198,8 +216,36 @@ export function GeradorDocumentos() {
   };
 
 
+  const solicitarRevisaoRecibo = async (func: FuncionarioSimplificado, input: TextoReciboInput, textoPadrao: string) => {
+    if (!usarIA) return { texto: textoPadrao, revisadoIA: false };
+    try {
+      const { data, error } = await supabase.functions.invoke("gerar-documento-ia", {
+        body: {
+          tipo: "recibo",
+          ideia: input.referencia,
+          referencia: input.referencia,
+          nomeFuncionario: input.nomeFuncionario,
+          cargoFuncionario: input.cargoFuncionario || "",
+          nomeEmpresa: input.nomeEmpresa,
+          obra: func.obraNome || "",
+          data: input.data,
+          valor: formatarValorBR(input.valor),
+          valorExtenso: textoPadrao.match(/\(([^\n]+)\)/)?.[1] || "",
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      const textoIA = typeof data?.texto === "string" ? data.texto.trim() : "";
+      if (!validarTextoReciboIA(textoIA, input)) throw new Error("A revisão alterou ou omitiu dados obrigatórios");
+      return { texto: textoIA, revisadoIA: true };
+    } catch (err: any) {
+      return { texto: textoPadrao, revisadoIA: false, erroIA: err?.message || "IA indisponível" };
+    }
+  };
+
   const handleGerar = async () => {
-    if (!funcId && !isComunicadoGeral) {
+    const geracaoReciboPorObra = tipoDoc === "recibo" && modoRecibo === "obra";
+    if (!funcId && !isComunicadoGeral && !geracaoReciboPorObra) {
       toast({ title: "Selecione um funcionário", variant: "destructive" });
       return;
     }
@@ -223,12 +269,54 @@ export function GeradorDocumentos() {
     const contextoFinal = aplicarVariaveis(contextoUsuario, ctxVars);
 
     if (tipoDoc === "recibo") {
+      if (modoRecibo === "obra") {
+        const envolvidos = funcionarios.filter(f => reciboSelecionados.has(f.id));
+        const invalidos = envolvidos.filter(f => !lerValorBR(valoresRecibo[f.id] || ""));
+        if (!obraReciboId || envolvidos.length === 0) {
+          toast({ title: "Selecione a obra e os envolvidos", variant: "destructive" });
+          return;
+        }
+        if (invalidos.length > 0) {
+          toast({ title: "Preencha todos os valores", description: `${invalidos.length} funcionário(s) sem valor válido.`, variant: "destructive" });
+          return;
+        }
+        setGerando(true);
+        const gerados: ReciboGeradoLote[] = [];
+        for (const pessoa of envolvidos) {
+          const valorPessoa = lerValorBR(valoresRecibo[pessoa.id] || "");
+          if (!valorPessoa) continue;
+          const empresaPessoa = pessoa.empresa?.nome_fantasia || pessoa.empresa?.razao_social || "Empresa";
+          const referenciaPessoa = aplicarVariaveis(contextoUsuario, {
+            nome: pessoa.nome, cargo: pessoa.cargo, cpf: pessoa.cpf, rg: pessoa.rg,
+            matricula: pessoa.matricula, admissao: pessoa.admissao, empresa: empresaPessoa,
+            cnpj: pessoa.empresa?.cnpj, obra: pessoa.obraNome, data: dataDoc,
+          });
+          const input: TextoReciboInput = {
+            nomeFuncionario: pessoa.nome, cargoFuncionario: pessoa.cargo, nomeEmpresa: empresaPessoa,
+            valor: valorPessoa, referencia: referenciaPessoa, data: dataDoc,
+            cidade: pessoa.empresa?.cidade, uf: pessoa.empresa?.uf,
+          };
+          const padrao = gerarTextoReciboPagamento(input);
+          const revisao = await solicitarRevisaoRecibo(pessoa, input, padrao);
+          gerados.push({ funcionario: pessoa, valor: valorPessoa, ...revisao });
+        }
+        setRecibosLote(gerados);
+        const primeiro = gerados[0];
+        if (primeiro) {
+          setFuncId(primeiro.funcionario.id);
+          setTextoGerado(primeiro.texto);
+        }
+        setGerando(false);
+        const falhas = gerados.filter(r => r.erroIA).length;
+        toast({ title: `${gerados.length} recibo(s) gerado(s)`, description: falhas ? `${falhas} usaram o modelo padrão porque a revisão por IA não foi aceita.` : "Todos os recibos foram conferidos." });
+        return;
+      }
       const valor = lerValorBR(reciboValor);
       if (!func || !valor) {
         toast({ title: "Informe um valor válido para o recibo", variant: "destructive" });
         return;
       }
-      setTextoGerado(gerarTextoReciboPagamento({
+      const input: TextoReciboInput = {
         nomeFuncionario: func.nome,
         cargoFuncionario: func.cargo,
         nomeEmpresa,
@@ -237,8 +325,12 @@ export function GeradorDocumentos() {
         data: dataDoc,
         cidade: func.empresa?.cidade,
         uf: func.empresa?.uf,
-      }));
-      toast({ title: "Recibo gerado", description: "Valor preenchido em algarismos e por extenso." });
+      };
+      setGerando(true);
+      const revisao = await solicitarRevisaoRecibo(func, input, gerarTextoReciboPagamento(input));
+      setTextoGerado(revisao.texto);
+      setGerando(false);
+      toast({ title: "Recibo gerado", description: revisao.revisadoIA ? "Texto revisado pela IA e valores conferidos." : "Modelo padrão aplicado com valor em algarismos e por extenso." });
       return;
     }
 
@@ -317,35 +409,29 @@ export function GeradorDocumentos() {
     const empresaPdf = funcSelecionado?.empresa || funcionarios[0]?.empresa || null;
     if (tipoDoc === "recibo") {
       if (!funcSelecionado) return null;
-      const valorNum = lerValorBR(reciboValor);
-      if (!valorNum) {
-        toast({ title: "Informe o valor do recibo", variant: "destructive" });
-        return null;
-      }
-      return await gerarReciboPdf({
-        empresa: (funcSelecionado.empresa || { razao_social: "Empresa" }) as any,
-        funcionario: {
-          nome: funcSelecionado.nome,
-          cargo: funcSelecionado.cargo,
-          cpf: funcSelecionado.cpf,
-          rg: funcSelecionado.rg,
-        },
-        valor: valorNum,
-        referencia: aplicarVariaveis(contextoUsuario, {
-          nome: funcSelecionado.nome,
-          cargo: funcSelecionado.cargo,
-          cpf: funcSelecionado.cpf,
-          rg: funcSelecionado.rg,
-          matricula: funcSelecionado.matricula,
-          admissao: funcSelecionado.admissao,
-          empresa: funcSelecionado.empresa?.nome_fantasia || funcSelecionado.empresa?.razao_social,
-          cnpj: funcSelecionado.empresa?.cnpj,
-          obra: funcSelecionado.obraNome,
-          data: dataDoc,
-        }) || "Pagamento avulso",
-      });
+      return await gerarPdfA4(textoGerado, "recibo.pdf", empresaPdf);
     }
     return await gerarPdfA4(textoGerado, "doc.pdf", empresaPdf);
+  };
+
+  const recibosDaObra = funcionarios.filter(f => f.obraId === obraReciboId && (!buscaRecibo || f.nome.toLocaleLowerCase("pt-BR").includes(buscaRecibo.toLocaleLowerCase("pt-BR"))));
+  const obrasRecibo = Array.from(new Map(funcionarios.filter(f => f.obraId && f.obraNome).map(f => [f.obraId as string, f.obraNome as string])).entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  const totalLote = Array.from(reciboSelecionados).reduce((soma, id) => soma + (lerValorBR(valoresRecibo[id] || "") || 0), 0);
+
+  const selecionarTodosRecibo = (checked: boolean) => {
+    setReciboSelecionados(checked ? new Set(recibosDaObra.map(f => f.id)) : new Set());
+  };
+
+  const baixarLote = async () => {
+    if (!recibosLote.length) return;
+    const blob = await gerarPdfA4(recibosLote.map(r => r.texto).join("\n\f\n"), "recibos_obra.pdf", recibosLote[0]?.funcionario.empresa);
+    downloadBlob(blob, `recibos_${(recibosLote[0]?.funcionario.obraNome || "obra").replace(/[^a-zA-Z0-9]/g, "_")}_${dataDoc}.pdf`);
+  };
+
+  const imprimirLote = async () => {
+    if (!recibosLote.length) return;
+    const blob = await gerarPdfA4(recibosLote.map(r => r.texto).join("\n\f\n"), "recibos_obra.pdf", recibosLote[0]?.funcionario.empresa);
+    imprimirBlob(blob);
   };
 
   const handleDownload = async () => {
@@ -399,6 +485,25 @@ export function GeradorDocumentos() {
       }
     } catch (err: any) {
       toast({ title: "Erro inesperado", description: err.message, variant: "destructive" });
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  const salvarLoteRh = async () => {
+    if (!recibosLote.length) return;
+    setSalvando(true);
+    let salvos = 0;
+    try {
+      for (const recibo of recibosLote) {
+        const blob = await gerarPdfA4(recibo.texto, "recibo.pdf", recibo.funcionario.empresa);
+        const fname = formatFileName("recibo", recibo.funcionario.nome);
+        const filePath = `funcionarios/${recibo.funcionario.id}/${PASTAS_DOC.recibo}/${fname}`;
+        const { error } = await supabase.storage.from("documentos").upload(filePath, new File([blob], fname, { type: "application/pdf" }), { upsert: true });
+        if (!error) salvos += 1;
+      }
+      toast({ title: `${salvos} recibo(s) arquivado(s)`, description: salvos === recibosLote.length ? "Todos foram anexados aos prontuários." : "Alguns recibos não puderam ser arquivados." });
+      carregarHistorico();
     } finally {
       setSalvando(false);
     }
@@ -538,7 +643,21 @@ export function GeradorDocumentos() {
               </div>
 
 
-              <div className="space-y-1">
+              {tipoDoc === "recibo" && (
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold">1. Forma de geração</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button type="button" variant={modoRecibo === "individual" ? "default" : "outline"} onClick={() => { setModoRecibo("individual"); setRecibosLote([]); }} className="gap-2">
+                      <FileText className="h-4 w-4" /> Individual
+                    </Button>
+                    <Button type="button" variant={modoRecibo === "obra" ? "default" : "outline"} onClick={() => { setModoRecibo("obra"); setTextoGerado(""); }} className="gap-2">
+                      <Users className="h-4 w-4" /> Por obra
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {(tipoDoc !== "recibo" || modoRecibo === "individual") && <div className="space-y-1">
                 <Label className="text-xs font-semibold">1. Funcionário</Label>
                 <Select value={funcId} onValueChange={setFuncId}>
                   <SelectTrigger className="bg-background"><SelectValue placeholder="Selecione..." /></SelectTrigger>
@@ -556,7 +675,40 @@ export function GeradorDocumentos() {
                     {funcSelecionado.empresa.logo_url && <span className="ml-2 text-success">• logo carregada</span>}
                   </p>
                 )}
-              </div>
+              </div>}
+
+              {tipoDoc === "recibo" && modoRecibo === "obra" && (
+                <div className="space-y-3 rounded-md border bg-background p-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs font-semibold">2. Obra</Label>
+                    <Select value={obraReciboId} onValueChange={v => { setObraReciboId(v); setReciboSelecionados(new Set()); setRecibosLote([]); }}>
+                      <SelectTrigger><SelectValue placeholder="Selecione a obra" /></SelectTrigger>
+                      <SelectContent>{obrasRecibo.map(([id, nome]) => <SelectItem key={id} value={id}>{nome}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  {obraReciboId && <>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input value={buscaRecibo} onChange={e => setBuscaRecibo(e.target.value)} placeholder="Buscar funcionário..." className="pl-9" />
+                    </div>
+                    <div className="flex items-center justify-between border-b pb-2 text-xs">
+                      <label className="flex items-center gap-2 font-medium"><Checkbox checked={recibosDaObra.length > 0 && recibosDaObra.every(f => reciboSelecionados.has(f.id))} onCheckedChange={v => selecionarTodosRecibo(v === true)} /> Selecionar todos</label>
+                      <span className="text-muted-foreground">{reciboSelecionados.size} selecionado(s)</span>
+                    </div>
+                    <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+                      {recibosDaObra.map(f => {
+                        const marcado = reciboSelecionados.has(f.id);
+                        return <div key={f.id} className="grid grid-cols-[auto_1fr_120px] items-center gap-2 rounded-md border p-2">
+                          <Checkbox checked={marcado} onCheckedChange={v => setReciboSelecionados(prev => { const next = new Set(prev); v === true ? next.add(f.id) : next.delete(f.id); return next; })} />
+                          <div className="min-w-0"><p className="truncate text-xs font-medium">{f.nome}</p><p className="truncate text-[10px] text-muted-foreground">{f.cargo}</p></div>
+                          <Input aria-label={`Valor de ${f.nome}`} disabled={!marcado} inputMode="decimal" placeholder="R$ 0,00" value={valoresRecibo[f.id] || ""} onChange={e => setValoresRecibo(prev => ({ ...prev, [f.id]: e.target.value }))} className="h-8 font-mono text-xs" />
+                        </div>;
+                      })}
+                    </div>
+                    <div className="flex justify-between rounded-md bg-muted p-2 text-xs font-semibold"><span>Total do lote</span><span>{formatarValorBR(totalLote)}</span></div>
+                  </>}
+                </div>
+              )}
 
               <div className="space-y-1">
                 <Label className="text-xs font-semibold">2. Tipo de Documento</Label>
@@ -618,12 +770,12 @@ export function GeradorDocumentos() {
                 />
               </div>
 
-              {tipoDoc !== "recibo" && <label className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2 cursor-pointer">
+              <label className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2 cursor-pointer">
                 <input type="checkbox" checked={usarIA} onChange={e => setUsarIA(e.target.checked)} className="rounded" />
-                <span className="text-xs font-medium flex items-center gap-1"><Bot className="h-3.5 w-3.5 text-primary" /> Desenvolver texto com IA a partir da minha ideia</span>
-              </label>}
+                <span className="text-xs font-medium flex items-center gap-1"><Bot className="h-3.5 w-3.5 text-primary" /> {tipoDoc === "recibo" ? "Revisar texto completo com IA" : "Desenvolver texto com IA a partir da minha ideia"}</span>
+              </label>
 
-              {tipoDoc === "recibo" && (
+              {tipoDoc === "recibo" && modoRecibo === "individual" && (
                 <div className="space-y-1">
                   <Label className="text-xs font-semibold">Valor (R$)</Label>
                   <Input
@@ -654,13 +806,13 @@ export function GeradorDocumentos() {
                     Prévia com dados reais: <span className="text-foreground">{aplicarVariaveis(contextoUsuario, ctxPreview)}</span>
                   </p>
                 )}
-                <p className="text-[10px] text-muted-foreground"><Info className="inline h-3 w-3 mr-1" />{tipoDoc === "recibo" ? "O recibo é gerado automaticamente, sem IA, usando o valor, a referência e os dados cadastrados." : usarIA ? "Escreva a ideia em linguagem simples e use as variáveis acima — elas são substituídas pelos dados do colaborador antes de gerar." : "O sistema aplica automaticamente a fundamentação legal CLT e substitui as variáveis."}</p>
+                <p className="text-[10px] text-muted-foreground"><Info className="inline h-3 w-3 mr-1" />{tipoDoc === "recibo" ? usarIA ? "A IA revisa a redação, mas nome, empresa, obra e valores são conferidos pelo sistema." : "O sistema aplica o modelo padronizado com valor em algarismos e por extenso." : usarIA ? "Escreva a ideia em linguagem simples e use as variáveis acima — elas são substituídas pelos dados do colaborador antes de gerar." : "O sistema aplica automaticamente a fundamentação legal CLT e substitui as variáveis."}</p>
               </div>
 
 
-              <Button onClick={handleGerar} disabled={gerando || (!funcId && !isComunicadoGeral)} className="w-full gap-2 mt-2">
+              <Button onClick={handleGerar} disabled={gerando || (tipoDoc === "recibo" && modoRecibo === "obra" ? reciboSelecionados.size === 0 : (!funcId && !isComunicadoGeral))} className="w-full gap-2 mt-2">
                 {gerando ? <Loader2 className="h-4 w-4 animate-spin" /> : tipoDoc === "recibo" ? <FileText className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
-                {gerando ? "Gerando..." : tipoDoc === "recibo" ? "Gerar Recibo" : usarIA ? "Gerar com IA" : "Gerar Documento"}
+                 {gerando ? "Gerando..." : tipoDoc === "recibo" && modoRecibo === "obra" ? `Gerar ${reciboSelecionados.size} recibo(s)` : tipoDoc === "recibo" ? "Gerar Recibo" : usarIA ? "Gerar com IA" : "Gerar Documento"}
               </Button>
 
             </CardContent>
@@ -669,7 +821,24 @@ export function GeradorDocumentos() {
 
         {/* Coluna Direita: pré-visualização */}
         <div className="lg:col-span-7 space-y-4">
-          {textoGerado && funcSelecionado ? (
+          {tipoDoc === "recibo" && modoRecibo === "obra" && recibosLote.length > 0 ? (
+            <Card className="shadow-sm border-muted">
+              <CardContent className="space-y-4 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
+                  <div><Badge variant="outline">RECIBOS POR OBRA</Badge><h3 className="mt-2 text-lg font-semibold">{recibosLote.length} recibo(s) prontos</h3><p className="text-xs text-muted-foreground">Total: {formatarValorBR(recibosLote.reduce((s, r) => s + r.valor, 0))}</p></div>
+                  <div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={imprimirLote} className="gap-1.5"><Printer className="h-3.5 w-3.5" /> Imprimir todos</Button><Button size="sm" variant="outline" onClick={baixarLote} className="gap-1.5"><Download className="h-3.5 w-3.5" /> PDF único</Button></div>
+                </div>
+                <div className="max-h-[480px] space-y-2 overflow-y-auto">
+                  {recibosLote.map((r, index) => <button key={r.funcionario.id} type="button" onClick={() => { setFuncId(r.funcionario.id); setTextoGerado(r.texto); }} className={`w-full rounded-md border p-3 text-left ${funcSelecionado?.id === r.funcionario.id ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`}>
+                    <div className="flex items-center justify-between gap-2"><span className="truncate text-sm font-medium">{index + 1}. {r.funcionario.nome}</span><span className="whitespace-nowrap font-mono text-sm font-semibold">{formatarValorBR(r.valor)}</span></div>
+                    <p className="mt-1 text-[10px] text-muted-foreground">{r.revisadoIA ? "Revisado pela IA e conferido" : r.erroIA ? "Modelo padrão aplicado" : "Modelo padrão"}</p>
+                  </button>)}
+                </div>
+                {textoGerado && <Textarea value={textoGerado} onChange={e => { const texto = e.target.value; setTextoGerado(texto); if (funcSelecionado) setRecibosLote(prev => prev.map(r => r.funcionario.id === funcSelecionado.id ? { ...r, texto } : r)); }} className="h-[300px] bg-muted/20 font-mono text-sm leading-relaxed" />}
+                <Button onClick={salvarLoteRh} disabled={salvando} className="w-full gap-2 bg-success text-success-foreground hover:bg-success/90"><Save className="h-4 w-4" /> {salvando ? "Arquivando..." : "Arquivar todos nos prontuários"}</Button>
+              </CardContent>
+            </Card>
+          ) : textoGerado && funcSelecionado ? (
             <Card className="shadow-sm border-muted">
               <CardContent className="p-4 space-y-4">
                 <div className="flex justify-between items-end mb-2 border-b pb-3">

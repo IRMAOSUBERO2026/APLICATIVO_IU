@@ -51,3 +51,14 @@ ______________________________________________
 ${input.nomeFuncionario}
 Recebedor`;
 }
+
+/** Garante que uma revisão por IA preservou os dados financeiros imutáveis. */
+export function validarTextoReciboIA(texto: string, input: TextoReciboInput): boolean {
+  if (!texto.trim()) return false;
+  const valorFormatado = formatarValorBR(input.valor);
+  const valorExtenso = valorPorExtenso(input.valor);
+  return texto.includes(input.nomeFuncionario)
+    && texto.includes(input.nomeEmpresa)
+    && texto.includes(valorFormatado)
+    && texto.toLocaleLowerCase("pt-BR").includes(valorExtenso.toLocaleLowerCase("pt-BR"));
+}
