@@ -14,6 +14,7 @@ import { gerarReciboPdf } from "@/lib/gerarReciboPdf";
 import { Input } from "@/components/ui/input";
 import { VARIAVEIS_DOCUMENTO, aplicarVariaveis, inserirVariavel, resolverVariaveis, temVariaveis, type ContextoVariaveis } from "@/lib/variaveisDocumento";
 import { BIBLIOTECA_MODELOS, CATEGORIAS_MODELO, modelosPorCategoria, type CategoriaModelo, type ModeloComunicacao } from "@/lib/bibliotecaModelos";
+import { gerarTextoReciboPagamento, lerValorBR } from "@/lib/reciboPagamento";
 
 
 
@@ -221,6 +222,26 @@ export function GeradorDocumentos() {
     const tituloFinal = aplicarVariaveis(titulo, ctxVars);
     const contextoFinal = aplicarVariaveis(contextoUsuario, ctxVars);
 
+    if (tipoDoc === "recibo") {
+      const valor = lerValorBR(reciboValor);
+      if (!func || !valor) {
+        toast({ title: "Informe um valor válido para o recibo", variant: "destructive" });
+        return;
+      }
+      setTextoGerado(gerarTextoReciboPagamento({
+        nomeFuncionario: func.nome,
+        cargoFuncionario: func.cargo,
+        nomeEmpresa,
+        valor,
+        referencia: contextoFinal,
+        data: dataDoc,
+        cidade: func.empresa?.cidade,
+        uf: func.empresa?.uf,
+      }));
+      toast({ title: "Recibo gerado", description: "Valor preenchido em algarismos e por extenso." });
+      return;
+    }
+
     setGerando(true);
 
     // Fallback local (template) usado quando a IA não estiver disponível.
@@ -296,8 +317,8 @@ export function GeradorDocumentos() {
     const empresaPdf = funcSelecionado?.empresa || funcionarios[0]?.empresa || null;
     if (tipoDoc === "recibo") {
       if (!funcSelecionado) return null;
-      const valorNum = parseFloat((reciboValor || "0").replace(/\./g, "").replace(",", "."));
-      if (!valorNum || valorNum <= 0) {
+      const valorNum = lerValorBR(reciboValor);
+      if (!valorNum) {
         toast({ title: "Informe o valor do recibo", variant: "destructive" });
         return null;
       }
@@ -310,7 +331,18 @@ export function GeradorDocumentos() {
           rg: funcSelecionado.rg,
         },
         valor: valorNum,
-        referencia: contextoUsuario || "Pagamento avulso",
+        referencia: aplicarVariaveis(contextoUsuario, {
+          nome: funcSelecionado.nome,
+          cargo: funcSelecionado.cargo,
+          cpf: funcSelecionado.cpf,
+          rg: funcSelecionado.rg,
+          matricula: funcSelecionado.matricula,
+          admissao: funcSelecionado.admissao,
+          empresa: funcSelecionado.empresa?.nome_fantasia || funcSelecionado.empresa?.razao_social,
+          cnpj: funcSelecionado.empresa?.cnpj,
+          obra: funcSelecionado.obraNome,
+          data: dataDoc,
+        }) || "Pagamento avulso",
       });
     }
     return await gerarPdfA4(textoGerado, "doc.pdf", empresaPdf);
@@ -538,7 +570,7 @@ export function GeradorDocumentos() {
                 </Select>
               </div>
 
-              <div className="space-y-1">
+              {tipoDoc !== "recibo" && <div className="space-y-1">
                 <Label className="text-xs font-semibold">Modelo de Título / Assunto</Label>
                 <Select value={titulo} onValueChange={setTitulo}>
                   <SelectTrigger className="bg-background"><SelectValue placeholder="Escolha um modelo de título" /></SelectTrigger>
@@ -561,10 +593,10 @@ export function GeradorDocumentos() {
                     Prévia: <span className="font-medium text-foreground">{aplicarVariaveis(titulo, ctxPreview)}</span>
                   </p>
                 )}
-              </div>
+              </div>}
 
 
-              <div className="space-y-1">
+              {tipoDoc !== "recibo" && <div className="space-y-1">
                 <Label className="text-xs font-semibold">Tom da Redação</Label>
                 <Select value={tom} onValueChange={setTom}>
                   <SelectTrigger className="bg-background"><SelectValue /></SelectTrigger>
@@ -574,7 +606,7 @@ export function GeradorDocumentos() {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </div>}
 
               <div className="space-y-1">
                 <Label className="text-xs font-semibold">Data do Documento</Label>
@@ -586,10 +618,10 @@ export function GeradorDocumentos() {
                 />
               </div>
 
-              <label className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2 cursor-pointer">
+              {tipoDoc !== "recibo" && <label className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2 cursor-pointer">
                 <input type="checkbox" checked={usarIA} onChange={e => setUsarIA(e.target.checked)} className="rounded" />
                 <span className="text-xs font-medium flex items-center gap-1"><Bot className="h-3.5 w-3.5 text-primary" /> Desenvolver texto com IA a partir da minha ideia</span>
-              </label>
+              </label>}
 
               {tipoDoc === "recibo" && (
                 <div className="space-y-1">
@@ -622,13 +654,13 @@ export function GeradorDocumentos() {
                     Prévia com dados reais: <span className="text-foreground">{aplicarVariaveis(contextoUsuario, ctxPreview)}</span>
                   </p>
                 )}
-                <p className="text-[10px] text-muted-foreground"><Info className="inline h-3 w-3 mr-1" />{usarIA ? "Escreva a ideia em linguagem simples e use as variáveis acima — elas são substituídas pelos dados do colaborador antes de gerar." : "O sistema aplica automaticamente a fundamentação legal CLT e substitui as variáveis."}</p>
+                <p className="text-[10px] text-muted-foreground"><Info className="inline h-3 w-3 mr-1" />{tipoDoc === "recibo" ? "O recibo é gerado automaticamente, sem IA, usando o valor, a referência e os dados cadastrados." : usarIA ? "Escreva a ideia em linguagem simples e use as variáveis acima — elas são substituídas pelos dados do colaborador antes de gerar." : "O sistema aplica automaticamente a fundamentação legal CLT e substitui as variáveis."}</p>
               </div>
 
 
               <Button onClick={handleGerar} disabled={gerando || (!funcId && !isComunicadoGeral)} className="w-full gap-2 mt-2">
-                {gerando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bot className="h-4 w-4" />}
-                {gerando ? "Gerando..." : usarIA ? "Gerar com IA" : "Gerar Documento"}
+                {gerando ? <Loader2 className="h-4 w-4 animate-spin" /> : tipoDoc === "recibo" ? <FileText className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
+                {gerando ? "Gerando..." : tipoDoc === "recibo" ? "Gerar Recibo" : usarIA ? "Gerar com IA" : "Gerar Documento"}
               </Button>
 
             </CardContent>
