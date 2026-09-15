@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { gerarTextoDocumentoOficial, TipoDocumentoOficial, TIPO_DOCUMENTO_LABEL, TIPO_DOCUMENTO_PASTA, TITULOS_SUGERIDOS, TONS_DOCUMENTO } from "@/lib/motorIaDocumentos";
-import { gerarPdfA4, downloadBlob, imprimirBlob, EmpresaPdf } from "@/lib/gerarPdfOficial";
+import { gerarPdfA4, gerarPdfRecibosLote, downloadBlob, imprimirBlob, EmpresaPdf, type FormatoRecibosLote } from "@/lib/gerarPdfOficial";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { VARIAVEIS_DOCUMENTO, aplicarVariaveis, inserirVariavel, resolverVariaveis, temVariaveis, type ContextoVariaveis } from "@/lib/variaveisDocumento";
@@ -75,6 +75,7 @@ export function GeradorDocumentos() {
   const [reciboSelecionados, setReciboSelecionados] = useState<Set<string>>(new Set());
   const [valoresRecibo, setValoresRecibo] = useState<Record<string, string>>({});
   const [recibosLote, setRecibosLote] = useState<ReciboGeradoLote[]>([]);
+  const [formatoRecibosLote, setFormatoRecibosLote] = useState<FormatoRecibosLote>("pagina-inteira");
   const [dataDoc, setDataDoc] = useState<string>(new Date().toISOString().slice(0, 10));
   const [usarIA, setUsarIA] = useState(true);
   const [titulo, setTitulo] = useState<string>(TITULOS_SUGERIDOS["advertencia"][0]);
@@ -424,13 +425,14 @@ export function GeradorDocumentos() {
 
   const baixarLote = async () => {
     if (!recibosLote.length) return;
-    const blob = await gerarPdfA4(recibosLote.map(r => r.texto).join("\n\f\n"), "recibos_obra.pdf", recibosLote[0]?.funcionario.empresa);
+    const blob = await gerarPdfRecibosLote(recibosLote.map(r => r.texto), recibosLote[0]?.funcionario.empresa, formatoRecibosLote);
     downloadBlob(blob, `recibos_${(recibosLote[0]?.funcionario.obraNome || "obra").replace(/[^a-zA-Z0-9]/g, "_")}_${dataDoc}.pdf`);
+    toast({ title: "PDF único gerado", description: `${recibosLote.length} recibos reunidos em um arquivo.` });
   };
 
   const imprimirLote = async () => {
     if (!recibosLote.length) return;
-    const blob = await gerarPdfA4(recibosLote.map(r => r.texto).join("\n\f\n"), "recibos_obra.pdf", recibosLote[0]?.funcionario.empresa);
+    const blob = await gerarPdfRecibosLote(recibosLote.map(r => r.texto), recibosLote[0]?.funcionario.empresa, formatoRecibosLote);
     imprimirBlob(blob);
   };
 
@@ -826,7 +828,18 @@ export function GeradorDocumentos() {
               <CardContent className="space-y-4 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
                   <div><Badge variant="outline">RECIBOS POR OBRA</Badge><h3 className="mt-2 text-lg font-semibold">{recibosLote.length} recibo(s) prontos</h3><p className="text-xs text-muted-foreground">Total: {formatarValorBR(recibosLote.reduce((s, r) => s + r.valor, 0))}</p></div>
-                  <div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={imprimirLote} className="gap-1.5"><Printer className="h-3.5 w-3.5" /> Imprimir todos</Button><Button size="sm" variant="outline" onClick={baixarLote} className="gap-1.5"><Download className="h-3.5 w-3.5" /> PDF único</Button></div>
+                  <div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={imprimirLote} className="gap-1.5"><Printer className="h-3.5 w-3.5" /> Imprimir todos</Button><Button size="sm" variant="outline" onClick={baixarLote} className="gap-1.5"><Download className="h-3.5 w-3.5" /> Baixar PDF único</Button></div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Formato do PDF único</Label>
+                  <Select value={formatoRecibosLote} onValueChange={(v: FormatoRecibosLote) => setFormatoRecibosLote(v)}>
+                    <SelectTrigger className="max-w-sm"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pagina-inteira">1 recibo por página A4</SelectItem>
+                      <SelectItem value="meia-pagina">2 recibos por página A4</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-muted-foreground">A opção de meia página inclui uma linha de corte entre os recibos.</p>
                 </div>
                 <div className="max-h-[480px] space-y-2 overflow-y-auto">
                   {recibosLote.map((r, index) => <button key={r.funcionario.id} type="button" onClick={() => { setFuncId(r.funcionario.id); setTextoGerado(r.texto); }} className={`w-full rounded-md border p-3 text-left ${funcSelecionado?.id === r.funcionario.id ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`}>
