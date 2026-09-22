@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1790101761540,
+      "tag": "0000_add_union_fee_and_food_benefit_to_payroll",
+      "breakpoints": true
+    }
+  ]
+}
