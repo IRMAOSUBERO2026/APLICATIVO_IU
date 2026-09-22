@@ -6,6 +6,7 @@ import { EspelhoPonto, type HorarioPadrao, type PontoResult } from "./EspelhoPon
 import { FolhaInputForm } from "./FolhaInputForm";
 import { FolhaResultado } from "./FolhaResultado";
 import { calcularFolha, type FolhaInput, type FolhaOutput } from "@/lib/motorFolha";
+import { BENEFICIO_ALIMENTACAO_PADRAO, MENSALIDADE_SINDICAL_PADRAO } from "@/lib/motorFolha";
 import {
   Calculator, CheckCircle, Save, User, ArrowLeft, RotateCcw, Clock, Eye, EyeOff, Play,
 } from "lucide-react";
@@ -103,13 +104,14 @@ export function FolhaCalculoIndividual({
       semanas_com_falta: 0,
       bonificacao_meta: 0,
       bonificacao_assiduidade: 0,
+      beneficio_alimentacao: BENEFICIO_ALIMENTACAO_PADRAO,
       desconto_marmita: 0,
       qtd_marmitas: 0,
       valor_marmita_unitario: 0,
       desconto_vale: 0,
       desconto_emprestimo: 0,
       desconto_adiantamento: 0,
-      desconto_sindicato: 0,
+      desconto_sindicato: MENSALIDADE_SINDICAL_PADRAO,
       outros_descontos: 0,
       salario_registro: funcionario.salario_base,
       salario_combinado: sc,

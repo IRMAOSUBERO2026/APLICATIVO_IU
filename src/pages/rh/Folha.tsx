@@ -6,7 +6,7 @@ import { FolhaCalculoIndividual } from "@/components/folha/FolhaCalculoIndividua
 import { HorarioPadraoEditor } from "@/components/folha/HorarioPadraoEditor";
 import { FuncionariosList } from "@/components/folha/FuncionariosList";
 import { DocumentManager } from "@/components/rh/DocumentManager";
-import { calcularFolha, type FolhaInput, type FolhaOutput } from "@/lib/motorFolha";
+import { BENEFICIO_ALIMENTACAO_PADRAO, calcularFolha, MENSALIDADE_SINDICAL_PADRAO, type FolhaInput, type FolhaOutput } from "@/lib/motorFolha";
 import { supabase } from "@/integrations/supabase/client";
 import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -75,7 +75,7 @@ function countSundaysAndHolidays(year: number, month: number): number {
   return count;
 }
 
-function makeDefaultInput(salarioBase: number, salarioCombinado: number, diasMes: number, domingos: number, tipoRem: string): FolhaInput {
+function makeDefaultInput(salarioBase: number, salarioCombinado: number, diasMes: number, domingos: number, tipoRem: string, sindicato = MENSALIDADE_SINDICAL_PADRAO, alimentacao = BENEFICIO_ALIMENTACAO_PADRAO): FolhaInput {
   return {
     salario_registro: salarioBase,
     salario_combinado: salarioCombinado,
@@ -92,13 +92,14 @@ function makeDefaultInput(salarioBase: number, salarioCombinado: number, diasMes
     domingos_feriados_no_mes: domingos,
     bonificacao_meta: 0,
     bonificacao_assiduidade: 0,
+    beneficio_alimentacao: alimentacao,
     desconto_marmita: 0,
     qtd_marmitas: 0,
     valor_marmita_unitario: 0,
     desconto_vale: 0,
     desconto_emprestimo: 0,
     desconto_adiantamento: 0,
-    desconto_sindicato: 0,
+    desconto_sindicato: sindicato,
     outros_descontos: 0,
     usar_salario_sindicato_para_HE: true,
   };
@@ -218,6 +219,7 @@ export default function Folha() {
             domingos_feriados_no_mes: domingos,
             bonificacao_meta: Number(existing.bonificacao_meta),
             bonificacao_assiduidade: Number(existing.bonificacao_assiduidade),
+            beneficio_alimentacao: Number(existing.beneficio_alimentacao || 0),
             desconto_marmita: Number(existing.desconto_marmita),
             qtd_marmitas: Number(existing.qtd_marmitas || 0),
             valor_marmita_unitario: Number(existing.valor_marmita_unitario || 0),
@@ -239,7 +241,7 @@ export default function Folha() {
         }
         const sc = f.salario_combinado ?? f.salario_base;
         const prefill = calcularPrefillBonificacoes(f.bonificacoes_padrao);
-        const baseInput = makeDefaultInput(f.salario_base, sc, diasMes, domingos, f.tipo_remuneracao || "mensal");
+        const baseInput = makeDefaultInput(f.salario_base, sc, diasMes, domingos, f.tipo_remuneracao || "mensal", Number(f.mensalidade_sindical ?? MENSALIDADE_SINDICAL_PADRAO), Number(f.valor_alimentacao ?? BENEFICIO_ALIMENTACAO_PADRAO));
         return {
           id: f.id, nome: f.nome, cpf: f.cpf, cargo: f.cargo,
           salario_base: f.salario_base, salario_combinado: f.salario_combinado,
@@ -292,6 +294,7 @@ export default function Folha() {
     semanas_com_falta: func.input.semanas_com_falta,
     bonificacao_meta: func.input.bonificacao_meta,
     bonificacao_assiduidade: func.input.bonificacao_assiduidade,
+    beneficio_alimentacao: func.input.beneficio_alimentacao,
     desconto_marmita: func.input.desconto_marmita,
     qtd_marmitas: func.input.qtd_marmitas,
     valor_marmita_unitario: func.input.valor_marmita_unitario,
