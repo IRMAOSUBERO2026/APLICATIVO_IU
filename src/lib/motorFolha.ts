@@ -25,6 +25,7 @@ export interface FolhaInput {
 
   bonificacao_meta: number;
   bonificacao_assiduidade: number;
+  beneficio_alimentacao: number;
 
   desconto_marmita: number;
   qtd_marmitas: number;
@@ -54,6 +55,7 @@ export interface FolhaOutput {
   dsr_perdido: number;
 
   total_bonificacoes: number;
+  beneficio_alimentacao: number;
   total_descontos: number;
 
   valor_producao: number;
@@ -66,6 +68,9 @@ export interface FolhaOutput {
 }
 
 const r2 = (v: number): number => Math.round(v * 100) / 100;
+export const LIMITE_BONIFICACOES = 400;
+export const MENSALIDADE_SINDICAL_PADRAO = 20;
+export const BENEFICIO_ALIMENTACAO_PADRAO = 400;
 
 export function calcularFolha(input: FolhaInput): FolhaOutput {
   const {
@@ -83,6 +88,7 @@ export function calcularFolha(input: FolhaInput): FolhaOutput {
     semanas_com_falta,
     bonificacao_meta,
     bonificacao_assiduidade,
+    beneficio_alimentacao,
     desconto_marmita,
     qtd_marmitas,
     valor_marmita_unitario,
@@ -140,7 +146,10 @@ export function calcularFolha(input: FolhaInput): FolhaOutput {
   const totalMarmita = r2(desconto_marmita > 0 ? desconto_marmita : qtd_marmitas * valor_marmita_unitario);
 
   // Bonificações — só para mensal (produção não soma proventos)
-  const total_bonificacoes = isProducao ? 0 : r2(bonificacao_meta + bonificacao_assiduidade);
+  const total_bonificacoes = isProducao
+    ? 0
+    : r2(Math.min(Math.max(0, bonificacao_meta) + Math.max(0, bonificacao_assiduidade), LIMITE_BONIFICACOES));
+  const alimentacao = r2(Math.max(0, beneficio_alimentacao || 0));
 
   // Descontos
   // Mensal: descontos completos (vale, marmita, faltas, h.neg, DSR, etc.)
@@ -166,7 +175,8 @@ export function calcularFolha(input: FolhaInput): FolhaOutput {
     total_HE +
     valor_atestados + // <- Somamos o valor do atestado pago pela carteira
     total_bonificacoes -
-    total_descontos
+    total_descontos +
+    alimentacao
   );
 
   // Encargos sobre salário de registro
@@ -186,6 +196,7 @@ export function calcularFolha(input: FolhaInput): FolhaOutput {
     desconto_horas_negativas,
     dsr_perdido,
     total_bonificacoes,
+    beneficio_alimentacao: alimentacao,
     total_descontos,
     valor_producao: isProducao ? valor_producao : 0,
     fgts,

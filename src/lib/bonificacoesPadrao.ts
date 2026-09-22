@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { LIMITE_BONIFICACOES } from "@/lib/motorFolha";
 
 export interface BonificacaoPadrao {
   descricao: string;
@@ -41,6 +42,8 @@ export function calcularPrefillBonificacoes(
     }
   }
 
+  meta = Math.min(meta, LIMITE_BONIFICACOES);
+  assiduidade = Math.min(assiduidade, LIMITE_BONIFICACOES - meta);
   return { meta, assiduidade };
 }
 
@@ -151,7 +154,7 @@ export async function inserirFuncionarioComBonificacoes(insertData: Record<strin
 }
 
 export async function buscarFuncionariosFolha(obraId: string) {
-  const columnsWithBonuses = "id, nome, cpf, cargo, salario_base, salario_combinado, tipo_remuneracao, escala, bonificacoes_padrao, observacoes";
+  const columnsWithBonuses = "id, nome, cpf, cargo, salario_base, salario_combinado, tipo_remuneracao, escala, mensalidade_sindical, valor_alimentacao, bonificacoes_padrao, observacoes";
   const firstAttempt = await supabase
     .from("funcionarios")
     .select(columnsWithBonuses)
@@ -171,7 +174,7 @@ export async function buscarFuncionariosFolha(obraId: string) {
 
   const fallback = await supabase
     .from("funcionarios")
-    .select("id, nome, cpf, cargo, salario_base, salario_combinado, tipo_remuneracao, escala, observacoes")
+    .select("id, nome, cpf, cargo, salario_base, salario_combinado, tipo_remuneracao, escala, mensalidade_sindical, valor_alimentacao, observacoes")
     .eq("obra_id", obraId)
     .eq("status", "ativo")
     .order("nome");

@@ -28,6 +28,8 @@ const FIELDS: { key: string; label: string; type?: string; options?: string[] }[
   { key: "cargo", label: "Cargo" },
   { key: "salario_base", label: "Salário Base", type: "number" },
   { key: "salario_combinado", label: "Salário Combinado", type: "number" },
+  { key: "mensalidade_sindical", label: "Mensalidade Sindical", type: "number" },
+  { key: "valor_alimentacao", label: "Benefício Alimentação", type: "number" },
   { key: "tipo_remuneracao", label: "Tipo de Remuneração", options: ["mensal", "quinzenal", "semanal", "producao"] },
   { key: "escala", label: "Escala", options: ["5x2", "6x1"] },
   { key: "data_admissao", label: "Data de Admissão", type: "date" },

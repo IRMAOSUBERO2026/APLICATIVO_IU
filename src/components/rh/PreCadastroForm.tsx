@@ -35,6 +35,7 @@ const emptyForm = {
   banco: "", agencia: "", conta: "", tipoConta: "", dependentes: 0,
   rne: "", dataEntradaPais: "", tipo_remuneracao: "mensal", escala: "5x2",
   naturalidade: "", reservista: "",
+  mensalidadeSindical: 20, valorAlimentacao: 400,
 };
 
 type FormStep = "pessoal" | "documentos" | "endereco" | "trabalho" | "bancario" | "dependentes";
@@ -181,6 +182,8 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
       carteira_reservista: form.reservista || null,
       dependentes_json: depsClean,
       bonificacoes_padrao: bonificacoesPadrao as any,
+      mensalidade_sindical: Number(form.mensalidadeSindical) || 20,
+      valor_alimentacao: Number(form.valorAlimentacao) || 0,
     };
   };
 

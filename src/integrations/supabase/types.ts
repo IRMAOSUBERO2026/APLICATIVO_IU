@@ -1180,6 +1180,7 @@ export type Database = {
           atestados: number
           base_dia: number
           base_hora: number
+          beneficio_alimentacao: number
           bonificacao_assiduidade: number
           bonificacao_justificativa: string | null
           bonificacao_meta: number
@@ -1234,6 +1235,7 @@ export type Database = {
           atestados?: number
           base_dia?: number
           base_hora?: number
+          beneficio_alimentacao?: number
           bonificacao_assiduidade?: number
           bonificacao_justificativa?: string | null
           bonificacao_meta?: number
@@ -1288,6 +1290,7 @@ export type Database = {
           atestados?: number
           base_dia?: number
           base_hora?: number
+          beneficio_alimentacao?: number
           bonificacao_assiduidade?: number
           bonificacao_justificativa?: string | null
           bonificacao_meta?: number
@@ -1458,6 +1461,7 @@ export type Database = {
           estado_civil: string | null
           foto_url: string | null
           id: string
+          mensalidade_sindical: number
           motivo_rescisao: string | null
           nacionalidade: string | null
           naturalidade: string | null
@@ -1482,6 +1486,7 @@ export type Database = {
           uf: string | null
           updated_at: string
           validade_cnh: string | null
+          valor_alimentacao: number
           zona_eleitoral: string | null
         }
         Insert: {
@@ -1520,6 +1525,7 @@ export type Database = {
           estado_civil?: string | null
           foto_url?: string | null
           id?: string
+          mensalidade_sindical?: number
           motivo_rescisao?: string | null
           nacionalidade?: string | null
           naturalidade?: string | null
@@ -1544,6 +1550,7 @@ export type Database = {
           uf?: string | null
           updated_at?: string
           validade_cnh?: string | null
+          valor_alimentacao?: number
           zona_eleitoral?: string | null
         }
         Update: {
@@ -1582,6 +1589,7 @@ export type Database = {
           estado_civil?: string | null
           foto_url?: string | null
           id?: string
+          mensalidade_sindical?: number
           motivo_rescisao?: string | null
           nacionalidade?: string | null
           naturalidade?: string | null
@@ -1606,6 +1614,7 @@ export type Database = {
           uf?: string | null
           updated_at?: string
           validade_cnh?: string | null
+          valor_alimentacao?: number
           zona_eleitoral?: string | null
         }
         Relationships: [

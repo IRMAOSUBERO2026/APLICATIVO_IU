@@ -17,6 +17,7 @@ const baseInput: FolhaInput = {
   domingos_feriados_no_mes: 5,
   bonificacao_meta: 0,
   bonificacao_assiduidade: 0,
+  beneficio_alimentacao: 0,
   desconto_marmita: 0,
   qtd_marmitas: 0,
   valor_marmita_unitario: 0,
@@ -97,9 +98,9 @@ describe("motorFolha", () => {
       desconto_vale: 150,
       desconto_emprestimo: 100,
     });
-    expect(r.total_bonificacoes).toBe(700);
+    expect(r.total_bonificacoes).toBe(400);
     expect(r.total_descontos).toBe(550);
-    expect(r.salario_final).toBe(3200 + 700 - 550);
+    expect(r.salario_final).toBe(3200 + 400 - 550);
   });
 
   it("calcula FGTS e INSS sobre salário de registro", () => {
@@ -175,10 +176,16 @@ describe("motorFolha", () => {
       desconto_vale: 100,
     });
     expect(r.total_HE).toBe(170.4);
-    expect(r.total_bonificacoes).toBe(650);
+    expect(r.total_bonificacoes).toBe(400);
     expect(r.desconto_faltas).toBe(213.34);
     expect(r.dsr_perdido).toBe(213.34);
-    // 3200 + 170.4 + 650 - (213.34 + 213.34 + 100) = 3493.72
-    expect(r.salario_final).toBe(3493.72);
+    // 3200 + 170.4 + 400 - (213.34 + 213.34 + 100) = 3243.72
+    expect(r.salario_final).toBe(3243.72);
+  });
+
+  it("soma o benefício variável de alimentação separadamente", () => {
+    const r = calcularFolha({ ...baseInput, beneficio_alimentacao: 400, desconto_sindicato: 20 });
+    expect(r.beneficio_alimentacao).toBe(400);
+    expect(r.salario_final).toBe(3580);
   });
 });

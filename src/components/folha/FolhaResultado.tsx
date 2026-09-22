@@ -117,7 +117,8 @@ export function FolhaResultado({ result, input }: Props) {
     salarioBaseProvento +
     result.total_HE +
     result.valor_atestados +
-    result.total_bonificacoes;
+    result.total_bonificacoes +
+    result.beneficio_alimentacao;
 
   return (
     <div className="space-y-2">
@@ -167,6 +168,7 @@ export function FolhaResultado({ result, input }: Props) {
           />
           <Line label="Meta" value={input?.bonificacao_meta ?? 0} />
           <Line label="Assiduidade" value={input?.bonificacao_assiduidade ?? 0} />
+          <Line label="Alimentação" value={result.beneficio_alimentacao} />
         </CardContent>
       </Card>
 

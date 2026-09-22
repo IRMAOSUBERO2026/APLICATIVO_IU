@@ -4,6 +4,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { FolhaInput } from "@/lib/motorFolha";
+import { LIMITE_BONIFICACOES } from "@/lib/motorFolha";
 import { Settings, Minus, Gift } from "lucide-react";
 
 interface Props {
@@ -12,8 +13,8 @@ interface Props {
   salarioReadOnly?: boolean;
 }
 
-function NumField({ label, value, onChange, min = 0, step = "1", disabled = false }: {
-  label: string; value: number; onChange: (v: number) => void; min?: number; step?: string; disabled?: boolean;
+function NumField({ label, value, onChange, min = 0, max, step = "1", disabled = false }: {
+  label: string; value: number; onChange: (v: number) => void; min?: number; max?: number; step?: string; disabled?: boolean;
 }) {
   return (
     <div className="space-y-1">
@@ -21,6 +22,7 @@ function NumField({ label, value, onChange, min = 0, step = "1", disabled = fals
       <Input
         type="number"
         min={min}
+        max={max}
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value) || 0)}
@@ -36,6 +38,11 @@ export function FolhaInputForm({ data, onChange, salarioReadOnly = false }: Prop
     onChange({ ...data, [field]: value });
 
   const isProducao = data.tipo_remuneracao === "producao";
+  const totalBonificacoes = data.bonificacao_meta + data.bonificacao_assiduidade;
+  const setBonificacao = (field: "bonificacao_meta" | "bonificacao_assiduidade", value: number) => {
+    const outro = field === "bonificacao_meta" ? data.bonificacao_assiduidade : data.bonificacao_meta;
+    set(field, Math.min(Math.max(0, value), Math.max(0, LIMITE_BONIFICACOES - outro)));
+  };
 
   return (
     <div className="space-y-3">
@@ -88,8 +95,12 @@ export function FolhaInputForm({ data, onChange, salarioReadOnly = false }: Prop
           </CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-3 grid grid-cols-2 gap-2">
-          <NumField label="Meta" value={data.bonificacao_meta} onChange={(v) => set("bonificacao_meta", v)} step="0.01" />
-          <NumField label="Assiduidade" value={data.bonificacao_assiduidade} onChange={(v) => set("bonificacao_assiduidade", v)} step="0.01" />
+          <NumField label="Meta" value={data.bonificacao_meta} onChange={(v) => setBonificacao("bonificacao_meta", v)} max={LIMITE_BONIFICACOES - data.bonificacao_assiduidade} step="0.01" />
+          <NumField label="Assiduidade" value={data.bonificacao_assiduidade} onChange={(v) => setBonificacao("bonificacao_assiduidade", v)} max={LIMITE_BONIFICACOES - data.bonificacao_meta} step="0.01" />
+          <p className="col-span-2 text-[11px] text-muted-foreground">Total: {totalBonificacoes.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} de R$ 400,00</p>
+          <div className="col-span-2">
+            <NumField label="Benefício alimentação" value={data.beneficio_alimentacao} onChange={(v) => set("beneficio_alimentacao", v)} step="0.01" />
+          </div>
         </CardContent>
       </Card>
 
@@ -108,7 +119,7 @@ export function FolhaInputForm({ data, onChange, salarioReadOnly = false }: Prop
           <NumField label="Vale" value={data.desconto_vale} onChange={(v) => set("desconto_vale", v)} step="0.01" />
           <NumField label="Adiantamento" value={data.desconto_adiantamento} onChange={(v) => set("desconto_adiantamento", v)} step="0.01" />
           <NumField label="Empréstimo" value={data.desconto_emprestimo} onChange={(v) => set("desconto_emprestimo", v)} step="0.01" />
-          <NumField label="Sindicato" value={data.desconto_sindicato} onChange={(v) => set("desconto_sindicato", v)} step="0.01" />
+          <NumField label="Sindicato" value={data.desconto_sindicato} onChange={(v) => set("desconto_sindicato", v)} step="0.01" disabled />
           <NumField label="Outros" value={data.outros_descontos} onChange={(v) => set("outros_descontos", v)} step="0.01" />
         </CardContent>
       </Card>

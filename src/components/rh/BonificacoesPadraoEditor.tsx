@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { BonificacaoPadrao } from "@/lib/bonificacoesPadrao";
+import { LIMITE_BONIFICACOES } from "@/lib/motorFolha";
 
 export type { BonificacaoPadrao } from "@/lib/bonificacoesPadrao";
 
@@ -19,6 +20,7 @@ export const BonificacoesPadraoEditor = forwardRef<HTMLDivElement, Props>(functi
   ref,
 ) {
   const list = Array.isArray(value) ? value : [];
+  const total = list.reduce((soma, item) => soma + Math.max(0, Number(item.valor) || 0), 0);
 
   const add = () =>
     onChange([...list, { descricao: "", valor: 0, tipo: "fixo" }]);
@@ -30,8 +32,15 @@ export const BonificacoesPadraoEditor = forwardRef<HTMLDivElement, Props>(functi
     idx: number,
     field: K,
     val: BonificacaoPadrao[K],
-  ) =>
-    onChange(list.map((b, i) => (i === idx ? { ...b, [field]: val } : b)));
+  ) => {
+    if (field !== "valor") {
+      onChange(list.map((b, i) => (i === idx ? { ...b, [field]: val } : b)));
+      return;
+    }
+    const outros = list.reduce((soma, item, i) => soma + (i === idx ? 0 : Math.max(0, item.valor)), 0);
+    const limitado = Math.min(Math.max(0, Number(val) || 0), Math.max(0, LIMITE_BONIFICACOES - outros));
+    onChange(list.map((b, i) => (i === idx ? { ...b, valor: limitado } : b)));
+  };
 
   return (
     <div ref={ref} className="space-y-3 rounded-lg border bg-card/50 p-3">
@@ -50,6 +59,7 @@ export const BonificacoesPadraoEditor = forwardRef<HTMLDivElement, Props>(functi
         pré-preenchido, mas o usuário confirma antes de fechar o mês. Descrições com "Meta" ou
         "Desempenho" alimentam o campo <em>Meta</em>; as demais alimentam <em>Assiduidade</em>.
       </p>
+      <p className="text-xs font-medium">Total: {total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} de R$ 400,00</p>
 
       {list.length === 0 ? (
         <p className="text-xs text-muted-foreground italic py-2 text-center">
@@ -80,6 +90,7 @@ export const BonificacoesPadraoEditor = forwardRef<HTMLDivElement, Props>(functi
                 <Input
                   type="number"
                   min={0}
+                  max={Math.max(0, LIMITE_BONIFICACOES - (total - b.valor))}
                   step="0.01"
                   value={b.valor || ""}
                   onChange={(e) => update(idx, "valor", Number(e.target.value) || 0)}
