@@ -110,7 +110,7 @@ export function PreCadastroForm({ open, onOpenChange, onSave, nextId }: PreCadas
     setForm(prev => {
       const base = salarioPorCargo(value);
       const preencheSalario = base !== null && (!prev.salarioBase || Number(prev.salarioBase) === 0);
-      return { ...prev, cargo: value, salarioBase: preencheSalario ? base! : prev.salarioBase };
+      return { ...prev, cargo: value, salarioBase: preencheSalario && base !== null ? base : prev.salarioBase };
     });
   };
 
