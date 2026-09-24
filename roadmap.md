@@ -4,4 +4,4 @@
 - [x] Atualizar pisos salariais 2026 por categoria
 - [x] Aplicar mensalidade sindical de R$ 20,00 a ativos e novos funcionários
 - [x] Limitar bonificações totais a R$ 400,00 no lançamento e cálculo
-- [ ] Atualizar dados existentes e validar folha/cadastros
+- [x] Atualizar dados existentes e validar folha/cadastros
