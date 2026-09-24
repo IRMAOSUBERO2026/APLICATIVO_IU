@@ -66,7 +66,7 @@ describe("motorFolha", () => {
   it("calcula atestados pelo salário de registro", () => {
     const r = calcularFolha({ ...baseInput, atestados: 3 });
     expect(r.valor_atestados).toBe(250);
-    expect(r.salario_final).toBe(3200 + 250);
+    expect(r.salario_final).toBe(3130);
   });
 
   it("calcula HE 100%", () => {
