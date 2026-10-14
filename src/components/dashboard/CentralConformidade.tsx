@@ -22,13 +22,13 @@ export function CentralConformidade({ alertas, loading }: { alertas: AlertaConfo
 
   return (
     <section className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
-      <div className="flex flex-col gap-4 border-b border-border bg-primary px-5 py-4 text-primary-foreground sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 border-b border-border bg-primary px-4 py-4 text-primary-foreground sm:flex-row sm:items-center sm:justify-between sm:px-5">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary-foreground/10">
             <AlertTriangle className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="text-base font-semibold text-primary-foreground">Central de Blindagem Trabalhista</h2>
+            <h2 className="text-sm font-semibold text-primary-foreground sm:text-base">Central de Blindagem Trabalhista</h2>
             <p className="text-xs text-primary-foreground/75">Documentos, experiência e contratos que exigem atenção</p>
           </div>
         </div>
@@ -38,11 +38,14 @@ export function CentralConformidade({ alertas, loading }: { alertas: AlertaConfo
         </div>
       </div>
 
-      <div className="grid border-b border-border sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 border-b border-border lg:grid-cols-4">
         {categorias.map(({ chave, rotulo, icon: Icon }, index) => {
           const total = alertas.filter((item) => item.categoria === chave).length;
           return (
-            <div key={chave} className={`flex items-center gap-3 px-5 py-4 ${index < categorias.length - 1 ? "lg:border-r lg:border-border" : ""}`}>
+            <div
+              key={chave}
+              className={`flex min-h-20 items-center gap-3 px-4 py-3 ${index % 2 === 0 ? "border-r border-border" : ""} ${index < 2 ? "border-b border-border lg:border-b-0" : ""} ${index < categorias.length - 1 ? "lg:border-r lg:border-border" : "lg:border-r-0"}`}
+            >
               <Icon className="h-5 w-5 text-primary" />
               <div>
                 <p className="text-xl font-bold text-foreground">{loading ? "—" : total}</p>
@@ -63,13 +66,13 @@ export function CentralConformidade({ alertas, loading }: { alertas: AlertaConfo
         {!loading && alertas.slice(0, 6).map((alerta) => {
           const urgente = alerta.faixa === "vencido" || alerta.faixa === "sem_documento" || alerta.faixa === "7_dias";
           return (
-            <Link key={alerta.id} to={alerta.link} className="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-muted/40">
+            <Link key={alerta.id} to={alerta.link} className="flex min-h-16 items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/40 sm:px-5">
               <span className={`h-2 w-2 flex-shrink-0 rounded-full ${urgente ? "bg-destructive" : "bg-warning"}`} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium text-foreground">{alerta.titulo}</p>
                 <p className="truncate text-xs text-muted-foreground">{alerta.descricao}</p>
               </div>
-              <span className={`hidden rounded-md px-2 py-1 text-[10px] font-semibold sm:block ${urgente ? "bg-destructive/10 text-destructive" : "bg-warning/10 text-warning"}`}>
+              <span className={`rounded-md px-2 py-1 text-[10px] font-semibold ${urgente ? "bg-destructive/10 text-destructive" : "bg-warning/10 text-warning"}`}>
                 {faixaLabel[alerta.faixa]}
               </span>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
