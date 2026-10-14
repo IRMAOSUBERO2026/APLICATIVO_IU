@@ -22,6 +22,11 @@ describe("conformidadeAlertas", () => {
     expect(alertas.filter((a) => a.faixa === "sem_documento")).toHaveLength(5);
   });
 
+  it("trata datas impossíveis como pendência de cadastro", () => {
+    const alertas = calcularAlertasConformidade([{ id: "f5", nome: "José", data_aso: "0228-01-01" }], [], hoje);
+    expect(alertas.find((a) => a.id === "data_aso-f5")).toMatchObject({ faixa: "sem_documento", titulo: "ASO com data inválida" });
+  });
+
   it("alerta os marcos de experiência de 30 e 90 dias", () => {
     const alertas = calcularAlertasConformidade([
       { id: "f3", nome: "Ana", data_admissao: "2026-09-20", data_aso: "2026-09-20", data_nr6: "2026-09-20", data_nr12: "2026-09-20", data_nr18: "2026-09-20", data_nr35: "2026-09-20" },

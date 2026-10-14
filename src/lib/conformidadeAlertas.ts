@@ -33,8 +33,11 @@ export interface AlertaConformidade {
 
 const DIA_MS = 86_400_000;
 
-function dataLocal(valor: string): Date {
-  return new Date(`${valor.slice(0, 10)}T12:00:00`);
+function dataLocal(valor: string): Date | null {
+  const data = new Date(`${valor.slice(0, 10)}T12:00:00`);
+  const ano = data.getFullYear();
+  if (Number.isNaN(data.getTime()) || ano < 1900 || ano > 2100) return null;
+  return data;
 }
 
 function inicioDia(data: Date): Date {
@@ -98,13 +101,14 @@ export function calcularAlertasConformidade(
   funcionarios.forEach((funcionario) => {
     DOCUMENTOS.forEach((documento) => {
       const realizacao = funcionario[documento.campo];
-      if (!realizacao) {
+      const dataRealizacao = realizacao ? dataLocal(realizacao) : null;
+      if (!dataRealizacao) {
         alertas.push({
           id: `${documento.campo}-${funcionario.id}`,
           categoria: documento.categoria,
           faixa: "sem_documento",
-          titulo: `${documento.nome} não informado`,
-          descricao: funcionario.nome,
+          titulo: `${documento.nome} ${realizacao ? "com data inválida" : "não informado"}`,
+          descricao: `${funcionario.nome} • Corrigir no cadastro`,
           diasRestantes: null,
           dataVencimento: null,
           link: `/rh/seguranca/funcionario/${funcionario.id}`,
@@ -112,7 +116,7 @@ export function calcularAlertasConformidade(
         return;
       }
 
-      const vencimento = somarAnos(dataLocal(realizacao), documento.anos);
+      const vencimento = somarAnos(dataRealizacao, documento.anos);
       const dias = diferencaDias(vencimento, referencia);
       const faixa = faixaPorDias(dias);
       if (!faixa) return;
@@ -130,6 +134,7 @@ export function calcularAlertasConformidade(
 
     if (funcionario.data_admissao) {
       const admissao = dataLocal(funcionario.data_admissao);
+      if (!admissao) return;
       const diasDeCasa = -diferencaDias(admissao, referencia);
       const marco = diasDeCasa <= 30 ? 30 : diasDeCasa <= 90 ? 90 : null;
       if (marco) {
@@ -154,6 +159,7 @@ export function calcularAlertasConformidade(
   contratos.forEach((contrato) => {
     if (!contrato.data_fim) return;
     const fim = dataLocal(contrato.data_fim);
+    if (!fim) return;
     const dias = diferencaDias(fim, referencia);
     const faixa = faixaPorDias(dias);
     if (!faixa) return;
@@ -186,6 +192,8 @@ export function calcularAlertasConformidade(
 
 export function estaEmExperiencia(dataAdmissao?: string | null, referencia = new Date()): boolean {
   if (!dataAdmissao) return false;
-  const dias = -diferencaDias(dataLocal(dataAdmissao), referencia);
+  const admissao = dataLocal(dataAdmissao);
+  if (!admissao) return false;
+  const dias = -diferencaDias(admissao, referencia);
   return dias >= 0 && dias <= 90;
 }
