@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollableTable } from "@/components/shared/ScrollableTable";
 import { VirtualGridList } from "@/components/shared/VirtualGridList";
+import { estaEmExperiencia } from "@/lib/conformidadeAlertas";
 
 const RH_GRID = "70px minmax(180px,1.6fr) 110px 140px 130px 130px 100px 130px 140px 110px 110px 170px";
 const RH_MIN_WIDTH = 1560;
@@ -75,7 +76,9 @@ export default function RH() {
   const [sortBy, setSortBy] = useState<"nome" | "admissao" | "obra" | "status" | "registro">("nome");
   const [editingExamFunc, setEditingExamFunc] = useState<any>(null);
   const [filterObra, setFilterObra] = useState("");
-  const [filterStatus, setFilterStatus] = useState("ativo");
+  const [filterStatus, setFilterStatus] = useState(() =>
+    new URLSearchParams(window.location.search).get("filtro") === "experiencia" ? "experiencia_periodo" : "ativo"
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const xlsxInputRef = useRef<HTMLInputElement>(null);
   const [funcionarios] = useState(funcionariosData);
@@ -174,7 +177,9 @@ export default function RH() {
       f.cpf?.includes(search) ||
       f.numero_registro?.includes(search);
     const obraMatch = !filterObra || f.obra_id === filterObra;
-    const statusMatch = !filterStatus || f.status?.toLowerCase() === filterStatus.toLowerCase();
+    const statusMatch = filterStatus === "experiencia_periodo"
+      ? ["ativo", "experiencia", "experiência"].includes(String(f.status).toLowerCase()) && estaEmExperiencia(f.data_admissao)
+      : !filterStatus || f.status?.toLowerCase() === filterStatus.toLowerCase();
     return searchMatch && obraMatch && statusMatch;
   });
 
@@ -599,6 +604,7 @@ export default function RH() {
               </select>
               <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="rounded-lg border bg-card px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring">
                 <option value="ativo">Apenas Ativos</option>
+                <option value="experiencia_periodo">Em experiência (30/60d)</option>
                 <option value="">Todos os Status</option>
                 {STATUS_OPTIONS.filter(s => s.value !== "ativo").map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
               </select>
@@ -623,7 +629,7 @@ export default function RH() {
               </div>
               <div className="rounded-xl border bg-card p-4 shadow-sm">
                 <p className="text-xs text-muted-foreground">Experiência</p>
-                <p className="text-2xl font-bold text-accent">{allFuncionarios.filter(f => f.status === "experiência" || f.status === "experiencia").length}</p>
+                <p className="text-2xl font-bold text-accent">{allFuncionarios.filter(f => ["ativo", "experiencia", "experiência"].includes(String(f.status).toLowerCase()) && estaEmExperiencia(f.data_admissao)).length}</p>
               </div>
               <div className="rounded-xl border bg-card p-4 shadow-sm">
                 <p className="text-xs text-muted-foreground">Desligados</p>
