@@ -2,7 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 // Calcula data de vencimento baseada no tipo do documento
 export function calcularVencimento(tipo: string, dataRealizacao: Date): Date {
-  const meses = ['NR12', 'NR18', 'NR35'].includes(tipo.toUpperCase()) ? 24 : 6;
+  const meses = ['NR12', 'NR18', 'NR35'].includes(tipo.toUpperCase()) ? 24 : 12;
   const vencimento = new Date(dataRealizacao);
   vencimento.setMonth(vencimento.getMonth() + meses);
   return vencimento;

@@ -1,0 +1,1 @@
+- Keep compliance deadline calculations in `src/lib/conformidadeAlertas.ts` as pure functions so dashboard and HR views share one auditable rule set.
