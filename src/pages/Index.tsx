@@ -1,6 +1,8 @@
 import { AppLayout } from "@/components/layout/AppLayout";
 import React, { useState, useEffect, useMemo } from "react";
 import { useDashboardData } from "@/hooks/useDashboardData";
+import { useConformidadeAlertas } from "@/hooks/useConformidadeAlertas";
+import { CentralConformidade } from "@/components/dashboard/CentralConformidade";
 import { useEmpresaObra } from "@/contexts/EmpresaObraContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
@@ -106,6 +108,7 @@ interface PendenciaItem {
 /* ───────── Página ───────── */
 export default function Dashboard() {
   const { kpis, faturamentoSerie, obrasAndamento, loading } = useDashboardData();
+  const { alertas: alertasConformidade, loading: loadingConformidade } = useConformidadeAlertas();
   const { empresaAtual, obraAtual, empresaId, obraId } = useEmpresaObra();
   const [fluxo, setFluxo] = useState<FluxoPonto[]>([]);
   const [alertas, setAlertas] = useState<AlertaItem[]>([]);
@@ -350,6 +353,8 @@ export default function Dashboard() {
             <Users className="h-4 w-4" /> PORTAL DO COLABORADOR
           </Link>
         </div>
+
+        <CentralConformidade alertas={alertasConformidade} loading={loadingConformidade} />
 
         {/* Grade de KPIs */}
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
