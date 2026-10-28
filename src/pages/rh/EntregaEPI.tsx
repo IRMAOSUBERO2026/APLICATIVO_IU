@@ -24,6 +24,8 @@ import { ScrollableTable } from "@/components/shared/ScrollableTable";
 import { OBRA_STATUS_ATIVOS_ARR } from "@/lib/obraStatus";
 import { gerarFichaEPIPdf } from "@/lib/gerarFichaEPIPdf";
 import QRCode from "qrcode";
+import { Users } from "lucide-react";
+import { EntregaLoteEPIDialog } from "@/components/epi/EntregaLoteEPIDialog";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function ConfirmacaoBadge({ tipo }: { tipo: string }) {
@@ -58,6 +60,7 @@ export default function EntregaEPI() {
   const [tab, setTab] = useState("entregas");
   const [fichasRefreshKey, setFichasRefreshKey] = useState(0);
   const [showNewDelivery, setShowNewDelivery] = useState(false);
+  const [showLote, setShowLote] = useState(false);
 
   const [selectedItems, setSelectedItems] = useState<any[]>([]);
   const [form, setForm] = useState({ funcionario_id: "", obra_id: "central", data_entrega: format(new Date(), "yyyy-MM-dd") });
@@ -383,6 +386,10 @@ export default function EntregaEPI() {
             <Button onClick={() => { setSelectedItems([]); setShowNewDelivery(true); }} className="bg-amber-500 hover:bg-amber-600 text-white border-none h-12 gap-3 px-8 shadow-xl shadow-amber-500/20 rounded-xl font-bold">
               <Plus size={20} /> Nova Entrega
             </Button>
+            <Button variant="outline" onClick={() => setShowLote(true)} className="h-12 gap-2 rounded-xl font-bold">
+              <Users size={18} /> Entrega em Lote
+            </Button>
+            <EntregaLoteEPIDialog open={showLote} onOpenChange={setShowLote} produtos={produtos} obras={obras} funcionarios={funcionarios} onDone={() => { loadData(); setFichasRefreshKey((k) => k + 1); }} />
             <ImportarFichasAntigas onImported={() => {
               loadData();
               setFichasRefreshKey((key) => key + 1);
